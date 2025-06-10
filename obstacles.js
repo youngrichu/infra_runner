@@ -1,0 +1,121 @@
+import { LANES, OBSTACLE_TYPES, SPAWN_CONFIG, SCORING } from './constants.js';
+
+export class ObstacleManager {
+    constructor(scene) {
+        this.scene = scene;
+        this.obstacles = [];
+        this.lastObstacleType = '';
+        this.lastObstacleZ = 0;
+        this.gameController = null; // Will be set by game.js
+    }
+
+    setGameController(gameController) {
+        this.gameController = gameController;
+    }
+
+    createObstacle(playerZ) {
+        // Filter out the last used obstacle type to prevent repetition
+        const availableTypes = Object.keys(OBSTACLE_TYPES).filter(type => type !== this.lastObstacleType);
+        const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+        const obstacleConfig = OBSTACLE_TYPES[type];
+
+        const material = new THREE.MeshStandardMaterial({ color: obstacleConfig.color });
+        const obstacleMesh = new THREE.Mesh(obstacleConfig.geometry(), material);
+        const laneIndex = Math.floor(Math.random() * LANES.COUNT);
+        
+        obstacleMesh.position.set(
+            LANES.POSITIONS[laneIndex], 
+            obstacleConfig.yPos, 
+            playerZ - 50
+        );
+        obstacleMesh.castShadow = true;
+        this.scene.add(obstacleMesh);
+        
+        this.obstacles.push({ mesh: obstacleMesh, type: type });
+        this.lastObstacleType = type;
+    }
+
+    startSpawning() {
+        this.spawnObstacle();
+    }
+
+    spawnObstacle() {
+        // Check if game is still active using the game controller
+        if (!this.gameController || !this.gameController.isGameActive()) {
+            return;
+        }
+
+        const playerZ = this.gameController.getPlayerPosition().z;
+        const minDistance = SPAWN_CONFIG.OBSTACLE_MIN_DISTANCE;
+        const currentZ = playerZ - 50;
+        
+        if (Math.abs(currentZ - this.lastObstacleZ) >= minDistance) {
+            this.createObstacle(playerZ);
+            this.lastObstacleZ = currentZ;
+            setTimeout(() => {
+                this.spawnObstacle(); // Recursive call without parameters
+            }, Math.random() * SPAWN_CONFIG.OBSTACLE_INTERVAL.MAX + SPAWN_CONFIG.OBSTACLE_INTERVAL.MIN);
+        } else {
+            setTimeout(() => {
+                this.spawnObstacle(); // Try again soon
+            }, 500);
+        }
+    }
+
+    updateObstacles(gameSpeed, cameraZ, gameActive) {
+        let scoreGained = 0;
+        
+        for (let i = this.obstacles.length - 1; i >= 0; i--) {
+            this.obstacles[i].mesh.position.z += gameSpeed;
+            if (this.obstacles[i].mesh.position.z > cameraZ + 5) {
+                this.scene.remove(this.obstacles[i].mesh);
+                this.obstacles.splice(i, 1);
+                if (gameActive) {
+                    scoreGained += SCORING.OBSTACLE_PASSED;
+                }
+            }
+        }
+        
+        return scoreGained;
+    }
+
+    checkCollisions(playerBox, waterSlideObjects, hasWaterSlide) {
+        for (let i = 0; i < this.obstacles.length; i++) {
+            const obstacleBox = new THREE.Box3().setFromObject(this.obstacles[i].mesh);
+            
+            // Check if player is protected by water slide
+            let isProtectedByWaterSlide = false;
+            
+            if (hasWaterSlide && waterSlideObjects && waterSlideObjects.length > 0) {
+                const slideSegment = waterSlideObjects[0];
+                if (slideSegment) {
+                    const slideLaneX = slideSegment.position.x;
+                    const obstacleLaneX = this.obstacles[i].mesh.position.x;
+                    
+                    if (Math.abs(slideLaneX - obstacleLaneX) < 0.5 && 
+                        this.obstacles[i].mesh.position.z < playerBox.max.z + 5 && 
+                        this.obstacles[i].mesh.position.z > playerBox.max.z - 50) {
+                        isProtectedByWaterSlide = true;
+                    }
+                }
+            }
+            
+            if (!isProtectedByWaterSlide && playerBox.intersectsBox(obstacleBox)) {
+                console.log('Collision detected with obstacle:', this.obstacles[i].type);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    getObstacles() {
+        return this.obstacles;
+    }
+
+    reset() {
+        this.obstacles.forEach(obstacle => this.scene.remove(obstacle.mesh));
+        this.obstacles = [];
+        this.lastObstacleType = '';
+        this.lastObstacleZ = 0;
+    }
+}
