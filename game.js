@@ -20,6 +20,23 @@ let isInvincible = false;
 let invincibilityTimer = 0;
 let ground; // Make ground accessible globally
 
+// Power-up variables
+let isFlying = false;
+let flyingTimer = 0;
+let hasSolarBoost = false;
+let solarBoostTimer = 0;
+let hasWindPower = false;
+let windPowerTimer = 0;
+let hasWaterSlide = false;
+let waterSlideTimer = 0;
+let canDoubleJump = false;
+let hasDoubleJumped = false;
+let activePowerUps = []; // Track active power-ups for UI
+let powerUpElements = [];
+let waterSlideObjects = [];
+let lastObstacleType = '';
+let lastObstacleZ = 0;
+
 function init() {
     // Scene setup
     scene = new THREE.Scene();
@@ -163,9 +180,6 @@ function spawnBuildings() {
     setTimeout(spawnBuildings, Math.random() * 2000 + 1000); // Randomize spawn time
 }
 
-let lastObstacleType = '';
-let lastObstacleZ = 0;
-
 function createObstacle() {
     // Define obstacle types with their specific properties
     const obstacleTypes = {
@@ -201,14 +215,13 @@ function createObstacle() {
     const obstacle = obstacleTypes[type];
 
     const material = new THREE.MeshStandardMaterial({ color: obstacle.color });
-    // const obstacleMesh = new THREE.Mesh(obstacle.geometry, material); // This line is redundant
-
-    const obstacleMesh = new THREE.Mesh(obstacle.geometry, material); // Corrected: use obstacle.geometry
+    const obstacleMesh = new THREE.Mesh(obstacle.geometry, material);
     const laneIndex = Math.floor(Math.random() * 3);
-    obstacleMesh.position.set(lanes[laneIndex], obstacle.yPos, player.position.z - 50); // Corrected: use obstacle.yPos
+    obstacleMesh.position.set(lanes[laneIndex], obstacle.yPos, player.position.z - 50);
     obstacleMesh.castShadow = true;
     scene.add(obstacleMesh);
     obstacles.push({ mesh: obstacleMesh, type: type });
+    lastObstacleType = type;
 }
 
 function spawnObstacle() {
@@ -230,8 +243,24 @@ function spawnObstacle() {
 }
 
 function createCollectable() {
-    const types = ['blueprint', 'waterDrop', 'energyCell', 'hardHat']; // Added hardHat
-    const type = types[Math.floor(Math.random() * types.length)];
+    // Include all regular collectibles and power-ups
+    const types = [
+        // Regular collectibles
+        'blueprint', 'waterDrop', 'energyCell', 
+        // Power-ups (with lower spawn probability)
+        'hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'
+    ];
+    
+    // Weighted random selection - power-ups are rarer
+    let typePool = [];
+    // Add regular collectibles with higher frequency
+    for (let i = 0; i < 2; i++) { // Reduced from 3 to 2 to increase power-up chance
+        typePool = typePool.concat(['blueprint', 'waterDrop', 'energyCell']);
+    }
+    // Add power-ups with increased frequency (add each power-up twice)
+    typePool = typePool.concat(['hardHat', 'hardHat', 'helicopter', 'helicopter', 'solarPower', 'solarPower', 'windPower', 'windPower', 'waterPipeline', 'waterPipeline']);
+    
+    const type = typePool[Math.floor(Math.random() * typePool.length)];
     let geometry, material, color;
 
     let spawnPosition;
@@ -266,6 +295,7 @@ function createCollectable() {
     }
 
     switch (type) {
+        // Regular collectibles
         case 'blueprint':
             geometry = new THREE.BoxGeometry(0.3, 0.3, 0.05);
             color = 0x0000ff; // Blue
@@ -278,18 +308,69 @@ function createCollectable() {
             geometry = new THREE.CylinderGeometry(0.15, 0.15, 0.4, 32);
             color = 0xffff00; // Yellow
             break;
-        case 'hardHat': // Hard Hat Power-up
-            geometry = new THREE.BoxGeometry(0.4, 0.4, 0.4); // Placeholder shape
-            color = 0xaaaaaa; // Grey
+            
+        // Power-ups
+        case 'hardHat': // Hard Hat Shield (temporary invincibility)
+            geometry = new THREE.ConeGeometry(0.2, 0.4, 32);
+            color = 0xffa500; // Orange
+            break;
+        case 'helicopter': // Helicopter Ride (flying)
+            geometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8);
+            const rotorGeometry = new THREE.BoxGeometry(0.5, 0.05, 0.1);
+            material = new THREE.MeshStandardMaterial({ color: 0x444444 }); // Dark grey
+            const collectableMesh = new THREE.Mesh(geometry, material);
+            const rotor = new THREE.Mesh(rotorGeometry, material);
+            rotor.position.y = 0.1;
+            collectableMesh.add(rotor);
+            collectableMesh.position.copy(spawnPosition);
+            collectableMesh.castShadow = true;
+            scene.add(collectableMesh);
+            collectables.push({ mesh: collectableMesh, type: type });
+            return; // Skip the rest of the function since we've already created the mesh
+        case 'solarPower': // Solar Power Boost (speed + magnet)
+            geometry = new THREE.CircleGeometry(0.25, 16);
+            color = 0xffff00; // Bright yellow
+            material = new THREE.MeshStandardMaterial({ color: color, side: THREE.DoubleSide });
+            const solarMesh = new THREE.Mesh(geometry, material);
+            solarMesh.rotation.x = -Math.PI / 2; // Lay flat
+            solarMesh.position.copy(spawnPosition);
+            solarMesh.castShadow = true;
+            scene.add(solarMesh);
+            collectables.push({ mesh: solarMesh, type: type });
+            return;
+        case 'windPower': // Wind Power (double jump)
+            geometry = new THREE.SphereGeometry(0.2, 16, 16);
+            color = 0xaaffaa; // Light green
+            material = new THREE.MeshStandardMaterial({ color: color, transparent: true, opacity: 0.7 });
+            const windMesh = new THREE.Mesh(geometry, material);
+            // Add some wind-like particles or effects
+            const particleGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+            const particleMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+            for (let i = 0; i < 5; i++) {
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                particle.position.set(
+                    (Math.random() - 0.5) * 0.3,
+                    (Math.random() - 0.5) * 0.3,
+                    (Math.random() - 0.5) * 0.3
+                );
+                windMesh.add(particle);
+            }
+            windMesh.position.copy(spawnPosition);
+            windMesh.castShadow = true;
+            scene.add(windMesh);
+            collectables.push({ mesh: windMesh, type: type });
+            return;
+        case 'waterPipeline': // Water Pipeline (safe path)
+            geometry = new THREE.TorusGeometry(0.2, 0.05, 16, 16);
+            color = 0x0088ff; // Blue
             break;
     }
+    
     material = new THREE.MeshStandardMaterial({ color: color });
     const collectableMesh = new THREE.Mesh(geometry, material);
     collectableMesh.position.copy(spawnPosition);
+    
     // Make collectibles float a bit higher if they are above certain types of obstacles
-    // This requires knowing the obstacle type at spawnPosition, which is complex with current setup.
-    // For now, we ensure they don't spawn *inside* obstacles.
-    // A simpler approach for floating: slightly increase Y if an obstacle is very close on XZ plane.
     let yOffset = 0;
     for (const obstacle of obstacles) {
         if (Math.abs(obstacle.mesh.position.x - spawnPosition.x) < 1 && 
@@ -352,23 +433,125 @@ function moveRight() {
 }
 
 function jump() {
+    // Regular jump if not jumping
     if (!isJumping) {
         isJumping = true;
         playerVelocityY = 0.35; // Increased initial velocity to clear obstacles
+        hasDoubleJumped = false; // Reset double jump flag
+    } 
+    // Double jump if Wind Power is active and we haven't used double jump yet
+    else if (canDoubleJump && !hasDoubleJumped) {
+        playerVelocityY = 0.3; // Slightly less powerful than first jump
+        hasDoubleJumped = true;
+        // Visual effect for double jump
+        createJumpEffect();
     }
+}
+
+// Create a visual effect for double jump
+function createJumpEffect() {
+    const particleCount = 10;
+    const particles = [];
+    
+    const particleGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+    const particleMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xaaffaa,
+        transparent: true,
+        opacity: 0.7
+    });
+    
+    for (let i = 0; i < particleCount; i++) {
+        const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+        particle.position.copy(player.position);
+        particle.userData = {
+            velocity: new THREE.Vector3(
+                (Math.random() - 0.5) * 0.1,
+                Math.random() * 0.1,
+                (Math.random() - 0.5) * 0.1
+            ),
+            life: 30 // frames of life
+        };
+        scene.add(particle);
+        particles.push(particle);
+    }
+    
+    // Set up a function to animate and remove particles
+    function updateParticles() {
+        let allDead = true;
+        
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const particle = particles[i];
+            particle.position.add(particle.userData.velocity);
+            particle.userData.life--;
+            
+            // Fade out
+            particle.material.opacity = particle.userData.life / 30 * 0.7;
+            
+            if (particle.userData.life <= 0) {
+                scene.remove(particle);
+                particles.splice(i, 1);
+            } else {
+                allDead = false;
+            }
+        }
+        
+        if (!allDead) {
+            requestAnimationFrame(updateParticles);
+        }
+    }
+    
+    updateParticles();
 }
 
 function updatePlayerPosition() {
     const targetX = lanes[playerLane];
     player.position.x += (targetX - player.position.x) * 0.25; // Increased multiplier for snappier lane switching
 
-    if (isJumping) {
+    // Handle helicopter flying power-up
+    if (isFlying) {
+        // Maintain a high position while flying
+        const flyHeight = 3.0;
+        const prevY = player.position.y;
+        player.position.y += (flyHeight - player.position.y) * 0.1;
+        console.log(`Helicopter flying: Y from ${prevY.toFixed(2)} to ${player.position.y.toFixed(2)}, target: ${flyHeight}`);
+        // No gravity affects the player while flying
+    }
+    // Handle normal jumping or falling
+    else if (isJumping) {
         player.position.y += playerVelocityY;
         playerVelocityY += gravity;
         if (player.position.y <= 0.5) {
             player.position.y = 0.5;
             isJumping = false;
             playerVelocityY = 0;
+            hasDoubleJumped = false; // Reset double jump when landing
+        }
+    }
+    
+    // If player is on water slide, gradually move to that lane
+    if (hasWaterSlide && waterSlideObjects.length > 0) {
+        // Find the lane of the water slide
+        const slideSegment = waterSlideObjects[0];
+        if (slideSegment) {
+            // Find the closest lane to the slide
+            let closestLane = 0;
+            let minDistance = Math.abs(lanes[0] - slideSegment.position.x);
+            
+            for (let i = 1; i < lanes.length; i++) {
+                const distance = Math.abs(lanes[i] - slideSegment.position.x);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestLane = i;
+                }
+            }
+            
+            // Gradually move player to that lane if not already there
+            if (playerLane !== closestLane) {
+                // Don't instantly change lane, just nudge player toward it
+                const prevX = player.position.x;
+                player.position.x += (lanes[closestLane] - player.position.x) * 0.05;
+                console.log(`Water slide guiding: X from ${prevX.toFixed(2)} to ${player.position.x.toFixed(2)}, target lane: ${closestLane}`);
+            }
         }
     }
 }
@@ -383,24 +566,67 @@ function checkCollisions() {
     playerBox.min.z += shrinkAmount;
     playerBox.max.z -= shrinkAmount;
 
+    // Check obstacle collisions if not invincible
     if (!isInvincible) {
+        let collisionDetected = false;
+        
         for (let i = 0; i < obstacles.length; i++) {
             const obstacleBox = new THREE.Box3().setFromObject(obstacles[i].mesh);
-            if (playerBox.intersectsBox(obstacleBox)) {
+            
+            // Check if player is on water slide and if this obstacle is in the same lane as the slide
+            let isProtectedByWaterSlide = false;
+            
+            if (hasWaterSlide && waterSlideObjects.length > 0) {
+                // Find the lane of the water slide
+                const slideSegment = waterSlideObjects[0];
+                if (slideSegment) {
+                    // Check if obstacle is in same lane as water slide
+                    const slideLaneX = slideSegment.position.x;
+                    const obstacleLaneX = obstacles[i].mesh.position.x;
+                    
+                    // If obstacle is close to the slide lane and within the slide path length
+                    if (Math.abs(slideLaneX - obstacleLaneX) < 0.5 && 
+                        obstacles[i].mesh.position.z < player.position.z + 5 && 
+                        obstacles[i].mesh.position.z > player.position.z - 50) {
+                        isProtectedByWaterSlide = true;
+                    }
+                }
+            }
+            
+            // Only check collision if not protected by water slide
+            if (!isProtectedByWaterSlide && playerBox.intersectsBox(obstacleBox)) {
                 console.log('Collision detected with obstacle:', obstacles[i].type);
                 console.log('Player position:', player.position);
                 console.log('Obstacle position:', obstacles[i].mesh.position);
-                gameOver();
-                return; // Exit after first collision
+                collisionDetected = true;
+                break;
             }
+        }
+        
+        if (collisionDetected) {
+            gameOver();
+            return; // Exit after collision
         }
     }
 
     // Check collectable collisions
     for (let i = collectables.length - 1; i >= 0; i--) {
         const collectableBox = new THREE.Box3().setFromObject(collectables[i].mesh);
+        
+        // Normal collision detection
         if (playerBox.intersectsBox(collectableBox)) {
             collectItem(collectables[i].type, i);
+        }
+        // Extended range for Solar Power Boost magnet effect (visual only, actual collection still requires collision)
+        else if (hasSolarBoost) {
+            const magnetRadius = 5; // Same as in animate function
+            const distance = player.position.distanceTo(collectables[i].mesh.position);
+            
+            // If close enough, create a visual trail effect toward the player
+            if (distance < magnetRadius) {
+                // Visual effect for magnet pull could be added here
+                // For example, particle trail from collectible to player
+            }
         }
     }
 }
@@ -409,28 +635,220 @@ function collectItem(type, index) {
     scene.remove(collectables[index].mesh);
     collectables.splice(index, 1);
 
+    // Sound effect for collecting items (placeholder - would need to implement audio)
+    // playSound('collect');
+    
+    console.log(`Collected item: ${type}`); // Add logging for all collected items
+
     switch (type) {
+        // Regular collectibles
         case 'blueprint':
             blueprints++;
             score += 50;
-            // createBuilding(player.position.x, player.position.z + 2, true); // Removed infrastructure trail
             break;
         case 'waterDrop':
             waterDrops++;
             score += 20;
-            // createBuilding(player.position.x, player.position.z + 3, true); // Removed infrastructure trail
             break;
         case 'energyCell':
             energyCells++;
             score += 30;
-            // Could trigger a temporary power-up effect here
             break;
+        // Special aerial collectible
+        case 'aerialStar':
+            score += 150; // Higher score for aerial stars
+            console.log('Collected aerial star! +150 points');
+            break;
+            
+        // Power-ups
         case 'hardHat':
             score += 100; // Bonus for power-up
             activateInvincibility(5000); // Invincible for 5 seconds (5000ms)
+            addPowerUpToUI('🛡️ Hard Hat Shield', 5);
+            break;
+        case 'helicopter':
+            score += 100;
+            activateHelicopter(10000); // Flying for 10 seconds (10000ms)
+            addPowerUpToUI('🚁 Helicopter Ride', 10);
+            break;
+        case 'solarPower':
+            score += 100;
+            activateSolarPower(8000); // Speed boost + magnet for 8 seconds
+            addPowerUpToUI('🌟 Solar Power Boost', 8);
+            break;
+        case 'windPower':
+            score += 100;
+            activateWindPower(15000); // Double jump for 15 seconds
+            addPowerUpToUI('💨 Wind Power', 15);
+            break;
+        case 'waterPipeline':
+            score += 100;
+            activateWaterSlide(12000); // Water slide path for 12 seconds
+            addPowerUpToUI('🚰 Water Pipeline', 12);
             break;
     }
     updateScoreDisplay();
+}
+
+// Power-up activation functions
+function activateHelicopter(duration) {
+    console.log("Activating Helicopter Ride with duration:", duration);
+    isFlying = true;
+    flyingTimer = duration;
+    // Visual effect: make player float higher
+    player.position.y = 3.0;
+    // Change player appearance to indicate flying
+    player.material.color.set(0x888888); // Grey like a helicopter
+    console.log("Helicopter Ride ACTIVE! Player position:", player.position.y);
+}
+
+function deactivateHelicopter() {
+    isFlying = false;
+    // Gently return player to normal height by initiating a controlled fall
+    isJumping = true;
+    playerVelocityY = 0; // Start with zero velocity for a gentle fall
+    // The updatePlayerPosition function will handle the descent with gravity
+    player.material.color.set(0xff0000); // Revert player color
+    console.log("Helicopter Ride DEACTIVATED! Player position:", player.position.y);
+}
+
+function activateSolarPower(duration) {
+    hasSolarBoost = true;
+    solarBoostTimer = duration;
+    // Increase game speed temporarily
+    gameSpeed *= 1.5;
+    // Visual effect: make player glow
+    player.material.color.set(0xffff00); // Yellow glow
+    console.log("Solar Power Boost ACTIVE!");
+}
+
+function deactivateSolarPower() {
+    hasSolarBoost = false;
+    // Return to normal speed
+    gameSpeed /= 1.5;
+    // Only revert color if no other power-ups are active
+    if (!isInvincible && !isFlying && !hasWindPower && !hasWaterSlide) {
+        player.material.color.set(0xff0000);
+    }
+    console.log("Solar Power Boost DEACTIVATED!");
+}
+
+function activateWindPower(duration) {
+    hasWindPower = true;
+    windPowerTimer = duration;
+    canDoubleJump = true;
+    hasDoubleJumped = false;
+    // Visual effect: add wind particles around player
+    player.material.color.set(0xaaffaa); // Light green
+    console.log("Wind Power ACTIVE!");
+}
+
+function deactivateWindPower() {
+    hasWindPower = false;
+    canDoubleJump = false;
+    // Only revert color if no other power-ups are active
+    if (!isInvincible && !isFlying && !hasSolarBoost && !hasWaterSlide) {
+        player.material.color.set(0xff0000);
+    }
+    console.log("Wind Power DEACTIVATED!");
+}
+
+function activateWaterSlide(duration) {
+    console.log("Activating Water Pipeline with duration:", duration);
+    hasWaterSlide = true;
+    waterSlideTimer = duration;
+    // Create water slide path
+    createWaterSlidePath();
+    // Visual effect: blue tint
+    player.material.color.set(0x00aaff); // Blue
+    console.log("Water Pipeline ACTIVE! Water slide objects created:", waterSlideObjects.length);
+}
+
+function deactivateWaterSlide() {
+    hasWaterSlide = false;
+    // Remove water slide path
+    removeWaterSlidePath();
+    // Only revert color if no other power-ups are active
+    if (!isInvincible && !isFlying && !hasSolarBoost && !hasWindPower) {
+        player.material.color.set(0xff0000);
+    }
+    console.log("Water Pipeline DEACTIVATED! Water slide objects remaining:", waterSlideObjects.length);
+}
+
+// Create a visual water slide path ahead of the player
+function createWaterSlidePath() {
+    // Remove any existing water slide
+    removeWaterSlidePath();
+    
+    // Create a safe path ahead
+    const slideLength = 50;
+    const slideGeometry = new THREE.BoxGeometry(1, 0.1, 1);
+    const slideMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x00aaff,
+        transparent: true,
+        opacity: 0.7
+    });
+    
+    // Choose a random lane for the water slide
+    const slideLane = Math.floor(Math.random() * 3);
+    
+    for (let i = 0; i < slideLength; i++) {
+        const slideSegment = new THREE.Mesh(slideGeometry, slideMaterial);
+        slideSegment.position.set(
+            lanes[slideLane],
+            0.05, // Just above the ground
+            player.position.z - 10 - i
+        );
+        scene.add(slideSegment);
+        waterSlideObjects.push(slideSegment);
+    }
+}
+
+function removeWaterSlidePath() {
+    for (const obj of waterSlideObjects) {
+        scene.remove(obj);
+    }
+    waterSlideObjects = [];
+}
+
+// Add power-up to UI display
+function addPowerUpToUI(name, durationSeconds) {
+    // Create a new power-up display element
+    const powerUpElement = document.createElement('div');
+    powerUpElement.style.position = 'absolute';
+    powerUpElement.style.top = `${70 + powerUpElements.length * 30}px`;
+    powerUpElement.style.left = '10px';
+    powerUpElement.style.color = 'white';
+    powerUpElement.style.fontFamily = 'Arial, sans-serif';
+    powerUpElement.style.fontSize = '16px';
+    powerUpElement.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    powerUpElement.style.padding = '5px';
+    powerUpElement.style.borderRadius = '5px';
+    powerUpElement.innerHTML = `${name}: ${durationSeconds}s`;
+    document.body.appendChild(powerUpElement);
+    
+    // Add to active power-ups array
+    const powerUp = {
+        element: powerUpElement,
+        name: name,
+        duration: durationSeconds,
+        startTime: Date.now()
+    };
+    powerUpElements.push(powerUp);
+    activePowerUps.push(powerUp);
+    
+    // Set up timer to remove from UI when expired
+    setTimeout(() => {
+        if (powerUpElement.parentNode) {
+            document.body.removeChild(powerUpElement);
+        }
+        powerUpElements = powerUpElements.filter(p => p !== powerUp);
+        activePowerUps = activePowerUps.filter(p => p !== powerUp);
+        // Reposition remaining power-ups
+        powerUpElements.forEach((p, index) => {
+            p.element.style.top = `${70 + index * 30}px`;
+        });
+    }, durationSeconds * 1000);
 }
 
 function activateInvincibility(duration) {
@@ -466,6 +884,35 @@ function restartGame() {
     camera.position.z = 5;
     gameActive = true;
     gameOverElement.style.display = 'none';
+    
+    // Reset player appearance
+    player.material.color.set(0xff0000); // Red
+
+    // Reset power-up states
+    isInvincible = false;
+    invincibilityTimer = 0;
+    isFlying = false;
+    flyingTimer = 0;
+    hasSolarBoost = false;
+    solarBoostTimer = 0;
+    hasWindPower = false;
+    windPowerTimer = 0;
+    hasWaterSlide = false;
+    waterSlideTimer = 0;
+    canDoubleJump = false;
+    hasDoubleJumped = false;
+    
+    // Clear power-up UI elements
+    powerUpElements.forEach(p => {
+        if (p.element && p.element.parentNode) {
+            p.element.parentNode.removeChild(p.element);
+        }
+    });
+    powerUpElements = [];
+    activePowerUps = [];
+    
+    // Remove water slide objects
+    removeWaterSlidePath();
 
     // Clear existing objects
     obstacles.forEach(o => scene.remove(o.mesh));
@@ -522,6 +969,40 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+// Create special aerial collectibles that can only be collected while flying
+function createAerialCollectable() {
+    // Only spawn if player is flying
+    if (!isFlying) return;
+    
+    // Create a special aerial collectable (star shape)
+    const geometry = new THREE.OctahedronGeometry(0.3, 0); // Diamond/star-like shape
+    const material = new THREE.MeshStandardMaterial({ 
+        color: 0xffdd00, // Gold color
+        emissive: 0xffaa00, // Slight glow
+        metalness: 0.7,
+        roughness: 0.3
+    });
+    
+    const collectableMesh = new THREE.Mesh(geometry, material);
+    
+    // Position it ahead of the player at flying height
+    const laneIndex = Math.floor(Math.random() * 3);
+    collectableMesh.position.set(
+        lanes[laneIndex],
+        player.position.y + (Math.random() * 1 - 0.5), // Vary height slightly around player's flying height
+        player.position.z - 30 - (Math.random() * 20) // Some distance ahead
+    );
+    
+    // Add rotation animation
+    collectableMesh.userData = {
+        rotationSpeed: 0.05 + Math.random() * 0.05 // Random rotation speed
+    };
+    
+    collectableMesh.castShadow = true;
+    scene.add(collectableMesh);
+    collectables.push({ mesh: collectableMesh, type: 'aerialStar' });
+}
+
 function animate() {
     requestAnimationFrame(animate);
 
@@ -529,6 +1010,19 @@ function animate() {
         updatePlayerPosition();
         updateObjects();
         checkCollisions();
+        
+        // Occasionally spawn aerial collectibles when flying
+        if (isFlying && Math.random() < 0.02) { // 2% chance per frame
+            createAerialCollectable();
+        }
+        
+        // Rotate aerial stars
+        for (const collectable of collectables) {
+            if (collectable.type === 'aerialStar' && collectable.mesh.userData.rotationSpeed) {
+                collectable.mesh.rotation.y += collectable.mesh.userData.rotationSpeed;
+                collectable.mesh.rotation.x += collectable.mesh.userData.rotationSpeed * 0.5;
+            }
+        }
 
         // Smoothly update camera's x position to follow the player
         const cameraTargetX = player.position.x;
@@ -546,14 +1040,85 @@ function animate() {
             ground.position.z = camera.position.z - (ground.geometry.parameters.height / 2) + 50; // Adjust so the road starts ahead
         }
         
+        // Update water slide path position if active
+        if (hasWaterSlide) {
+            for (const obj of waterSlideObjects) {
+                obj.position.z += gameSpeed;
+            }
+        }
+        
+        // Magnet effect for Solar Power Boost - attract nearby collectibles
+        if (hasSolarBoost) {
+            const magnetRadius = 5; // Range of magnet effect
+            for (const collectable of collectables) {
+                const distance = player.position.distanceTo(collectable.mesh.position);
+                if (distance < magnetRadius) {
+                    // Move collectible toward player
+                    const direction = new THREE.Vector3().subVectors(player.position, collectable.mesh.position).normalize();
+                    collectable.mesh.position.add(direction.multiplyScalar(0.2)); // Adjust speed as needed
+                }
+            }
+        }
+        
+        // Update game speed and score
         gameSpeed += 0.00001;
-        score += 0.1; // Continuous score for running
+        // Extra speed boost when Solar Power is active
+        if (hasSolarBoost) {
+            score += 0.2; // Double score rate with solar boost
+        } else {
+            score += 0.1; // Normal score rate
+        }
         updateScoreDisplay();
 
+        // Update power-up timers
+        const frameTime = 1000 / 60; // Assuming 60 FPS
+        
+        // Hard Hat Shield (invincibility)
         if (isInvincible) {
-            invincibilityTimer -= 1000 / 60; // Assuming 60 FPS, decrement timer
+            invincibilityTimer -= frameTime;
             if (invincibilityTimer <= 0) {
                 deactivateInvincibility();
+            }
+        }
+        
+        // Helicopter Ride (flying)
+        if (isFlying) {
+            flyingTimer -= frameTime;
+            if (flyingTimer <= 0) {
+                deactivateHelicopter();
+            }
+        }
+        
+        // Solar Power Boost (speed + magnet)
+        if (hasSolarBoost) {
+            solarBoostTimer -= frameTime;
+            if (solarBoostTimer <= 0) {
+                deactivateSolarPower();
+            }
+        }
+        
+        // Wind Power (double jump)
+        if (hasWindPower) {
+            windPowerTimer -= frameTime;
+            if (windPowerTimer <= 0) {
+                deactivateWindPower();
+            }
+        }
+        
+        // Water Pipeline (safe path)
+        if (hasWaterSlide) {
+            waterSlideTimer -= frameTime;
+            if (waterSlideTimer <= 0) {
+                deactivateWaterSlide();
+            }
+        }
+        
+        // Update power-up UI timers
+        for (const powerUp of activePowerUps) {
+            const elapsed = (Date.now() - powerUp.startTime) / 1000;
+            const remaining = Math.max(0, powerUp.duration - elapsed);
+            if (powerUp.element) {
+                powerUp.element.innerHTML = `${powerUp.name}: ${remaining.toFixed(1)}s`;
             }
         }
     }
