@@ -45,16 +45,39 @@ export const COLORS = {
         AERIAL_STAR: 0xffdd00
     },
     ENVIRONMENT: {
+        SKY_WARM: 0xFFDAB9, // PeachPuff for a warmer sky
         SKY: 0x87CEEB,
         ROAD_BASE: '#404040',
         ROAD_TEXTURE: '#505050',
-        ROAD_MARKINGS: '#808080'
+        ROAD_MARKINGS: '#808080',
+        TREE_TRUNK: 0x8B4513, // Brown
+        TREE_FOLIAGE: 0x228B22, // Forest Green
+        PAVEMENT: 0xAAAAAA,  // Light gray for pavement/concrete
+        GREENERY: 0x90EE90,   // LightGreen
+        CONSTRUCTION_GROUND: 0xD2B48C // Tan (for dirt/sand)
+    },
+    BUILDINGS: {
+        INFRASTRUCTURE: 0x0000ff, // Existing blue for infrastructure
+        COMMERCIAL_HIGHRISE: [0xCCCCCC, 0xD3D3D3, 0xC0C0C0], // Shades of gray/silver
+        RESIDENTIAL_MIDRISE: [0xF5F5DC, 0xFFE4B5, 0xDEB887], // Beige, Moccasin, BurlyWood (earthy tones)
+        UNDER_CONSTRUCTION: [0xA9A9A9, 0xCD853F, 0x8B4513] // DarkGray, Peru, SaddleBrown (concrete, wood, dirt)
     }
 };
 
 export const SPAWN_CONFIG = {
     OBSTACLE_MIN_DISTANCE: 12,
-    BUILDING_INTERVAL: { MIN: 3000, MAX: 8000 },
+    BUILDING_INTERVAL: { MIN: 2000, MAX: 5000 }, // Reduced for more frequent clusters
+    BUILDING_OFFSET_FROM_ROAD: 8, // Increased offset for wider side areas
+    BUILDING_SPAWN_DISTANCE_AHEAD: 120, // How far ahead of the player buildings start spawning
+    BUILDING_CLUSTER_SIZE: { MIN: 2, MAX: 5 }, // Number of buildings per cluster
+    BUILDING_CLUSTER_SPREAD: 10, // Max random offset for buildings within a cluster
+    STREET_DECORATION_INTERVAL: { MIN: 1000, MAX: 3000 }, // Interval for spawning street decorations
+    STREET_DECORATION_CHANCE: 0.7, // Chance to spawn a street decoration in an interval
+    STREET_DECORATION_OFFSET: 1.5, // How far from the edge of the lanes decorations spawn
+    SIDE_AREA_LENGTH: 20, // Length of each side area segment
+    SIDE_AREA_WIDTH: 25,  // Width of each side area segment (extending from road edge)
+    SIDE_AREA_SPAWN_TRIGGER_OFFSET: 150, // When player is this far from last spawned side area, spawn new one
+    SIDE_AREA_DESPAWN_OFFSET: 20, // When side area is this far behind camera, despawn it
     COLLECTABLE_INTERVAL: { MIN: 2000, MAX: 5000 },
     OBSTACLE_INTERVAL: { MIN: 1800, MAX: 3500 }, // Base interval, used if dynamic interval is disabled or as a starting point
     AERIAL_SPAWN_CHANCE: 0.02,
