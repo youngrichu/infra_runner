@@ -54,9 +54,9 @@ export const COLORS = {
 
 export const SPAWN_CONFIG = {
     OBSTACLE_MIN_DISTANCE: 15,
-    BUILDING_INTERVAL: { MIN: 1000, MAX: 3000 },
-    COLLECTABLE_INTERVAL: { MIN: 1000, MAX: 3000 },
-    OBSTACLE_INTERVAL: { MIN: 1000, MAX: 3000 },
+    BUILDING_INTERVAL: { MIN: 3000, MAX: 8000 },
+    COLLECTABLE_INTERVAL: { MIN: 2000, MAX: 5000 },
+    OBSTACLE_INTERVAL: { MIN: 2000, MAX: 4000 },
     AERIAL_SPAWN_CHANCE: 0.02
 };
 
@@ -116,6 +116,6 @@ export const OBSTACLE_TYPES = {
 export const COLLECTABLE_SPAWN_WEIGHTS = {
     REGULAR: ['blueprint', 'waterDrop', 'energyCell'],
     POWER_UPS: ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'],
-    REGULAR_WEIGHT: 2,
-    POWER_UP_WEIGHT: 2
+    REGULAR_WEIGHT: 7,
+    POWER_UP_WEIGHT: 1
 };
