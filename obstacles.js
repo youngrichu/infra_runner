@@ -48,13 +48,33 @@ export class ObstacleManager {
         const playerZ = this.gameController.getPlayerPosition().z;
         const minDistance = SPAWN_CONFIG.OBSTACLE_MIN_DISTANCE;
         const currentZ = playerZ - 50;
-        
+
         if (Math.abs(currentZ - this.lastObstacleZ) >= minDistance) {
             this.createObstacle(playerZ);
             this.lastObstacleZ = currentZ;
+
+            let spawnIntervalMin = SPAWN_CONFIG.OBSTACLE_INTERVAL.MIN;
+            let spawnIntervalMax = SPAWN_CONFIG.OBSTACLE_INTERVAL.MAX;
+
+            if (SPAWN_CONFIG.OBSTACLE_DYNAMIC_INTERVAL.ENABLED) {
+                const gameSpeed = this.gameController.getGameSpeed();
+                const reduction = gameSpeed * SPAWN_CONFIG.OBSTACLE_DYNAMIC_INTERVAL.SPEED_SENSITIVITY;
+                
+                spawnIntervalMin = Math.max(
+                    SPAWN_CONFIG.OBSTACLE_INTERVAL.MIN - reduction,
+                    SPAWN_CONFIG.OBSTACLE_DYNAMIC_INTERVAL.MIN_CLAMP
+                );
+                spawnIntervalMax = Math.max(
+                    SPAWN_CONFIG.OBSTACLE_INTERVAL.MAX - reduction,
+                    spawnIntervalMin + SPAWN_CONFIG.OBSTACLE_DYNAMIC_INTERVAL.MAX_CLAMP_MIN_OFFSET // Ensure max is always greater than min
+                );
+            }
+
+            const timeoutDuration = Math.random() * (spawnIntervalMax - spawnIntervalMin) + spawnIntervalMin;
+
             setTimeout(() => {
                 this.spawnObstacle(); // Recursive call without parameters
-            }, Math.random() * SPAWN_CONFIG.OBSTACLE_INTERVAL.MAX + SPAWN_CONFIG.OBSTACLE_INTERVAL.MIN);
+            }, timeoutDuration);
         } else {
             setTimeout(() => {
                 this.spawnObstacle(); // Try again soon

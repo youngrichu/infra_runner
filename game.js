@@ -79,6 +79,14 @@ export class Game {
         this.inputManager.setupMobileControls();
     }
 
+    getGameSpeed() {
+        return this.gameSpeed.value;
+    }
+
+    // Public methods for managers to access current game state
+    // getPlayerPosition() is already defined below
+    // isGameActive() is already defined below
+
     startSpawning() {
         this.obstacleManager.startSpawning();
         this.environment.startSpawning();
@@ -243,6 +251,7 @@ export class Game {
     updateGameSpeed() {
         // Increase game speed gradually
         this.gameSpeed.value += GAME_CONFIG.SPEED_INCREMENT;
+        // console.log("Current Game Speed:", this.gameSpeed.value.toFixed(4)); // For debugging speed changes
         
         // Update score based on solar boost status
         if (this.powerUpManager.getSolarBoostStatus()) {

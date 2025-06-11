@@ -1,7 +1,7 @@
 // Game Constants
 export const GAME_CONFIG = {
-    INITIAL_SPEED: 0.1,
-    SPEED_INCREMENT: 0.00001,
+    INITIAL_SPEED: 0.13,
+    SPEED_INCREMENT: 0.000050,
     GRAVITY: -0.02,
     INITIAL_JUMP_VELOCITY: 0.35,
     DOUBLE_JUMP_VELOCITY: 0.3,
@@ -53,11 +53,19 @@ export const COLORS = {
 };
 
 export const SPAWN_CONFIG = {
-    OBSTACLE_MIN_DISTANCE: 15,
+    OBSTACLE_MIN_DISTANCE: 12,
     BUILDING_INTERVAL: { MIN: 3000, MAX: 8000 },
     COLLECTABLE_INTERVAL: { MIN: 2000, MAX: 5000 },
-    OBSTACLE_INTERVAL: { MIN: 2000, MAX: 4000 },
-    AERIAL_SPAWN_CHANCE: 0.02
+    OBSTACLE_INTERVAL: { MIN: 1800, MAX: 3500 }, // Base interval, used if dynamic interval is disabled or as a starting point
+    AERIAL_SPAWN_CHANCE: 0.02,
+    OBSTACLE_DYNAMIC_INTERVAL: {
+        ENABLED: true,
+        MIN_CLAMP: 700,       // Absolute minimum spawn interval (ms)
+        MAX_CLAMP_MIN_OFFSET: 300, // Ensures MAX_CLAMP is always at least MIN_CLAMP + this offset
+        // How much the interval (both min and max of the range) decreases per unit of game speed.
+        // e.g., if gameSpeed is 0.2 and sensitivity is 5000, reduction is 0.2 * 5000 = 1000ms.
+        SPEED_SENSITIVITY: 6000 
+    }
 };
 
 export const POWER_UP_DURATIONS = {
@@ -69,13 +77,13 @@ export const POWER_UP_DURATIONS = {
 };
 
 export const SCORING = {
-    OBSTACLE_PASSED: 10,
+    OBSTACLE_PASSED: 15,
     BLUEPRINT: 50,
     WATER_DROP: 20,
     ENERGY_CELL: 30,
     POWER_UP: 100,
     AERIAL_STAR: 150,
-    BASE_RATE: 0.1,
+    BASE_RATE: 0.15,
     SOLAR_BOOST_RATE: 0.2
 };
 
@@ -116,6 +124,6 @@ export const OBSTACLE_TYPES = {
 export const COLLECTABLE_SPAWN_WEIGHTS = {
     REGULAR: ['blueprint', 'waterDrop', 'energyCell'],
     POWER_UPS: ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'],
-    REGULAR_WEIGHT: 7,
+    REGULAR_WEIGHT: 6, // Reduced from 15 to make power-ups more frequent
     POWER_UP_WEIGHT: 1
 };

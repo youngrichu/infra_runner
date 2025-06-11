@@ -13,25 +13,30 @@ export class CollectableManager {
 
     createCollectable(playerZ, obstacles) {
         // Weighted random selection
-        let typePool = [];
-        
-        // Add regular collectibles
-        for (let i = 0; i < COLLECTABLE_SPAWN_WEIGHTS.REGULAR_WEIGHT; i++) {
-            typePool = typePool.concat(COLLECTABLE_SPAWN_WEIGHTS.REGULAR);
+        const regularCollectibles = COLLECTABLE_SPAWN_WEIGHTS.REGULAR;
+        const powerUps = COLLECTABLE_SPAWN_WEIGHTS.POWER_UPS;
+        const totalRegularWeight = COLLECTABLE_SPAWN_WEIGHTS.REGULAR_WEIGHT * regularCollectibles.length;
+        const totalPowerUpWeight = COLLECTABLE_SPAWN_WEIGHTS.POWER_UP_WEIGHT * powerUps.length;
+        const totalWeight = totalRegularWeight + totalPowerUpWeight;
+
+        let type;
+        const randomPick = Math.random() * totalWeight;
+
+        if (randomPick < totalRegularWeight) {
+            // Select a regular collectible
+            type = regularCollectibles[Math.floor(Math.random() * regularCollectibles.length)];
+        } else {
+            // Select a power-up
+            type = powerUps[Math.floor(Math.random() * powerUps.length)];
         }
-        
-        // Add power-ups
-        for (let i = 0; i < COLLECTABLE_SPAWN_WEIGHTS.POWER_UP_WEIGHT; i++) {
-            typePool = typePool.concat(COLLECTABLE_SPAWN_WEIGHTS.POWER_UPS);
-        }
-        
-        const type = typePool[Math.floor(Math.random() * typePool.length)];
 
         // Find clear position
         let spawnPosition;
         let positionClear = false;
         let attempts = 0;
         const maxAttempts = 10;
+        const currentObstacles = obstacles || (this.gameController ? this.gameController.getObstacles() : []);
+
 
         while (!positionClear && attempts < maxAttempts) {
             const laneIndex = Math.floor(Math.random() * LANES.COUNT);
@@ -39,26 +44,28 @@ export class CollectableManager {
             spawnPosition = new THREE.Vector3(LANES.POSITIONS[laneIndex], 0.7, zPos);
 
             positionClear = true;
-            for (const obstacle of obstacles) {
-                const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
-                const collectiblePreviewBox = new THREE.Box3(
-                    new THREE.Vector3(spawnPosition.x - 0.5, spawnPosition.y - 0.5, spawnPosition.z - 0.5),
-                    new THREE.Vector3(spawnPosition.x + 0.5, spawnPosition.y + 0.5, spawnPosition.z + 0.5)
-                );
-                if (collectiblePreviewBox.intersectsBox(obstacleBox)) {
-                    positionClear = false;
-                    break;
+            if (currentObstacles && currentObstacles.length > 0) {
+                for (const obstacle of currentObstacles) {
+                    const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
+                    const collectiblePreviewBox = new THREE.Box3(
+                        new THREE.Vector3(spawnPosition.x - 0.5, spawnPosition.y - 0.5, spawnPosition.z - 0.5),
+                        new THREE.Vector3(spawnPosition.x + 0.5, spawnPosition.y + 0.5, spawnPosition.z + 0.5)
+                    );
+                    if (collectiblePreviewBox.intersectsBox(obstacleBox)) {
+                        positionClear = false;
+                        break;
+                    }
                 }
             }
             attempts++;
         }
 
         if (!positionClear) {
-            console.log("Could not find a clear spot for collectible after", maxAttempts, "attempts. Skipping spawn.");
+            // console.log("Could not find a clear spot for collectible after", maxAttempts, "attempts. Skipping spawn.");
             return;
         }
 
-        const collectableMesh = this.createCollectableMesh(type, spawnPosition, obstacles);
+        const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
         if (collectableMesh) {
             this.collectables.push({ mesh: collectableMesh, type: type });
         }

@@ -1,0 +1,29 @@
+# Project-specific files to ignore
+
+project_status.md
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Stack dump files (if any, like the one present)
+bash.exe.stackdump
