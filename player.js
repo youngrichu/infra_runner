@@ -56,10 +56,11 @@ export class Player {
                     const visualOffset = GAME_CONFIG.PLAYER_VISUAL_OFFSET;
                     this.mesh.position.set(0, GAME_CONFIG.GROUND_HEIGHT + visualOffset, 0);
                     
-                    // Setup shadows
+                    // Setup shadows consistently
                     this.mesh.traverse((child) => {
                         if (child.isMesh) {
                             child.castShadow = true;
+                            child.receiveShadow = true;
                         }
                     });
                     
@@ -115,10 +116,34 @@ export class Player {
                         console.log('Stumble mesh created, position:', this.stumbleMesh.position);
                         console.log('Stumble mesh scale:', this.stumbleMesh.scale);
                         
-                        // Setup shadows
+                        // Store reference to running character materials for copying
+                        this.runningMaterials = [];
+                        if (this.mesh) {
+                            this.mesh.traverse((child) => {
+                                if (child.isMesh && child.material) {
+                                    this.runningMaterials.push(child.material);
+                                }
+                            });
+                        }
+                        
+                        // Setup shadows and lighting to match running character
+                        let materialIndex = 0;
                         this.stumbleMesh.traverse((child) => {
                             if (child.isMesh) {
                                 child.castShadow = true;
+                                child.receiveShadow = true;
+                                
+                                // Copy material from running character if available
+                                if (this.runningMaterials[materialIndex] && child.material) {
+                                    const runningMaterial = this.runningMaterials[materialIndex];
+                                    
+                                    // Clone the running character's material
+                                    child.material = runningMaterial.clone();
+                                    child.material.needsUpdate = true;
+                                    
+                                    console.log('Copied material from running character to stumble character');
+                                }
+                                materialIndex++;
                             }
                         });
                         
@@ -169,6 +194,7 @@ export class Player {
         const visualOffset = GAME_CONFIG.PLAYER_VISUAL_OFFSET;
         this.mesh.position.set(0, GAME_CONFIG.GROUND_HEIGHT + visualOffset, 0);
         this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
         this.mesh.visible = true;
         
         this.scene.add(this.mesh);
@@ -541,9 +567,14 @@ export class Player {
         this.gameOverCallback = null; // Clear any pending callback
         this.resetToNormalColor();
         
-        // Resume running animation if it was paused
+        // Restart running animation properly
         if (this.currentAction) {
+            this.currentAction.reset();
             this.currentAction.paused = false;
+            this.currentAction.enabled = true;
+            this.currentAction.setEffectiveWeight(1.0);
+            this.currentAction.play();
+            console.log('Restarted running animation on reset');
         }
     }
 
