@@ -5,6 +5,7 @@ export class PowerUpManager {
     constructor(scene, player) {
         this.scene = scene;
         this.player = player;
+        this.collectableManager = null; // Will be set by game.js
         
         // Power-up states
         this.isInvincible = false;
@@ -24,6 +25,10 @@ export class PowerUpManager {
 
     setGameSpeedReference(gameSpeedRef) {
         this.gameSpeed = gameSpeedRef;
+    }
+
+    setCollectableManager(collectableManager) {
+        this.collectableManager = collectableManager;
     }
 
     activateInvincibility(duration = POWER_UP_DURATIONS.INVINCIBILITY) {
@@ -54,6 +59,10 @@ export class PowerUpManager {
 
     deactivateHelicopter() {
         this.isFlying = false;
+        // Remove all aerial stars when helicopter ends
+        if (this.collectableManager) {
+            this.collectableManager.removeAerialStars();
+        }
         // Initiate controlled fall
         this.player.isJumping = true;
         this.player.velocityY = 0;

@@ -6,6 +6,12 @@ export class CollectableManager {
         this.scene = scene;
         this.collectables = [];
         this.gameController = null; // Will be set by game.js
+        
+        // Fair power-up spawning system (like Subway Surfers)
+        this.lastPowerUpTime = 0;
+        this.powerUpInterval = 25000; // Guarantee power-up every 25 seconds
+        this.regularCollectionsCount = 0;
+        this.powerUpAfterCollections = 8; // Or after collecting 8 regular items
     }
 
     setGameController(gameController) {
@@ -13,35 +19,21 @@ export class CollectableManager {
     }
 
     createCollectable(playerZ, obstacles) {
-        // Weighted random selection
+        // Only spawn regular collectibles here - power-ups are handled separately
         const regularCollectibles = COLLECTABLE_SPAWN_WEIGHTS.REGULAR;
-        const powerUps = COLLECTABLE_SPAWN_WEIGHTS.POWER_UPS;
-        const totalRegularWeight = COLLECTABLE_SPAWN_WEIGHTS.REGULAR_WEIGHT * regularCollectibles.length;
-        const totalPowerUpWeight = COLLECTABLE_SPAWN_WEIGHTS.POWER_UP_WEIGHT * powerUps.length;
-        const totalWeight = totalRegularWeight + totalPowerUpWeight;
+        const type = regularCollectibles[Math.floor(Math.random() * regularCollectibles.length)];
 
-        let type;
-        const randomPick = Math.random() * totalWeight;
-
-        if (randomPick < totalRegularWeight) {
-            // Select a regular collectible
-            type = regularCollectibles[Math.floor(Math.random() * regularCollectibles.length)];
-        } else {
-            // Select a power-up
-            type = powerUps[Math.floor(Math.random() * powerUps.length)];
-        }
-
-        // Find clear position
+        // Find clear position - ALWAYS use exact lane positions
         let spawnPosition;
         let positionClear = false;
         let attempts = 0;
         const maxAttempts = 10;
         const currentObstacles = obstacles || (this.gameController ? this.gameController.getObstacles() : []);
 
-
         while (!positionClear && attempts < maxAttempts) {
             const laneIndex = Math.floor(Math.random() * LANES.COUNT);
             const zPos = playerZ - 60 - (Math.random() * 20);
+            // STRICT: Use exact lane positions with NO deviation
             spawnPosition = new THREE.Vector3(LANES.POSITIONS[laneIndex], 0.7, zPos);
 
             positionClear = true;
@@ -62,13 +54,59 @@ export class CollectableManager {
         }
 
         if (!positionClear) {
-            // console.log("Could not find a clear spot for collectible after", maxAttempts, "attempts. Skipping spawn.");
             return;
         }
 
         const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
         if (collectableMesh) {
             this.collectables.push({ mesh: collectableMesh, type: type });
+        }
+    }
+
+    // NEW: Separate method for power-up spawning
+    createPowerUp(playerZ, obstacles) {
+        const powerUps = COLLECTABLE_SPAWN_WEIGHTS.POWER_UPS;
+        const type = powerUps[Math.floor(Math.random() * powerUps.length)];
+
+        // Find clear position - ALWAYS use exact lane positions
+        let spawnPosition;
+        let positionClear = false;
+        let attempts = 0;
+        const maxAttempts = 10;
+        const currentObstacles = obstacles || (this.gameController ? this.gameController.getObstacles() : []);
+
+        while (!positionClear && attempts < maxAttempts) {
+            const laneIndex = Math.floor(Math.random() * LANES.COUNT);
+            const zPos = playerZ - 40; // Spawn closer for guaranteed visibility
+            // STRICT: Use exact lane positions with NO deviation
+            spawnPosition = new THREE.Vector3(LANES.POSITIONS[laneIndex], 0.7, zPos);
+
+            positionClear = true;
+            if (currentObstacles && currentObstacles.length > 0) {
+                for (const obstacle of currentObstacles) {
+                    const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
+                    const collectiblePreviewBox = new THREE.Box3(
+                        new THREE.Vector3(spawnPosition.x - 0.5, spawnPosition.y - 0.5, spawnPosition.z - 0.5),
+                        new THREE.Vector3(spawnPosition.x + 0.5, spawnPosition.y + 0.5, spawnPosition.z + 0.5)
+                    );
+                    if (collectiblePreviewBox.intersectsBox(obstacleBox)) {
+                        positionClear = false;
+                        break;
+                    }
+                }
+            }
+            attempts++;
+        }
+
+        if (!positionClear) {
+            // Force spawn in center lane if no clear position found
+            spawnPosition = new THREE.Vector3(LANES.POSITIONS[LANES.CENTER], 1.2, playerZ - 40);
+        }
+
+        const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
+        if (collectableMesh) {
+            this.collectables.push({ mesh: collectableMesh, type: type });
+            console.log(`Guaranteed power-up spawned: ${type}`);
         }
     }
 
@@ -108,7 +146,7 @@ export class CollectableManager {
         
         material = new THREE.MeshStandardMaterial({ color: color });
         const collectableMesh = new THREE.Mesh(geometry, material);
-        collectableMesh.position.copy(spawnPosition);
+        collectableMesh.position.copy(spawnPosition); // Use exact spawn position
         
         // Adjust height if above obstacles
         this.adjustHeightForObstacles(collectableMesh, obstacles);
@@ -127,7 +165,10 @@ export class CollectableManager {
         const rotor = new THREE.Mesh(rotorGeometry, material);
         rotor.position.y = 0.1;
         collectableMesh.add(rotor);
-        collectableMesh.position.copy(spawnPosition);
+        
+        // STRICT: Use exact spawn position with NO deviation
+        collectableMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
+        
         collectableMesh.castShadow = true;
         this.scene.add(collectableMesh);
         return collectableMesh;
@@ -141,7 +182,10 @@ export class CollectableManager {
         });
         const solarMesh = new THREE.Mesh(geometry, material);
         solarMesh.rotation.x = -Math.PI / 2;
-        solarMesh.position.copy(spawnPosition);
+        
+        // STRICT: Use exact spawn position with NO deviation
+        solarMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
+        
         solarMesh.castShadow = true;
         this.scene.add(solarMesh);
         return solarMesh;
@@ -174,7 +218,9 @@ export class CollectableManager {
             windMesh.add(particle);
         }
         
-        windMesh.position.copy(spawnPosition);
+        // STRICT: Use exact spawn position with NO deviation
+        windMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
+        
         windMesh.castShadow = true;
         this.scene.add(windMesh);
         return windMesh;
@@ -192,9 +238,10 @@ export class CollectableManager {
         const collectableMesh = new THREE.Mesh(geometry, material);
         
         const laneIndex = Math.floor(Math.random() * LANES.COUNT);
+        
         collectableMesh.position.set(
             LANES.POSITIONS[laneIndex],
-            playerPosition.y + (Math.random() * 1 - 0.5),
+            playerPosition.y + 0.9, // Perfect visual offset to match flying character appearance
             playerPosition.z - 30 - (Math.random() * 20)
         );
         
@@ -261,13 +308,29 @@ export class CollectableManager {
         const collectedItems = [];
         
         for (let i = this.collectables.length - 1; i >= 0; i--) {
-            const collectableBox = new THREE.Box3().setFromObject(this.collectables[i].mesh);
+            const collectable = this.collectables[i];
+            const collectableBox = new THREE.Box3().setFromObject(collectable.mesh);
+            
+            // Skip aerial stars if player is not flying
+            if (collectable.type === 'aerialStar') {
+                const isFlying = this.gameController && this.gameController.powerUpManager && 
+                                this.gameController.powerUpManager.getFlyingStatus();
+                if (!isFlying) {
+                    continue; // Don't collect aerial stars when not flying
+                }
+            }
             
             if (playerBox.intersectsBox(collectableBox)) {
-                const collectable = this.collectables[i];
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
                 collectedItems.push(collectable.type);
+                
+                // Track regular collections for fair power-up spawning
+                const regularTypes = ['blueprint', 'waterDrop', 'energyCell'];
+                if (regularTypes.includes(collectable.type)) {
+                    this.regularCollectionsCount++;
+                    console.log(`Regular collections count: ${this.regularCollectionsCount}`);
+                }
             }
         }
         
@@ -290,8 +353,46 @@ export class CollectableManager {
         return this.collectables;
     }
 
+    // NEW: Check if a power-up should be spawned (Subway Surfers style)
+    shouldSpawnPowerUp() {
+        const currentTime = Date.now();
+        const timeSinceLastPowerUp = currentTime - this.lastPowerUpTime;
+        
+        // Power-up should spawn if:
+        // 1. Time interval reached (25 seconds)
+        // 2. OR collected enough regular items (8 items)
+        if (timeSinceLastPowerUp >= this.powerUpInterval || 
+            this.regularCollectionsCount >= this.powerUpAfterCollections) {
+            return true;
+        }
+        return false;
+    }
+    
+    // NEW: Mark that a power-up was spawned
+    markPowerUpSpawned() {
+        this.lastPowerUpTime = Date.now();
+        this.regularCollectionsCount = 0; // Reset collection counter
+        console.log('Power-up spawned - timers reset');
+    }
+    
     reset() {
         this.collectables.forEach(collectable => this.scene.remove(collectable.mesh));
         this.collectables = [];
+        
+        // Reset fair spawning system
+        this.lastPowerUpTime = Date.now();
+        this.regularCollectionsCount = 0;
+    }
+
+    removeAerialStars() {
+        // Remove all aerial stars from the scene when helicopter power-up ends
+        for (let i = this.collectables.length - 1; i >= 0; i--) {
+            const collectable = this.collectables[i];
+            if (collectable.type === 'aerialStar') {
+                this.scene.remove(collectable.mesh);
+                this.collectables.splice(i, 1);
+                console.log('Removed aerial star after helicopter ended');
+            }
+        }
     }
 }

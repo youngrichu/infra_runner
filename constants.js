@@ -117,7 +117,7 @@ export const SCORING = {
 export const PHYSICS = {
     MAGNET_RADIUS: 5,
     MAGNET_PULL_SPEED: 0.2,
-    FLYING_HEIGHT: 3.0,
+    FLYING_HEIGHT: 1.0, // Character flies around Y=1.0 based on console logs
     COLLISION_SHRINK: 0.1, // General shrink for X and Z axes
     COLLISION_SHRINK_Y: 0.0 // Specific shrink for Y axis (bottom of the player) - Set to 0 to minimize lifting
 };

@@ -74,6 +74,9 @@ export class Game {
         
         // Set game speed reference for power-ups
         this.powerUpManager.setGameSpeedReference(this.gameSpeed);
+        
+        // Set collectable manager reference for power-ups (to remove aerial stars)
+        this.powerUpManager.setCollectableManager(this.collectableManager);
     }
 
     setupInputManager() {
@@ -122,6 +125,14 @@ export class Game {
 
         // Check collisions
         this.checkCollisions();
+
+        // NEW: Fair power-up spawning system (like Subway Surfers)
+        if (this.collectableManager.shouldSpawnPowerUp()) {
+            const playerZ = this.player.getPosition().z;
+            const obstacles = this.obstacleManager.getObstacles();
+            this.collectableManager.createPowerUp(playerZ, obstacles);
+            this.collectableManager.markPowerUpSpawned();
+        }
 
         // Handle aerial collectibles when flying
         if (this.powerUpManager.getFlyingStatus() && Math.random() < SPAWN_CONFIG.AERIAL_SPAWN_CHANCE) {
@@ -176,8 +187,8 @@ export class Game {
     checkCollisions() {
         const playerBox = this.player.getCollisionBox();
 
-        // Check obstacle collisions (if not invincible and not stumbling)
-        if (!this.powerUpManager.getInvincibilityStatus() && !this.player.isStumbling) {
+        // Check obstacle collisions (if not invincible, not stumbling, and not flying)
+        if (!this.powerUpManager.getInvincibilityStatus() && !this.player.isStumbling && !this.powerUpManager.getFlyingStatus()) {
             const collision = this.obstacleManager.checkCollisions(
                 playerBox,
                 this.powerUpManager.getWaterSlideObjects(),
@@ -236,26 +247,31 @@ export class Game {
                     this.uiManager.updateScore(SCORING.POWER_UP);
                     this.powerUpManager.activateInvincibility();
                     this.uiManager.addPowerUpToUI('🛡️ Hard Hat Shield', 5);
+                    this.collectableManager.markPowerUpSpawned(); // Reset fair spawning timer
                     break;
                 case 'helicopter':
                     this.uiManager.updateScore(SCORING.POWER_UP);
                     this.powerUpManager.activateHelicopter();
                     this.uiManager.addPowerUpToUI('🚁 Helicopter Ride', 10);
+                    this.collectableManager.markPowerUpSpawned(); // Reset fair spawning timer
                     break;
                 case 'solarPower':
                     this.uiManager.updateScore(SCORING.POWER_UP);
                     this.powerUpManager.activateSolarPower();
                     this.uiManager.addPowerUpToUI('🌟 Solar Power Boost', 8);
+                    this.collectableManager.markPowerUpSpawned(); // Reset fair spawning timer
                     break;
                 case 'windPower':
                     this.uiManager.updateScore(SCORING.POWER_UP);
                     this.powerUpManager.activateWindPower();
                     this.uiManager.addPowerUpToUI('💨 Wind Power', 15);
+                    this.collectableManager.markPowerUpSpawned(); // Reset fair spawning timer
                     break;
                 case 'waterPipeline':
                     this.uiManager.updateScore(SCORING.POWER_UP);
                     this.powerUpManager.activateWaterSlide();
                     this.uiManager.addPowerUpToUI('🚰 Water Pipeline', 12);
+                    this.collectableManager.markPowerUpSpawned(); // Reset fair spawning timer
                     break;
             }
         }
@@ -266,9 +282,17 @@ export class Game {
         const cameraTargetX = this.player.getPosition().x;
         this.camera.position.x += (cameraTargetX - this.camera.position.x) * GAME_CONFIG.CAMERA_FOLLOW_SPEED;
 
-        // Camera's Y position follows player's Y position for jumps
-        const cameraTargetY = this.player.getPosition().y + 1.5;
-        this.camera.position.y += (cameraTargetY - this.camera.position.y) * GAME_CONFIG.CAMERA_FOLLOW_SPEED;
+        // Enhanced camera Y tracking - different behavior for flying vs. ground
+        let cameraTargetY;
+        if (this.powerUpManager && this.powerUpManager.getFlyingStatus()) {
+            // During flying: higher camera position with smoother tracking
+            cameraTargetY = this.player.getPosition().y + 1.0; // Closer to flying player
+            this.camera.position.y += (cameraTargetY - this.camera.position.y) * (GAME_CONFIG.CAMERA_FOLLOW_SPEED * 0.8); // Smoother for flying
+        } else {
+            // Normal ground tracking
+            cameraTargetY = this.player.getPosition().y + 1.5;
+            this.camera.position.y += (cameraTargetY - this.camera.position.y) * GAME_CONFIG.CAMERA_FOLLOW_SPEED;
+        }
 
         // Move camera forward
         this.camera.position.z -= this.gameSpeed.value;

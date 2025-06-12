@@ -12,11 +12,17 @@ export class Player {
         this.hasDoubleJumped = false;
         this.canDoubleJump = false;
         
-        // Simple animation system - running + stumble
+        // Animation system - running + flying + stumble
         this.mixer = null;
         this.currentAction = null;
         this.stumbleAction = null;
+        this.flyingAction = null;
         this.clock = new THREE.Clock();
+        
+        // Flying state
+        this.isFlying = false;
+        this.flyingHoverOffset = 0; // For subtle hovering motion
+        this.flyingTime = 0; // Track time spent flying
         
         // Stumble state
         this.isStumbling = false;
@@ -35,7 +41,9 @@ export class Player {
     async createSimplePlayer() {
         // Load running animation first
         await this.loadRunningAnimation();
-        // Then load stumble animation
+        // Then load flying animation
+        await this.loadFlyingAnimation();
+        // Finally load stumble animation
         await this.loadStumbleAnimation();
     }
     
@@ -83,6 +91,56 @@ export class Player {
                     console.error('Failed to load running model:', error);
                     this.createFallbackPlayer();
                     resolve();
+                }
+            );
+        });
+    }
+    
+    async loadFlyingAnimation() {
+        return new Promise((resolve, reject) => {
+            const loader = new GLTFLoader();
+            console.log('Attempting to load flying animation...');
+            loader.load(
+                'assets/models/Flying.glb',
+                (gltf) => {
+                    console.log('Loaded flying animation successfully');
+                    
+                    // Create flying mesh
+                    this.flyingMesh = gltf.scene;
+                    this.flyingMesh.scale.set(0.08, 0.08, 0.08); // Much smaller to prevent parade balloon effect
+                    this.flyingMesh.rotation.y = Math.PI;
+                    this.flyingMesh.visible = false; // Hide initially
+                    
+                    // Position same as running mesh
+                    const visualOffset = GAME_CONFIG.PLAYER_VISUAL_OFFSET;
+                    this.flyingMesh.position.set(0, GAME_CONFIG.GROUND_HEIGHT + visualOffset, 0);
+                    
+                    // Setup shadows consistently
+                    this.flyingMesh.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    
+                    this.scene.add(this.flyingMesh);
+                    console.log('Flying mesh added to scene');
+                    
+                    // Create flying mixer and action for static pose
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        this.flyingMixer = new THREE.AnimationMixer(this.flyingMesh);
+                        this.flyingAction = this.flyingMixer.clipAction(gltf.animations[0]);
+                        this.flyingAction.setLoop(THREE.LoopOnce); // Only play once
+                        this.flyingAction.clampWhenFinished = true; // Stay at end frame
+                        console.log('Flying animation ready for static pose');
+                    }
+                    
+                    resolve();
+                },
+                undefined,
+                (error) => {
+                    console.error('Failed to load flying animation:', error);
+                    resolve(); // Continue without flying animation
                 }
             );
         });
@@ -383,6 +441,9 @@ export class Player {
             this.endStumble();
         }
         
+        // Handle animation switching based on state
+        this.updateAnimationState(isFlying);
+        
         // If stumbling, only update animation mixers and exit - no movement allowed
         if (this.isStumbling) {
             // Update animation mixers
@@ -404,25 +465,54 @@ export class Player {
         
         const targetX = LANES.POSITIONS[this.lane];
         
-        // Update both running and stumble mesh positions
+        // Update all mesh positions (running, flying, stumble)
         this.mesh.position.x += (targetX - this.mesh.position.x) * GAME_CONFIG.LANE_SWITCH_SPEED;
+        if (this.flyingMesh) {
+            // Always keep flying mesh in sync with main position, but add floating effect when flying
+            this.flyingMesh.position.x = this.mesh.position.x;
+            this.flyingMesh.position.z = this.mesh.position.z;
+        }
         if (this.stumbleMesh) {
             this.stumbleMesh.position.x = this.mesh.position.x; // Keep X in sync
             this.stumbleMesh.position.y = this.mesh.position.y - 0.015; // Maintain smaller stumble Y offset
             this.stumbleMesh.position.z = this.mesh.position.z; // Keep Z in sync
         }
 
-        // Handle helicopter flying power-up
+        // Handle helicopter flying power-up with smooth hovering
         if (isFlying) {
+            this.isFlying = true;
+            this.flyingTime += 0.016; // Approximate delta time for smooth hovering
+            
             const flyHeight = PHYSICS.FLYING_HEIGHT;
-            this.mesh.position.y += (flyHeight - this.mesh.position.y) * 0.1;
-            if (this.stumbleMesh) {
-                this.stumbleMesh.position.y = this.mesh.position.y - 0.015; // Maintain smaller stumble Y offset
+            // Create more pronounced hovering motion since animation is static
+            const primaryHover = Math.sin(this.flyingTime * 1.2) * 0.25; // More pronounced
+            const secondaryHover = Math.sin(this.flyingTime * 2.5) * 0.08; // Subtle secondary
+            this.flyingHoverOffset = primaryHover + secondaryHover;
+            
+            const targetHeight = flyHeight + this.flyingHoverOffset;
+            
+            this.mesh.position.y += (targetHeight - this.mesh.position.y) * 0.08;
+            if (this.flyingMesh) {
+                this.flyingMesh.position.y = this.mesh.position.y;
+                // Log every 60 frames (about once per second)
+                if (Math.floor(this.flyingTime * 60) % 60 === 0) {
+                    console.log('Flying mesh floating at Y:', this.mesh.position.y.toFixed(2), 'hover offset:', this.flyingHoverOffset.toFixed(2));
+                }
             }
+            if (this.stumbleMesh) {
+                this.stumbleMesh.position.y = this.mesh.position.y - 0.015;
+            }
+        } else {
+            this.isFlying = false;
+            this.flyingTime = 0;
+            this.flyingHoverOffset = 0;
         }
-        // Handle normal jumping or falling (but not while stumbling)
-        else if (this.isJumping && !this.isStumbling) {
+        // Handle normal jumping or falling (but not while stumbling or flying)
+        if (this.isJumping && !this.isStumbling && !isFlying) {
             this.mesh.position.y += this.velocityY;
+            if (this.flyingMesh) {
+                this.flyingMesh.position.y = this.mesh.position.y;
+            }
             if (this.stumbleMesh) {
                 this.stumbleMesh.position.y = this.mesh.position.y - 0.015; // Maintain smaller stumble Y offset
             }
@@ -433,6 +523,9 @@ export class Player {
             
             if (this.mesh.position.y <= visualGroundHeight) {
                 this.mesh.position.y = visualGroundHeight;
+                if (this.flyingMesh) {
+                    this.flyingMesh.position.y = visualGroundHeight;
+                }
                 if (this.stumbleMesh) {
                     this.stumbleMesh.position.y = visualGroundHeight - 0.015; // Maintain smaller stumble Y offset
                 }
@@ -460,6 +553,9 @@ export class Player {
                 
                 if (this.lane !== closestLane) {
                     this.mesh.position.x += (LANES.POSITIONS[closestLane] - this.mesh.position.x) * 0.05;
+                    if (this.flyingMesh) {
+                        this.flyingMesh.position.x = this.mesh.position.x;
+                    }
                     if (this.stumbleMesh) {
                         this.stumbleMesh.position.x = this.mesh.position.x; // Keep X in sync only
                     }
@@ -472,14 +568,95 @@ export class Player {
         if (this.mixer) {
             this.mixer.update(deltaTime);
         }
+        // Only update flying mixer if not in static flying mode
+        if (this.flyingMixer && (!this.isFlying || !this.flyingMesh || !this.flyingMesh.visible)) {
+            this.flyingMixer.update(deltaTime);
+        }
         // Note: stumbleMixer is only updated during stumble (handled above)
+    }
+
+    updateAnimationState(isFlying) {
+        // Don't change animations while stumbling
+        if (this.isStumbling) return;
+        
+        // Switch to flying animation
+        if (isFlying && this.flyingMesh && this.flyingAction && !this.flyingMesh.visible) {
+            console.log('Switching to flying animation');
+            console.log('Flying mesh position before switch:', this.flyingMesh.position);
+            console.log('Running mesh position before switch:', this.mesh.position);
+            
+            // Hide running mesh, show flying mesh
+            this.mesh.visible = false;
+            this.flyingMesh.visible = true;
+            
+            // Sync positions before switching
+            this.flyingMesh.position.copy(this.mesh.position);
+            console.log('Flying mesh position after sync:', this.flyingMesh.position);
+            
+            // Stop running animation
+            if (this.currentAction) {
+                this.currentAction.stop();
+            }
+            
+            // Create completely static flying pose - lock to a good frame
+            this.flyingAction.reset();
+            this.flyingAction.enabled = true;
+            this.flyingAction.setEffectiveWeight(1.0);
+            
+            // Try to find a good flying pose frame (middle of animation)
+            const animationDuration = this.flyingAction.getClip().duration;
+            const goodPoseTime = animationDuration * 0.3; // 30% through animation
+            this.flyingAction.time = goodPoseTime;
+            this.flyingAction.setEffectiveTimeScale(0); // Stop animation completely
+            this.flyingAction.play();
+            
+            // Force update to apply the pose
+            if (this.flyingMixer) {
+                this.flyingMixer.update(0);
+            }
+            
+            console.log('Flying animation locked to static pose at time:', goodPoseTime, '- mesh visible:', this.flyingMesh.visible);
+            console.log('Animation should now be completely static with no looping');
+        }
+        // Switch back to running animation
+        else if (!isFlying && this.flyingMesh && this.flyingMesh.visible) {
+            console.log('Switching back to running animation');
+            
+            // Hide flying mesh, show running mesh
+            this.flyingMesh.visible = false;
+            this.mesh.visible = true;
+            
+            // Sync positions before switching
+            this.mesh.position.copy(this.flyingMesh.position);
+            
+            // Reset flying animation for next use
+            if (this.flyingAction) {
+                this.flyingAction.stop();
+                this.flyingAction.setEffectiveTimeScale(1.0); // Reset time scale
+            }
+            
+            // Restart running animation
+            if (this.currentAction) {
+                this.currentAction.reset();
+                this.currentAction.enabled = true;
+                this.currentAction.setEffectiveWeight(1.0);
+                this.currentAction.play();
+            }
+            
+            console.log('Running animation restarted');
+        }
     }
 
     getCollisionBox() {
         if (!this.mesh) return new THREE.Box3();
 
         // Use the position of the currently visible mesh
-        const activeMesh = this.isStumbling && this.stumbleMesh ? this.stumbleMesh : this.mesh;
+        let activeMesh = this.mesh;
+        if (this.isStumbling && this.stumbleMesh && this.stumbleMesh.visible) {
+            activeMesh = this.stumbleMesh;
+        } else if (this.flyingMesh && this.flyingMesh.visible) {
+            activeMesh = this.flyingMesh;
+        }
         const playerPos = activeMesh.position;
         
         // Debug logging for collision box
@@ -554,6 +731,11 @@ export class Player {
             this.mesh.visible = true; // Make sure running mesh is visible
         }
         
+        if (this.flyingMesh) {
+            this.flyingMesh.position.set(LANES.POSITIONS[this.lane], visualGroundHeight, 0);
+            this.flyingMesh.visible = false; // Hide flying mesh
+        }
+        
         if (this.stumbleMesh) {
             this.stumbleMesh.position.set(LANES.POSITIONS[this.lane], visualGroundHeight - 0.015, 0); // Apply smaller stumble offset
             this.stumbleMesh.visible = false; // Hide stumble mesh
@@ -564,6 +746,9 @@ export class Player {
         this.hasDoubleJumped = false;
         this.canDoubleJump = false;
         this.isStumbling = false; // Reset stumble state
+        this.isFlying = false; // Reset flying state
+        this.flyingTime = 0;
+        this.flyingHoverOffset = 0;
         this.gameOverCallback = null; // Clear any pending callback
         this.resetToNormalColor();
         
@@ -579,7 +764,14 @@ export class Player {
     }
 
     getPosition() {
-        return this.mesh ? this.mesh.position : new THREE.Vector3();
+        // Return the position of the currently active/visible mesh
+        if (this.isFlying && this.flyingMesh && this.flyingMesh.visible) {
+            return this.flyingMesh.position;
+        } else if (this.isStumbling && this.stumbleMesh && this.stumbleMesh.visible) {
+            return this.stumbleMesh.position;
+        } else {
+            return this.mesh ? this.mesh.position : new THREE.Vector3();
+        }
     }
 
     setPosition(x, y, z) {
