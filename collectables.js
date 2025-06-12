@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { LANES, COLORS, SPAWN_CONFIG, SCORING, COLLECTABLE_SPAWN_WEIGHTS } from './constants.js';
 
 export class CollectableManager {

@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 // Game Constants
 export const GAME_CONFIG = {
     INITIAL_SPEED: 0.13,
@@ -6,8 +8,10 @@ export const GAME_CONFIG = {
     INITIAL_JUMP_VELOCITY: 0.35,
     DOUBLE_JUMP_VELOCITY: 0.3,
     GROUND_HEIGHT: 0.5,
+    PLAYER_VISUAL_OFFSET: -0.35, // Offset to align GLB model visual center with collision box
     CAMERA_FOLLOW_SPEED: 0.1,
-    LANE_SWITCH_SPEED: 0.25
+    LANE_SWITCH_SPEED: 0.25,
+    DEBUG_COLLISIONS: true // Set to true to visualize player collision box
 };
 
 export const LANES = {
@@ -114,7 +118,8 @@ export const PHYSICS = {
     MAGNET_RADIUS: 5,
     MAGNET_PULL_SPEED: 0.2,
     FLYING_HEIGHT: 3.0,
-    COLLISION_SHRINK: 0.1
+    COLLISION_SHRINK: 0.1, // General shrink for X and Z axes
+    COLLISION_SHRINK_Y: 0.0 // Specific shrink for Y axis (bottom of the player) - Set to 0 to minimize lifting
 };
 
 export const OBSTACLE_TYPES = {

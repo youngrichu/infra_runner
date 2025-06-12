@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { LANES, COLORS, SPAWN_CONFIG } from './constants.js';
 
 export class Environment {

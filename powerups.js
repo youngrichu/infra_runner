@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { LANES, COLORS, POWER_UP_DURATIONS, PHYSICS } from './constants.js';
 
 export class PowerUpManager {

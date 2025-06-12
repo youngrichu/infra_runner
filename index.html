@@ -66,9 +66,16 @@
         <p><strong>Power-ups:</strong> Hard Hat (shield), Helicopter (fly), Solar (speed+magnet), Wind (double jump), Water Pipeline (safe path)</p>
     </div>
 
-    <!-- Three.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    
+    <!-- Three.js Library (ES Module via Import Map) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
     <!-- Game Modules -->
     <script type="module" src="game.js"></script>
     

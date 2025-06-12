@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { LANES, OBSTACLE_TYPES, SPAWN_CONFIG, SCORING } from './constants.js';
 
 export class ObstacleManager {

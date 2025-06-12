@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { Player } from './player.js';
 import { Environment } from './environment.js';
 import { ObstacleManager } from './obstacles.js';
@@ -30,9 +31,9 @@ export class Game {
         this.init();
     }
 
-    init() {
+    async init() { // Make init async
         this.setupThreeJS();
-        this.createManagers();
+        await this.createManagers(); // Await manager creation
         this.setupInputManager();
         this.startSpawning();
         this.animate();
@@ -55,10 +56,12 @@ export class Game {
         document.getElementById('game-container').appendChild(this.renderer.domElement);
     }
 
-    createManagers() {
+    async createManagers() { // Make createManagers async
         // Create managers in dependency order
         this.environment = new Environment(this.scene);
         this.player = new Player(this.scene);
+        await this.player.initialize(); // Await player initialization
+
         this.obstacleManager = new ObstacleManager(this.scene);
         this.collectableManager = new CollectableManager(this.scene);
         this.powerUpManager = new PowerUpManager(this.scene, this.player);
