@@ -98,11 +98,23 @@ export class Game {
 
     updateGameLogic() {
         if (!this.gameActive) return;
+        
+        // Pause most game logic if player is stumbling
+        if (this.player.isStumbling) {
+            // Only update player position to handle stumble animation, but pause everything else
+            this.player.updatePosition(
+                this.powerUpManager.getFlyingStatus(),
+                this.powerUpManager.getWaterSlideObjects(),
+                this.gameSpeed.value
+            );
+            return; // Skip all other game logic during stumble
+        }
 
         // Update player position
         this.player.updatePosition(
             this.powerUpManager.getFlyingStatus(),
-            this.powerUpManager.getWaterSlideObjects()
+            this.powerUpManager.getWaterSlideObjects(),
+            this.gameSpeed.value  // Pass game speed for animation state management
         );
 
         // Update all objects
@@ -164,8 +176,8 @@ export class Game {
     checkCollisions() {
         const playerBox = this.player.getCollisionBox();
 
-        // Check obstacle collisions (if not invincible)
-        if (!this.powerUpManager.getInvincibilityStatus()) {
+        // Check obstacle collisions (if not invincible and not stumbling)
+        if (!this.powerUpManager.getInvincibilityStatus() && !this.player.isStumbling) {
             const collision = this.obstacleManager.checkCollisions(
                 playerBox,
                 this.powerUpManager.getWaterSlideObjects(),
@@ -173,7 +185,23 @@ export class Game {
             );
             
             if (collision) {
-                this.gameOver();
+                console.log('*** COLLISION DETECTED ***');
+                console.log('Player isStumbling:', this.player.isStumbling);
+                
+                // Try to trigger stumble animation with game over callback
+                console.log('Attempting to trigger stumble...');
+                const stumbleTriggered = this.player.triggerStumble(() => this.gameOver());
+                console.log('Stumble triggered result:', stumbleTriggered);
+                
+                if (!stumbleTriggered) {
+                    // If stumble animation not available, immediate game over
+                    console.log('Stumble animation not available - Game Over!');
+                    this.gameOver();
+                    return;
+                }
+                
+                // Stumble was successfully triggered, continue playing
+                console.log('Player stumbled but continues playing!');
                 return;
             }
         }
