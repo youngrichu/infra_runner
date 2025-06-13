@@ -50,40 +50,49 @@ export const COLORS = {
         SOLAR_ORB: 0xffcc33 // New: Solar energy collectible
     },
     ENVIRONMENT: {
-        SKY_WARM: 0xFFDAB9, // PeachPuff for a warmer sky
+        SKY_WARM: 0xFF6B35, // Vibrant African sunset orange
         SKY: 0x87CEEB,
         ROAD_BASE: '#404040',
-        ROAD_TEXTURE: '#505050',
-        ROAD_MARKINGS: '#808080',
+        ROAD_TEXTURE: '#505050', 
+        ROAD_MARKINGS: '#FFD700', // Gold markings for African flair
         TREE_TRUNK: 0x8B4513, // Brown
         TREE_FOLIAGE: 0x228B22, // Forest Green
-        PAVEMENT: 0xAAAAAA,  // Light gray for pavement/concrete
-        GREENERY: 0x90EE90,   // LightGreen
-        CONSTRUCTION_GROUND: 0xD2B48C // Tan (for dirt/sand)
+        PAVEMENT: 0xFFD700,  // Golden pavement for vibrant look
+        GREENERY: 0x32CD32,   // More vibrant green
+        CONSTRUCTION_GROUND: 0xCD853F, // Richer earth tone
+        // New African-inspired surface colors
+        MARKET_SURFACE: 0xFF6347,    // Vibrant terracotta
+        PLAZA_SURFACE: 0xFFD700,     // Golden plaza
+        CULTURAL_SURFACE: 0x663399,  // Rich purple
+        RESIDENTIAL_SURFACE: 0xDEB887 // Warm beige
     },
     BUILDINGS: {
-        INFRASTRUCTURE: 0x0000ff, // Existing blue for infrastructure
-        COMMERCIAL_HIGHRISE: [0xCCCCCC, 0xD3D3D3, 0xC0C0C0], // Shades of gray/silver
-        RESIDENTIAL_MIDRISE: [0xF5F5DC, 0xFFE4B5, 0xDEB887], // Beige, Moccasin, BurlyWood (earthy tones)
-        UNDER_CONSTRUCTION: [0xA9A9A9, 0xCD853F, 0x8B4513] // DarkGray, Peru, SaddleBrown (concrete, wood, dirt)
+        INFRASTRUCTURE: 0x0047AB, // Bold blue for infrastructure
+        // Enhanced African-inspired building colors
+        MODERN_TOWER: [0x0047AB, 0x1E90FF, 0x4169E1], // Bold blues
+        RESIDENTIAL_WARM: [0xFF6347, 0xCD853F, 0xDEB887], // Warm earth tones
+        COMMERCIAL_VIBRANT: [0xFFD700, 0xFFA500, 0xFF8C00], // Golden yellows
+        CULTURAL_RICH: [0x663399, 0x9966CC, 0xBA55D3], // Rich purples
+        MIXED_USE: [0x228B22, 0x32CD32, 0x006400], // Natural greens
+        TRADITIONAL: [0xCD853F, 0xD2691E, 0xA0522D] // Rich terracotta
     }
 };
 
 export const SPAWN_CONFIG = {
     OBSTACLE_MIN_DISTANCE: 12,
-    OBSTACLE_SAFE_DISTANCE_MULTIPLIER: 1.5, // Increase minimum distance at high speeds
-    BUILDING_INTERVAL: { MIN: 2000, MAX: 5000 }, // Reduced for more frequent clusters
-    BUILDING_OFFSET_FROM_ROAD: 8, // Increased offset for wider side areas
-    BUILDING_SPAWN_DISTANCE_AHEAD: 120, // How far ahead of the player buildings start spawning
-    BUILDING_CLUSTER_SIZE: { MIN: 2, MAX: 5 }, // Number of buildings per cluster
-    BUILDING_CLUSTER_SPREAD: 10, // Max random offset for buildings within a cluster
-    STREET_DECORATION_INTERVAL: { MIN: 1000, MAX: 3000 }, // Interval for spawning street decorations
-    STREET_DECORATION_CHANCE: 0.7, // Chance to spawn a street decoration in an interval
-    STREET_DECORATION_OFFSET: 1.5, // How far from the edge of the lanes decorations spawn
-    SIDE_AREA_LENGTH: 20, // Length of each side area segment
-    SIDE_AREA_WIDTH: 25,  // Width of each side area segment (extending from road edge)
-    SIDE_AREA_SPAWN_TRIGGER_OFFSET: 150, // When player is this far from last spawned side area, spawn new one
-    SIDE_AREA_DESPAWN_OFFSET: 20, // When side area is this far behind camera, despawn it
+    OBSTACLE_SAFE_DISTANCE_MULTIPLIER: 1.5,
+    BUILDING_INTERVAL: { MIN: 8000, MAX: 15000 }, // Much longer intervals for minimal spawning
+    BUILDING_OFFSET_FROM_ROAD: 20,
+    BUILDING_SPAWN_DISTANCE_AHEAD: 100,
+    BUILDING_CLUSTER_SIZE: { MIN: 1, MAX: 1 },
+    BUILDING_CLUSTER_SPREAD: 0,
+    STREET_DECORATION_INTERVAL: { MIN: 2000, MAX: 4000 }, // Slower tree spawning
+    STREET_DECORATION_CHANCE: 0.3, // Much lower chance
+    STREET_DECORATION_OFFSET: 2.5,
+    SIDE_AREA_LENGTH: 25,
+    SIDE_AREA_WIDTH: 30,
+    SIDE_AREA_SPAWN_TRIGGER_OFFSET: 180,
+    SIDE_AREA_DESPAWN_OFFSET: 25,
     COLLECTABLE_INTERVAL: { MIN: 2000, MAX: 5000 },
     OBSTACLE_INTERVAL: { MIN: 1800, MAX: 3500 }, // Base interval, used if dynamic interval is disabled or as a starting point
     AERIAL_SPAWN_CHANCE: 0.02,

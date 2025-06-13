@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Player } from './player.js';
-import { Environment } from './environment.js';
+import { DirectModelEnvironment } from './direct-model-environment.js';
 import { ObstacleManager } from './obstacles.js';
 import { CollectableManager } from './collectables.js';
 import { PowerUpManager } from './powerups.js';
@@ -58,7 +58,7 @@ export class Game {
 
     async createManagers() { // Make createManagers async
         // Create managers in dependency order
-        this.environment = new Environment(this.scene);
+        this.environment = new DirectModelEnvironment(this.scene);
         this.player = new Player(this.scene);
         await this.player.initialize(); // Await player initialization
 
