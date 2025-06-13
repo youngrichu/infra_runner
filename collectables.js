@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { LANES, COLORS, SPAWN_CONFIG, SCORING, COLLECTABLE_SPAWN_WEIGHTS } from './constants.js';
+import { LANES, COLORS, SPAWN_CONFIG, SCORING, COLLECTABLE_SPAWN_WEIGHTS, PHYSICS } from './constants.js';
+import { CollisionUtils } from './collision-utils.js';
 
 export class CollectableManager {
     constructor(scene) {
@@ -254,6 +255,73 @@ export class CollectableManager {
         this.collectables.push({ mesh: collectableMesh, type: 'aerialStar' });
     }
 
+    createSolarOrb(playerPosition) {
+        // Create a light bulb/solar energy orb that appears during solar boost
+        const geometry = new THREE.SphereGeometry(0.25, 16, 16);
+        const material = new THREE.MeshStandardMaterial({ 
+            color: COLORS.COLLECTABLES.SOLAR_ORB,
+            emissive: 0xffaa00,
+            emissiveIntensity: 0.4,
+            metalness: 0.3,
+            roughness: 0.1,
+            transparent: true,
+            opacity: 0.9
+        });
+        
+        const collectableMesh = new THREE.Mesh(geometry, material);
+        
+        // Add a glowing inner core
+        const coreGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+        const coreMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0xffff88,
+            emissiveIntensity: 0.8,
+            transparent: true,
+            opacity: 0.7
+        });
+        const core = new THREE.Mesh(coreGeometry, coreMaterial);
+        collectableMesh.add(core);
+        
+        // Add light rays (4 extending lines)
+        for (let i = 0; i < 4; i++) {
+            const rayGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8);
+            const rayMaterial = new THREE.MeshStandardMaterial({
+                color: COLORS.COLLECTABLES.SOLAR_ORB,
+                emissive: 0xffcc00,
+                emissiveIntensity: 0.3,
+                transparent: true,
+                opacity: 0.6
+            });
+            const ray = new THREE.Mesh(rayGeometry, rayMaterial);
+            
+            // Position rays in cross pattern
+            if (i < 2) {
+                ray.rotation.z = (i * Math.PI) + (Math.PI / 4); // Diagonal rays
+            } else {
+                ray.rotation.x = ((i - 2) * Math.PI) + (Math.PI / 4); // Other diagonal rays
+            }
+            
+            collectableMesh.add(ray);
+        }
+        
+        const laneIndex = Math.floor(Math.random() * LANES.COUNT);
+        
+        collectableMesh.position.set(
+            LANES.POSITIONS[laneIndex],
+            playerPosition.y + 0.5, // Slightly closer to player than aerial stars
+            playerPosition.z - 25 - (Math.random() * 15)
+        );
+        
+        collectableMesh.userData = {
+            rotationSpeed: 0.08 + Math.random() * 0.04, // Faster rotation than aerial stars
+            pulseSpeed: 0.03 + Math.random() * 0.02
+        };
+        
+        collectableMesh.castShadow = true;
+        this.scene.add(collectableMesh);
+        this.collectables.push({ mesh: collectableMesh, type: 'solarOrb' });
+    }
+
     adjustHeightForObstacles(collectableMesh, obstacles) {
         let yOffset = 0;
         for (const obstacle of obstacles) {
@@ -297,6 +365,19 @@ export class CollectableManager {
                 collectable.mesh.rotation.x += collectable.mesh.userData.rotationSpeed * 0.5;
             }
             
+            // Animate solar orbs
+            if (collectable.type === 'solarOrb' && collectable.mesh.userData.rotationSpeed) {
+                collectable.mesh.rotation.y += collectable.mesh.userData.rotationSpeed;
+                collectable.mesh.rotation.z += collectable.mesh.userData.rotationSpeed * 0.3;
+                
+                // Pulsing glow effect
+                if (collectable.mesh.userData.pulseSpeed) {
+                    const time = Date.now() * 0.001;
+                    const pulse = Math.sin(time * collectable.mesh.userData.pulseSpeed * 10) * 0.5 + 0.5;
+                    collectable.mesh.material.emissiveIntensity = 0.3 + (pulse * 0.3);
+                }
+            }
+            
             if (collectable.mesh.position.z > cameraZ + 5) {
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
@@ -306,6 +387,11 @@ export class CollectableManager {
 
     checkCollisions(playerBox) {
         const collectedItems = [];
+        
+        // Get current game speed and magnet status for enhanced collision detection
+        const gameSpeed = this.gameController ? this.gameController.getGameSpeed() : 0;
+        const hasMagnetEffect = this.gameController && this.gameController.powerUpManager ? 
+                              this.gameController.powerUpManager.getSolarBoostStatus() : false;
         
         for (let i = this.collectables.length - 1; i >= 0; i--) {
             const collectable = this.collectables[i];
@@ -320,10 +406,40 @@ export class CollectableManager {
                 }
             }
             
-            if (playerBox.intersectsBox(collectableBox)) {
+            // Skip solar orbs if player doesn't have solar boost
+            if (collectable.type === 'solarOrb') {
+                const hasSolarBoost = this.gameController && this.gameController.powerUpManager && 
+                                     this.gameController.powerUpManager.getSolarBoostStatus();
+                if (!hasSolarBoost) {
+                    continue; // Don't collect solar orbs when not in solar boost mode
+                }
+            }
+            
+            // Use enhanced collision detection for collectibles
+            let collisionDetected = false;
+            
+            if (gameSpeed > PHYSICS.HIGH_SPEED_THRESHOLD) {
+                // High-speed: Use enhanced collision detection with larger collection radius
+                collisionDetected = CollisionUtils.checkCollectableCollision(
+                    playerBox, 
+                    collectableBox, 
+                    gameSpeed, 
+                    hasMagnetEffect
+                );
+            } else {
+                // Low-speed: Use standard collision detection
+                collisionDetected = playerBox.intersectsBox(collectableBox);
+            }
+            
+            if (collisionDetected) {
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
                 collectedItems.push(collectable.type);
+                
+                // Debug logging for high-speed collections
+                if (gameSpeed > 0.2) {
+                    console.log(`High-speed collection: ${collectable.type} at speed: ${gameSpeed.toFixed(3)}`);
+                }
                 
                 // Track regular collections for fair power-up spawning
                 const regularTypes = ['blueprint', 'waterDrop', 'energyCell'];
@@ -392,6 +508,18 @@ export class CollectableManager {
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
                 console.log('Removed aerial star after helicopter ended');
+            }
+        }
+    }
+
+    removeSolarOrbs() {
+        // Remove all solar orbs from the scene when solar power-up ends
+        for (let i = this.collectables.length - 1; i >= 0; i--) {
+            const collectable = this.collectables[i];
+            if (collectable.type === 'solarOrb') {
+                this.scene.remove(collectable.mesh);
+                this.collectables.splice(i, 1);
+                console.log('Removed solar orb after solar boost ended');
             }
         }
     }

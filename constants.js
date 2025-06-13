@@ -46,7 +46,8 @@ export const COLORS = {
         SOLAR_POWER: 0xffff00,
         WIND_POWER: 0xaaffaa,
         WATER_PIPELINE: 0x0088ff,
-        AERIAL_STAR: 0xffdd00
+        AERIAL_STAR: 0xffdd00,
+        SOLAR_ORB: 0xffcc33 // New: Solar energy collectible
     },
     ENVIRONMENT: {
         SKY_WARM: 0xFFDAB9, // PeachPuff for a warmer sky
@@ -70,6 +71,7 @@ export const COLORS = {
 
 export const SPAWN_CONFIG = {
     OBSTACLE_MIN_DISTANCE: 12,
+    OBSTACLE_SAFE_DISTANCE_MULTIPLIER: 1.5, // Increase minimum distance at high speeds
     BUILDING_INTERVAL: { MIN: 2000, MAX: 5000 }, // Reduced for more frequent clusters
     BUILDING_OFFSET_FROM_ROAD: 8, // Increased offset for wider side areas
     BUILDING_SPAWN_DISTANCE_AHEAD: 120, // How far ahead of the player buildings start spawning
@@ -85,6 +87,7 @@ export const SPAWN_CONFIG = {
     COLLECTABLE_INTERVAL: { MIN: 2000, MAX: 5000 },
     OBSTACLE_INTERVAL: { MIN: 1800, MAX: 3500 }, // Base interval, used if dynamic interval is disabled or as a starting point
     AERIAL_SPAWN_CHANCE: 0.02,
+    SOLAR_ORB_SPAWN_CHANCE: 0.03, // Slightly higher chance than aerial stars
     OBSTACLE_DYNAMIC_INTERVAL: {
         ENABLED: true,
         MIN_CLAMP: 700,       // Absolute minimum spawn interval (ms)
@@ -110,6 +113,7 @@ export const SCORING = {
     ENERGY_CELL: 30,
     POWER_UP: 100,
     AERIAL_STAR: 150,
+    SOLAR_ORB: 120, // New: Slightly less than aerial stars since they're easier to get
     BASE_RATE: 0.15,
     SOLAR_BOOST_RATE: 0.2
 };
@@ -119,7 +123,16 @@ export const PHYSICS = {
     MAGNET_PULL_SPEED: 0.2,
     FLYING_HEIGHT: 1.0, // Character flies around Y=1.0 based on console logs
     COLLISION_SHRINK: 0.1, // General shrink for X and Z axes
-    COLLISION_SHRINK_Y: 0.0 // Specific shrink for Y axis (bottom of the player) - Set to 0 to minimize lifting
+    COLLISION_SHRINK_Y: 0.0, // Specific shrink for Y axis (bottom of the player) - Set to 0 to minimize lifting
+    
+    // High-speed collision detection settings
+    HIGH_SPEED_THRESHOLD: 0.15, // Speed at which to use enhanced collision detection
+    COLLECTABLE_EXPANSION_BASE: 0.3, // Base expansion for collectable collection radius
+    COLLECTABLE_SPEED_EXPANSION: 2, // How much collection radius grows with speed
+    MAGNET_EXPANSION_BONUS: 0.5, // Additional expansion when magnet effect is active
+    SAFE_SPAWN_DISTANCE_BASE: 3, // Base safe distance for spawning objects
+    SAFE_SPAWN_DISTANCE_SPEED_MULTIPLIER: 10, // Distance multiplier based on speed
+    MAX_COLLISION_BOX_EXPANSION: 1.2 // Maximum factor for collision box expansion
 };
 
 export const OBSTACLE_TYPES = {

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { LANES, OBSTACLE_TYPES, SPAWN_CONFIG, SCORING } from './constants.js';
+import { LANES, OBSTACLE_TYPES, SPAWN_CONFIG, SCORING, PHYSICS } from './constants.js';
+import { CollisionUtils, PositionTracker } from './collision-utils.js';
 
 export class ObstacleManager {
     constructor(scene) {
@@ -8,6 +9,10 @@ export class ObstacleManager {
         this.lastObstacleType = '';
         this.lastObstacleZ = 0;
         this.gameController = null; // Will be set by game.js
+        
+        // High-speed collision detection
+        this.playerPositionTracker = new PositionTracker();
+        this.frameCounter = 0;
     }
 
     setGameController(gameController) {
@@ -101,6 +106,21 @@ export class ObstacleManager {
     }
 
     checkCollisions(playerBox, waterSlideObjects, hasWaterSlide) {
+        // Update position tracking
+        this.frameCounter++;
+        const playerCenter = new THREE.Vector3();
+        playerBox.getCenter(playerCenter);
+        
+        // Get previous player position for swept collision detection
+        const playerPrevPos = this.playerPositionTracker.getPreviousPosition('player');
+        this.playerPositionTracker.updatePosition('player', playerCenter);
+        
+        // Default to current position if no previous position available
+        const effectivePrevPos = playerPrevPos || playerCenter;
+        
+        // Get current game speed for collision detection
+        const gameSpeed = this.gameController ? this.gameController.getGameSpeed() : 0;
+        
         for (let i = 0; i < this.obstacles.length; i++) {
             const obstacleBox = new THREE.Box3().setFromObject(this.obstacles[i].mesh);
             
@@ -121,8 +141,23 @@ export class ObstacleManager {
                 }
             }
             
-            if (!isProtectedByWaterSlide && playerBox.intersectsBox(obstacleBox)) {
-                console.log('Collision detected with obstacle:', this.obstacles[i].type);
+            // Use advanced collision detection for high speeds
+            let collisionDetected = false;
+            if (gameSpeed > PHYSICS.HIGH_SPEED_THRESHOLD) {
+                // High-speed: Use swept collision detection
+                collisionDetected = CollisionUtils.checkSweptCollision(
+                    playerBox, 
+                    effectivePrevPos, 
+                    obstacleBox, 
+                    gameSpeed
+                );
+            } else {
+                // Low-speed: Use standard collision detection
+                collisionDetected = playerBox.intersectsBox(obstacleBox);
+            }
+            
+            if (!isProtectedByWaterSlide && collisionDetected) {
+                console.log(`Collision detected with obstacle: ${this.obstacles[i].type} at speed: ${gameSpeed.toFixed(3)}`);
                 return true;
             }
         }
@@ -138,5 +173,9 @@ export class ObstacleManager {
         this.obstacles = [];
         this.lastObstacleType = '';
         this.lastObstacleZ = 0;
+        
+        // Reset collision tracking
+        this.playerPositionTracker.clearAll();
+        this.frameCounter = 0;
     }
 }

@@ -82,6 +82,10 @@ export class PowerUpManager {
 
     deactivateSolarPower() {
         this.hasSolarBoost = false;
+        // Remove all solar orbs when solar boost ends
+        if (this.collectableManager) {
+            this.collectableManager.removeSolarOrbs();
+        }
         if (this.gameSpeed) {
             this.gameSpeed.value /= 1.5;
         }

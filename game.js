@@ -138,6 +138,11 @@ export class Game {
         if (this.powerUpManager.getFlyingStatus() && Math.random() < SPAWN_CONFIG.AERIAL_SPAWN_CHANCE) {
             this.collectableManager.createAerialCollectable(this.player.getPosition());
         }
+        
+        // Handle solar orbs when solar boost is active
+        if (this.powerUpManager.getSolarBoostStatus() && Math.random() < SPAWN_CONFIG.SOLAR_ORB_SPAWN_CHANCE) {
+            this.collectableManager.createSolarOrb(this.player.getPosition());
+        }
 
         // Update camera
         this.updateCamera();
@@ -240,6 +245,10 @@ export class Game {
                 case 'aerialStar':
                     this.uiManager.updateScore(SCORING.AERIAL_STAR);
                     console.log('Collected aerial star! +150 points');
+                    break;
+                case 'solarOrb':
+                    this.uiManager.updateScore(SCORING.SOLAR_ORB);
+                    console.log('Collected solar orb! +120 points');
                     break;
                     
                 // Power-ups
