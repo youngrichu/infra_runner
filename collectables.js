@@ -51,13 +51,13 @@ export class CollectableManager {
                 fallback: () => new THREE.BoxGeometry(0.3, 0.3, 0.05)
             },
             'waterDrop': {
-    path: './assets/Collectibles/A_simple_water_droplet.glb',  // Your new model
-    scale: [0.5, 0.5, 0.5],        // Start with this, adjust if needed
-    yPos: 0.7,                     // Standard collectible height
-    rotation: [0, 0, 0],
-    animation: 'float',
-    fallback: () => new THREE.SphereGeometry(0.2, 16, 16)
-},
+                path: './assets/Collectibles/A_simple_water_droplet.glb',  // Your new model
+                scale: [0.5, 0.5, 0.5],        // Start with this, adjust if needed
+                yPos: 0.7,                     // Standard collectible height
+                rotation: [0, 0, 0],
+                animation: 'float',
+                fallback: () => new THREE.SphereGeometry(0.2, 16, 16)
+            },
             'energyCell': {
                 path: './assets/Collectibles/Power Box.glb',
                 scale: [0.4, 0.4, 0.4],
@@ -68,11 +68,11 @@ export class CollectableManager {
             },
             'hardHat': {
                 path: './assets/Collectibles/Hardhat.glb',
-                scale: [0.7, 0.7, 0.7],
+                scale: [0.001, 0.001, 0.001], // SUPER TINY - practically invisible for testing
                 yPos: 0.6,
                 rotation: [0, 0, 0],
                 animation: 'float',
-                fallback: () => new THREE.ConeGeometry(0.2, 0.4, 32)
+                fallback: () => new THREE.ConeGeometry(0.02, 0.04, 32) // Also tiny fallback
             },
             'helicopter': {
                 path: './assets/Collectibles/Jetpack.glb',
@@ -86,13 +86,13 @@ export class CollectableManager {
                 path: './assets/Collectibles/Flat Solar Panel.glb',
                 scale: [0.7, 0.7, 0.7],
                 yPos: 0.7,
-                rotation: [0, 0, 0],
+                rotation: [0, 0, 0], // Flat orientation to show solar cells from the front
                 animation: 'pulse',
                 fallback: () => new THREE.CircleGeometry(0.25, 16)
             },
             'windPower': {
                 path: './assets/Collectibles/Trampoline.glb',
-                scale: [0.05, 0.05, 0.05],
+                scale: [0.15, 0.15, 0.15], // Balanced size - visible but not overwhelming
                 yPos: 0.1,
                 rotation: [0, 0, 0],
                 animation: 'float',
@@ -100,7 +100,7 @@ export class CollectableManager {
             },
             'waterPipeline': {
                 path: './assets/Collectibles/Pipes.glb',
-                scale: [0.6, 0.6, 0.6],
+                scale: [0.25, 0.25, 0.25], // Further reduced size for better proportions
                 yPos: 0.7,
                 rotation: [0, 0, 0],
                 animation: 'spin',
@@ -541,7 +541,7 @@ export class CollectableManager {
         }
 
         if (!positionClear) {
-            spawnPosition = new THREE.Vector3(LANES.POSITIONS[LANES.CENTER], 1.2, playerZ - 40);
+            spawnPosition = new THREE.Vector3(LANES.POSITIONS[LANES.CENTER], 0.7, playerZ - 40); // Fixed: ground level, not floating
         }
 
         const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
@@ -579,11 +579,16 @@ export class CollectableManager {
                 collectableMesh.rotation.set(...config.rotation);
             }
             
-            collectableMesh.position.set(spawnPosition.x, config.yPos, spawnPosition.z);
+            collectableMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z); // Use actual spawn position, not config.yPos
+            
+            // DEBUG: Log hard hat spawning details
+            if (type === 'hardHat') {
+                console.log(`🎩 HARD HAT SPAWNED: Scale=${config.scale}, Position=(${spawnPosition.x.toFixed(2)}, ${spawnPosition.y.toFixed(2)}, ${spawnPosition.z.toFixed(2)})`);
+            }
             
             collectableMesh.userData = {
                 animationType: config.animation,
-                originalY: config.yPos,
+                originalY: spawnPosition.y, // Use actual spawn Y position for animation
                 animationTime: 0,
                 rotationSpeed: 0.02 + Math.random() * 0.03,
                 isFallback: false,

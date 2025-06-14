@@ -50,7 +50,8 @@ export class DirectModelEnvironment {
 
     setupScene() {
         this.scene.background = new THREE.Color(0xFFDAB9);
-        this.scene.fog = new THREE.Fog(0xFFDAB9, 40, 150);
+        // Removed fog to eliminate gray cloud effect - cleaner visual presentation
+        // this.scene.fog = new THREE.Fog(0xFFDAB9, 40, 150);
     }
 
     setupLighting() {
@@ -403,7 +404,19 @@ export class DirectModelEnvironment {
             side: side
         });
 
-        console.log(`Building ${buildingKey}: ${side} side, X=${xOffset.toFixed(1)}, Z=${zPosition}, scale=${scale.toFixed(4)}`);
+        // DEBUG: Log building details with material info
+        let materialInfo = 'unknown';
+        building.traverse((child) => {
+            if (child.isMesh && child.material) {
+                const color = child.material.color ? child.material.color.getHexString() : 'no-color';
+                if (color.includes('808080') || color.includes('666666') || color.includes('999999')) {
+                    console.warn(`🔍 GRAY MATERIAL DETECTED in ${buildingKey}: color=${color}`);
+                    materialInfo = `GRAY-${color}`;
+                }
+            }
+        });
+        
+        console.log(`Building ${buildingKey}: ${side} side, X=${xOffset.toFixed(1)}, Z=${zPosition}, scale=${scale.toFixed(4)}, materials=${materialInfo}`);
     }
 
     // RESTORED: FIXED small tree spawning

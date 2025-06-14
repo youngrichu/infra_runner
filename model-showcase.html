@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Runner - Model Showcase</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow-x: auto;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .showcase-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .model-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .model-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .model-viewer {
+            width: 100%;
+            height: 200px;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.3);
+            margin-bottom: 15px;
+            position: relative;
+        }
+        
+        .model-info {
+            text-align: left;
+            font-size: 12px;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .category-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 30px 0 10px 0;
+            text-align: center;
+            color: #ffdd00;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .loading {
+            color: #ffdd00;
+            font-style: italic;
+        }
+        
+        .error {
+            color: #ff6b6b;
+            font-style: italic;
+        }
+        
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .controls button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .controls button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 Infrastructure Runner - Model Showcase</h1>
+        <p>Visual inspection of all collectibles and obstacles at their true scale</p>
+    </div>
+    
+    <div class="controls">
+        <button onclick="toggleRotation()">Toggle Rotation</button>
+        <button onclick="resetCamera()">Reset View</button>
+        <button onclick="location.reload()">Refresh All</button>
+    </div>
+
+    <div class="showcase-container">
+        <div class="category-title">🎯 COLLECTIBLES</div>
+        
+        <!-- Regular Collectibles -->
+        <div class="model-card">
+            <h3>📋 Blueprint</h3>
+            <div class="model-viewer" id="blueprint-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/Collectibles/Blueprint.glb<br>
+                <strong>Scale:</strong> [0.6, 0.6, 0.6]<br>
+                <strong>Points:</strong> 50<br>
+                <strong>Animation:</strong> Float
+            </div>
+        </div>
+        
+        <div class="model-card">
+            <h3>💧 Water Drop</h3>
+            <div class="model-viewer" id="waterDrop-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/Collectibles/A_simple_water_droplet.glb<br>
+                <strong>Scale:</strong> [0.5, 0.5, 0.5]<br>
+                <strong>Points:</strong> 20<br>
+                <strong>Animation:</strong> Float
+            </div>
+        </div>
+        
+        <div class="model-card">
+            <h3>⚡ Energy Cell</h3>
+            <div class="model-viewer" id="energyCell-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/Collectibles/Power Box.glb<br>
+                <strong>Scale:</strong> [0.4, 0.4, 0.4]<br>
+                <strong>Points:</strong> 30<br>
+                <strong>Animation:</strong> Pulse
+            </div>
+        </div>
+        
+        <!-- Power-ups -->
+        <div class="category-title">🚀 POWER-UPS</div>
+        
+        <div class="model-card">
+            <h3>🛡️ Hard Hat (Shield)</h3>
+            <div class="model-viewer" id="hardHat-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/Collectibles/Hardhat.glb<br>
+                <strong>Scale:</strong> [0.7, 0.7, 0.7] → [0.1, 0.1, 0.1] (UPDATED)<br>
+                <strong>Duration:</strong> 5 seconds<br>
+                <strong>Animation:</strong> Float
+            </div>
+        </div>
+        
+        <div class="model-card">
+            <h3>🚁 Helicopter (Flying)</h3>
+            <div class="model-viewer" id="helicopter-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/Collectibles/Jetpack.glb<br>
+                <strong>Scale:</strong> [0.3, 0.3, 0.3]<br>
+                <strong>Duration:</strong> 10 seconds<br>
+                <strong>Animation:</strong> Helicopter
+            </div>
+        </div>
+        
+        <div class="model-card">
+            <h3>🌟 Solar Power</h3>
+            <div class="model-viewer" id="solarPower-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/Collectibles/Flat Solar Panel.glb<br>
+                <strong>Scale:</strong> [0.7, 0.7, 0.7]<br>
+                <strong>Duration:</strong> 8 seconds<br>
+                <strong>Animation:</strong> Pulse<br>
+                <strong>Note:</strong> Rotation fixed to show cells
+            </div>
+        </div>
+        
+        <div class="model-card">
+            <h3>💨 Wind Power (Trampoline)</h3>
+            <div class="model-viewer" id="windPower-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/Collectibles/Trampoline.glb<br>
+                <strong>Scale:</strong> [0.5, 0.5, 0.5] (FIXED)<br>
+                <strong>Duration:</strong> 15 seconds<br>
+                <strong>Animation:</strong> Float<br>
+                <strong>Note:</strong> Size adjusted from 0.3 → 0.5
+            </div>
+        </div>
+        
+        <div class="model-card">
+            <h3>🚰 Water Pipeline</h3>
+            <div class="model-viewer" id="waterPipeline-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/Collectibles/Pipes.glb<br>
+                <strong>Scale:</strong> [0.25, 0.25, 0.25] (REDUCED)<br>
+                <strong>Duration:</strong> 12 seconds<br>
+                <strong>Animation:</strong> Spin<br>
+                <strong>Note:</strong> Size reduced from 0.4 → 0.25
+            </div>
+        </div>
+        
+        <!-- Obstacles -->
+        <div class="category-title">🚧 OBSTACLES</div>
+        
+        <div class="model-card">
+            <h3>🕳️ Floor Hole</h3>
+            <div class="model-viewer" id="floorHole-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/obstacles/hole.glb<br>
+                <strong>Type:</strong> Low obstacle<br>
+                <strong>Color:</strong> Dark gray (#111111)<br>
+                <strong>Animation:</strong> Static
+            </div>
+        </div>
+        
+        <div class="model-card">
+            <h3>🚧 Construction Barrier</h3>
+            <div class="model-viewer" id="barrier-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/obstacles/barrier.glb<br>
+                <strong>Type:</strong> Medium height<br>
+                <strong>Color:</strong> Orange/Red<br>
+                <strong>Animation:</strong> Static
+            </div>
+        </div>
+        
+        <div class="model-card">
+            <h3>🔺 Traffic Cone</h3>
+            <div class="model-viewer" id="cone-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/obstacles/cone.glb<br>
+                <strong>Type:</strong> Medium obstacle<br>
+                <strong>Color:</strong> Orange<br>
+                <strong>Animation:</strong> Static
+            </div>
+        </div>
+        
+        <div class="model-card">
+            <h3>🪨 Rubble Pile</h3>
+            <div class="model-viewer" id="rubble-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/obstacles/rubble.glb<br>
+                <strong>Type:</strong> Construction debris<br>
+                <strong>Color:</strong> Gray/Brown<br>
+                <strong>Animation:</strong> Static
+            </div>
+        </div>
+        
+        <div class="model-card">
+            <h3>🚧 Traffic Barrier</h3>
+            <div class="model-viewer" id="trafficBarrier-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/obstacles/trafficbarrier.glb<br>
+                <strong>Type:</strong> Large barrier<br>
+                <strong>Color:</strong> Orange/White<br>
+                <strong>Animation:</strong> Static
+            </div>
+        </div>
+        
+        <div class="model-card">
+            <h3>🕳️ Pothole</h3>
+            <div class="model-viewer" id="pothole-viewer"></div>
+            <div class="model-info">
+                <strong>Path:</strong> ./assets/obstacles/pothole.glb<br>
+                <strong>Type:</strong> Road damage<br>
+                <strong>Color:</strong> Dark gray<br>
+                <strong>Animation:</strong> Static
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js Library (ES Module via Import Map) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        const scenes = {};
+        const renderers = {};
+        const cameras = {};
+        const controls = {};
+        let rotationEnabled = true;
+
+        // Model configurations (corrected file paths)
+        const modelConfigs = {
+            // Collectibles
+            blueprint: { path: './assets/Collectibles/Blueprint.glb', scale: [0.6, 0.6, 0.6] },
+            waterDrop: { path: './assets/Collectibles/A_simple_water_droplet.glb', scale: [0.5, 0.5, 0.5] },
+            energyCell: { path: './assets/Collectibles/Power Box.glb', scale: [0.4, 0.4, 0.4] },
+            hardHat: { path: './assets/Collectibles/Hardhat.glb', scale: [0.1, 0.1, 0.1] }, // Updated size
+            helicopter: { path: './assets/Collectibles/Jetpack.glb', scale: [0.3, 0.3, 0.3] },
+            solarPower: { path: './assets/Collectibles/Flat Solar Panel.glb', scale: [0.7, 0.7, 0.7] },
+            windPower: { path: './assets/Collectibles/Trampoline.glb', scale: [0.5, 0.5, 0.5] },
+            waterPipeline: { path: './assets/Collectibles/Pipes.glb', scale: [0.25, 0.25, 0.25] },
+            
+            // Obstacles (corrected paths with capital O and spaces)
+            floorHole: { path: './assets/Obstacles/Floor Hole.glb', scale: [1, 1, 1] },
+            barrier: { path: './assets/Obstacles/Barricade.glb', scale: [1, 1, 1] },
+            cone: { path: './assets/Obstacles/Traffic Cone.glb', scale: [1, 1, 1] },
+            rubble: { path: './assets/Obstacles/rubble.glb', scale: [1, 1, 1] },
+            trafficBarrier: { path: './assets/Obstacles/Traffic Barrier.glb', scale: [1, 1, 1] },
+            pothole: { path: './assets/Obstacles/Pothole.glb', scale: [1, 1, 1] }
+        };
+
+        const loader = new GLTFLoader();
+
+        function initializeViewer(containerId, modelKey) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setClearColor(0x222222, 0.8); // Darker background to see models better
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Improved lighting setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(2, 2, 2);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 512;
+            directionalLight.shadow.mapSize.height = 512;
+            scene.add(directionalLight);
+            
+            // Add a second light from the other side
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+            fillLight.position.set(-2, 1, -1);
+            scene.add(fillLight);
+
+            // Initial camera position (will be adjusted per model)
+            camera.position.set(2, 2, 2);
+            camera.lookAt(0, 0, 0);
+
+            // Store references
+            scenes[modelKey] = scene;
+            renderers[modelKey] = renderer;
+            cameras[modelKey] = camera;
+
+            // Load model
+            loadModel(modelKey, scene, container);
+
+            return { scene, camera, renderer };
+        }
+
+        function loadModel(modelKey, scene, container) {
+            const config = modelConfigs[modelKey];
+            if (!config) {
+                container.innerHTML = '<div class="error">❌ No config found</div>';
+                return;
+            }
+
+            container.innerHTML = '<div class="loading">🔄 Loading...</div>';
+
+            loader.load(
+                config.path,
+                (gltf) => {
+                    // Clear loading message
+                    const loadingDiv = container.querySelector('.loading, .error');
+                    if (loadingDiv) loadingDiv.remove();
+
+                    const model = gltf.scene.clone();
+                    
+                    // Apply scale from config
+                    model.scale.set(...config.scale);
+                    
+                    // Center the model properly
+                    const box = new THREE.Box3().setFromObject(model);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    
+                    // Move model to origin
+                    model.position.sub(center);
+                    
+                    // Adjust camera distance based on model size
+                    const camera = cameras[modelKey];
+                    if (camera) {
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const fov = camera.fov * (Math.PI / 180);
+                        const distance = Math.max(2, maxDim / (2 * Math.tan(fov / 2)) * 1.5);
+                        camera.position.set(distance, distance, distance);
+                        camera.lookAt(0, 0, 0);
+                    }
+
+                    // Enable shadows and improve materials
+                    model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            
+                            // Enhance material visibility
+                            if (child.material) {
+                                if (Array.isArray(child.material)) {
+                                    child.material.forEach(mat => {
+                                        if (mat.isMeshStandardMaterial) {
+                                            mat.metalness = Math.min(mat.metalness + 0.1, 1);
+                                            mat.roughness = Math.max(mat.roughness - 0.1, 0);
+                                        }
+                                    });
+                                } else if (child.material.isMeshStandardMaterial) {
+                                    child.material.metalness = Math.min(child.material.metalness + 0.1, 1);
+                                    child.material.roughness = Math.max(child.material.roughness - 0.1, 0);
+                                }
+                            }
+                        }
+                    });
+
+                    scene.add(model);
+                    scenes[modelKey].userData.model = model;
+
+                    console.log(`✅ Loaded and displayed ${modelKey}, size: ${size.x.toFixed(2)}x${size.y.toFixed(2)}x${size.z.toFixed(2)}`);
+                },
+                (progress) => {
+                    const percent = Math.round((progress.loaded / progress.total) * 100);
+                    const loadingDiv = container.querySelector('.loading');
+                    if (loadingDiv) loadingDiv.textContent = `🔄 Loading... ${percent}%`;
+                },
+                (error) => {
+                    console.error(`❌ Failed to load ${modelKey}:`, error);
+                    container.innerHTML = `<div class="error">❌ Failed to load<br>${config.path.split('/').pop()}</div>`;
+                }
+            );
+        }
+
+        // Initialize all viewers
+        Object.keys(modelConfigs).forEach(modelKey => {
+            const containerId = `${modelKey}-viewer`;
+            initializeViewer(containerId, modelKey);
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            Object.keys(scenes).forEach(modelKey => {
+                const scene = scenes[modelKey];
+                const renderer = renderers[modelKey];
+                const camera = cameras[modelKey];
+
+                if (scene && renderer && camera) {
+                    // Rotate models if enabled
+                    if (rotationEnabled && scene.userData.model) {
+                        scene.userData.model.rotation.y += 0.01;
+                        scene.userData.model.rotation.x += 0.005;
+                    }
+
+                    renderer.render(scene, camera);
+                }
+            });
+        }
+
+        animate();
+
+        // Global controls
+        window.toggleRotation = () => {
+            rotationEnabled = !rotationEnabled;
+            console.log('Rotation:', rotationEnabled ? 'ON' : 'OFF');
+        };
+
+        window.resetCamera = () => {
+            Object.keys(cameras).forEach(modelKey => {
+                const camera = cameras[modelKey];
+                if (camera) {
+                    camera.position.set(1, 1, 2);
+                    camera.lookAt(0, 0, 0);
+                }
+            });
+            console.log('Cameras reset');
+        };
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            Object.keys(renderers).forEach(modelKey => {
+                const renderer = renderers[modelKey];
+                const camera = cameras[modelKey];
+                const container = document.getElementById(`${modelKey}-viewer`);
+                
+                if (renderer && camera && container) {
+                    camera.aspect = container.clientWidth / container.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(container.clientWidth, container.clientHeight);
+                }
+            });
+        });
+
+        console.log('🎮 Model Showcase initialized');
+    </script>
+</body>
+</html>
