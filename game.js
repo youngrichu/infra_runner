@@ -385,5 +385,5 @@ export class Game {
 
 // Initialize the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new Game();
+    window.game = new Game(); // Make game globally accessible for debugging
 });

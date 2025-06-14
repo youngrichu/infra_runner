@@ -1,3 +1,4 @@
+// Updated Version 2 - Added new obstacle types and colors for GLB models
 import * as THREE from 'three';
 
 // Game Constants
@@ -10,7 +11,7 @@ export const GAME_CONFIG = {
     GROUND_HEIGHT: 0.5,
     PLAYER_VISUAL_OFFSET: -0.35, // Offset to align GLB model visual center with collision box
     CAMERA_FOLLOW_SPEED: 0.1,
-    LANE_SWITCH_SPEED: 0.25,
+    LANE_SWITCH_SPEED: 0.35,
     DEBUG_COLLISIONS: false // Set to true to visualize player collision box
 };
 
@@ -35,7 +36,9 @@ export const COLORS = {
         POTHOLE: 0x333333,
         CONSTRUCTION_BARRIER: 0xff4444,
         CONE: 0xff8800,
-        RUBBLE: 0x808080
+        RUBBLE: 0x808080,
+        TRAFFIC_BARRIER: 0xff6600,
+        FLOOR_HOLE: 0x111111
     },
     COLLECTABLES: {
         BLUEPRINT: 0x0000ff,
@@ -79,7 +82,7 @@ export const COLORS = {
 };
 
 export const SPAWN_CONFIG = {
-    OBSTACLE_MIN_DISTANCE: 12,
+    OBSTACLE_MIN_DISTANCE: 6, // EXPO FIX: Moderately denser obstacles
     OBSTACLE_SAFE_DISTANCE_MULTIPLIER: 1.5,
     BUILDING_INTERVAL: { MIN: 8000, MAX: 15000 }, // Much longer intervals for minimal spawning
     BUILDING_OFFSET_FROM_ROAD: 20,
@@ -93,8 +96,8 @@ export const SPAWN_CONFIG = {
     SIDE_AREA_WIDTH: 30,
     SIDE_AREA_SPAWN_TRIGGER_OFFSET: 180,
     SIDE_AREA_DESPAWN_OFFSET: 25,
-    COLLECTABLE_INTERVAL: { MIN: 2000, MAX: 5000 },
-    OBSTACLE_INTERVAL: { MIN: 1800, MAX: 3500 }, // Base interval, used if dynamic interval is disabled or as a starting point
+    COLLECTABLE_INTERVAL: { MIN: 1500, MAX: 3000 }, // EXPO FIX: Moderately faster collectible spawning
+    OBSTACLE_INTERVAL: { MIN: 1000, MAX: 2000 }, // EXPO FIX: Moderately faster obstacle spawning
     AERIAL_SPAWN_CHANCE: 0.02,
     SOLAR_ORB_SPAWN_CHANCE: 0.03, // Slightly higher chance than aerial stars
     OBSTACLE_DYNAMIC_INTERVAL: {
@@ -168,6 +171,18 @@ export const OBSTACLE_TYPES = {
         color: COLORS.OBSTACLES.RUBBLE,
         yPos: 0.2,
         description: 'Construction debris'
+    },
+    'trafficBarrier': {
+        geometry: () => new THREE.BoxGeometry(1.8, 0.8, 0.3),
+        color: COLORS.OBSTACLES.TRAFFIC_BARRIER,
+        yPos: 0.4,
+        description: 'Heavy traffic barrier'
+    },
+    'floorHole': {
+        geometry: () => new THREE.CylinderGeometry(0.6, 0.6, 0.05, 32),
+        color: COLORS.OBSTACLES.FLOOR_HOLE,
+        yPos: 0.05,
+        description: 'Dangerous floor opening'
     }
 };
 

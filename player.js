@@ -30,6 +30,9 @@ export class Player {
         this.stumbleAnimationDuration = 1500; // Default 1.5 seconds max, will be updated when animation loads
         this.stumbleSpeedMultiplier = 1.0; // Speed multiplier for animation playback
         this.gameOverCallback = null; // Callback to trigger game over after stumble
+        
+        // Debug counter
+        this.frameCounter = 0;
     }
 
     async initialize() {
@@ -354,12 +357,18 @@ export class Player {
     moveLeft() {
         if (this.lane > LANES.LEFT) {
             this.lane--;
+            console.log(`⬅️ Moved left to lane ${this.lane} (X position will be ${LANES.POSITIONS[this.lane]})`);
+        } else {
+            console.log(`⬅️ Already at leftmost lane ${this.lane}`);
         }
     }
 
     moveRight() {
         if (this.lane < LANES.RIGHT) {
             this.lane++;
+            console.log(`➡️ Moved right to lane ${this.lane} (X position will be ${LANES.POSITIONS[this.lane]})`);
+        } else {
+            console.log(`➡️ Already at rightmost lane ${this.lane}`);
         }
     }
 
@@ -464,6 +473,12 @@ export class Player {
         }
         
         const targetX = LANES.POSITIONS[this.lane];
+        
+        // Debug lane positions every 60 frames
+        if (this.frameCounter % 60 === 0) {
+            console.log(`🎯 Player lane: ${this.lane}, Target X: ${targetX}, Current X: ${this.mesh.position.x.toFixed(2)}`);
+        }
+        this.frameCounter = (this.frameCounter || 0) + 1;
         
         // Update all mesh positions (running, flying, stumble)
         this.mesh.position.x += (targetX - this.mesh.position.x) * GAME_CONFIG.LANE_SWITCH_SPEED;
