@@ -141,7 +141,7 @@ export class CollectableManager {
             }
         }
         
-        console.log(`💎 Generated collectible pattern with ${pattern.length} items over ${currentPosition.toFixed(1)} units`);
+
         return pattern;
     }
 
@@ -173,7 +173,7 @@ export class CollectableManager {
             // Regenerate pattern if we've used it all
             this.collectiblePattern = this.generateCollectiblePattern(60);
             this.collectiblePatternIndex = 0;
-            console.log('🔄 Regenerated collectible pattern');
+
         }
         
         const collectibleData = this.collectiblePattern[this.collectiblePatternIndex];
@@ -235,7 +235,7 @@ export class CollectableManager {
             lane: finalLane
         });
         
-        console.log(`💎 Smart spawned: ${collectibleData.type} at Z=${spawnZ.toFixed(1)} (lane ${finalLane}), player at Z=${playerZ.toFixed(1)}`);
+
     }
 
     // EXPO FIX: Check if position is clear of obstacles
@@ -276,12 +276,12 @@ export class CollectableManager {
         }
         
         if (removedCount > 0) {
-            console.log(`🧹 Cleaned up ${removedCount} collectibles behind player`);
+
         }
     }
 
     async initializeSmartPooling() {
-        console.log('💎 Starting Smart Pooling for Collectibles...');
+
         
         // PHASE 1: Load priority models first (instant game start)
         await this.loadPriorityModels();
@@ -291,7 +291,7 @@ export class CollectableManager {
     }
 
     async loadPriorityModels() {
-        console.log('⚡ Phase 1: Loading priority collectible models...');
+
         
         const priorityPromises = this.priorityModels.map(async (type) => {
             const config = this.modelConfig[type];
@@ -301,7 +301,7 @@ export class CollectableManager {
                 const gltf = await this.loadModel(config.path);
                 if (gltf && gltf.scene) {
                     this.loadedModels.set(type, gltf.scene);
-                    console.log(`✅ Priority loaded: ${type}`);
+
                     
                     // PROGRESSIVE ENHANCEMENT: Upgrade existing fallbacks
                     this.upgradeExistingFallbacks(type);
@@ -319,11 +319,11 @@ export class CollectableManager {
 
         await Promise.allSettled(priorityPromises);
         this.priorityModelsLoaded = true;
-        console.log('🎯 Priority collectibles loaded - Regular items 100% GLB!');
+
     }
 
     async loadBackgroundModels() {
-        console.log('🔄 Phase 2: Background loading power-ups and special models...');
+
         
         // Load power-up models + lightning bolt for solar orbs
         const allBackgroundModels = [
@@ -341,7 +341,7 @@ export class CollectableManager {
                 const gltf = await this.loadModel(path);
                 if (gltf && gltf.scene) {
                     this.loadedModels.set(type, gltf.scene);
-                    console.log(`✅ Background loaded: ${type}`);
+
                     
                     // PROGRESSIVE ENHANCEMENT: Upgrade existing fallbacks
                     this.upgradeExistingFallbacks(type);
@@ -359,11 +359,11 @@ export class CollectableManager {
 
         await Promise.allSettled(backgroundPromises);
         this.allModelsLoaded = true;
-        console.log('🏆 All collectible models loaded - 100% consistency achieved!');
+
     }
 
     upgradeExistingFallbacks(modelType) {
-        console.log(`🔄 Upgrading collectible fallbacks for: ${modelType}`);
+
         
         // Find all existing collectibles of this type that use fallback geometry
         for (let i = 0; i < this.collectables.length; i++) {
@@ -395,7 +395,7 @@ export class CollectableManager {
                     // Update collectable reference
                     collectable.mesh = newMesh;
                     
-                    console.log(`✨ Upgraded ${modelType} from fallback to GLB`);
+
                 }
             }
         }
@@ -547,7 +547,7 @@ export class CollectableManager {
         const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
         if (collectableMesh) {
             this.collectables.push({ mesh: collectableMesh, type: type });
-            console.log(`Power-up spawned: ${type} (${this.loadedModels.has(type) && this.loadedModels.get(type) ? 'GLB' : 'fallback'})`);
+
         }
     }
 
@@ -596,7 +596,7 @@ export class CollectableManager {
             };
         } else {
             // Use fallback geometry (will be upgraded when GLB loads)
-            console.log(`🔄 Using fallback for ${type} (will upgrade when GLB loads)`);
+
             
             const geometry = config.fallback();
             const material = new THREE.MeshStandardMaterial({ 
@@ -816,7 +816,7 @@ export class CollectableManager {
     }
 
     startSpawning() {
-        console.log('💎 Collectibles smart spawning started - using pattern-based system');
+
         // Spawning logic is now handled in the update loop, not time-based
     }
 
@@ -824,7 +824,7 @@ export class CollectableManager {
     spawnCollectable() {
         // This method is replaced by the smart pattern-based spawning system
         // All spawning is now handled in spawnAheadCollectibles()
-        console.log('⚠️ Legacy spawnCollectable called - using smart spawning instead');
+
     }
 
     updateCollectables(gameSpeed, cameraZ) {
@@ -888,8 +888,7 @@ export class CollectableManager {
                 collectedItems.push(collectable.type);
                 
                 if (gameSpeed > 0.2) {
-                    const modelType = collectable.mesh.userData.isFallback ? 'fallback' : 'GLB';
-                    console.log(`Collected: ${collectable.type} (${modelType}) at speed: ${gameSpeed.toFixed(3)}`);
+                // Performance tracking for debugging if needed
                 }
                 
                 // Track regular collections for power-up spawning
@@ -944,7 +943,7 @@ export class CollectableManager {
         this.collectiblePatternIndex = 0;
         this.collectiblePattern = this.generateCollectiblePattern(60);
         
-        console.log('✅ Collectibles reset with new smart pattern');
+
     }
 
     removeAerialStars() {

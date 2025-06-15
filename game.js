@@ -202,22 +202,15 @@ export class Game {
             
             if (collision) {
                 console.log('*** COLLISION DETECTED ***');
-                console.log('Player isStumbling:', this.player.isStumbling);
                 
                 // Try to trigger stumble animation with game over callback
-                console.log('Attempting to trigger stumble...');
                 const stumbleTriggered = this.player.triggerStumble(() => this.gameOver());
-                console.log('Stumble triggered result:', stumbleTriggered);
                 
                 if (!stumbleTriggered) {
                     // If stumble animation not available, immediate game over
-                    console.log('Stumble animation not available - Game Over!');
                     this.gameOver();
                     return;
                 }
-                
-                // Stumble was successfully triggered, continue playing
-                console.log('Player stumbled but continues playing!');
                 return;
             }
         }
@@ -229,8 +222,6 @@ export class Game {
 
     handleCollectedItems(collectedItems) {
         for (const itemType of collectedItems) {
-            console.log(`Collected item: ${itemType}`);
-            
             switch (itemType) {
                 // Regular collectibles
                 case 'blueprint':
@@ -244,11 +235,9 @@ export class Game {
                     break;
                 case 'aerialStar':
                     this.uiManager.updateScore(SCORING.AERIAL_STAR);
-                    console.log('Collected aerial star! +150 points');
                     break;
                 case 'solarOrb':
                     this.uiManager.updateScore(SCORING.SOLAR_ORB);
-                    console.log('Collected solar orb! +120 points');
                     break;
                     
                 // Power-ups
@@ -315,7 +304,7 @@ export class Game {
     updateGameSpeed() {
         // Increase game speed gradually
         this.gameSpeed.value += GAME_CONFIG.SPEED_INCREMENT;
-        // console.log("Current Game Speed:", this.gameSpeed.value.toFixed(4)); // For debugging speed changes
+
         
         // Update score based on solar boost status
         if (this.powerUpManager.getSolarBoostStatus()) {

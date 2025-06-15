@@ -121,7 +121,7 @@ export class ObstacleManager {
             }
         }
         
-        console.log(`🎯 Generated obstacle pattern with ${pattern.length} obstacles over ${currentPosition.toFixed(1)} units`);
+
         return pattern;
     }
 
@@ -153,7 +153,7 @@ export class ObstacleManager {
             // Regenerate pattern if we've used it all
             this.obstaclePattern = this.generateObstaclePattern(50);
             this.patternIndex = 0;
-            console.log('🔄 Regenerated obstacle pattern');
+
         }
         
         const obstacleData = this.obstaclePattern[this.patternIndex];
@@ -198,7 +198,7 @@ export class ObstacleManager {
         this.scene.add(obstacleMesh);
         this.obstacles.push(obstacle);
         
-        console.log(`✨ Smart spawned: ${obstacleData.type} at Z=${spawnZ.toFixed(1)} (lane ${obstacleData.lane}), player at Z=${playerZ.toFixed(1)}`);
+
     }
 
     // EXPO FIX: Enhanced memory monitoring for expo reliability
@@ -207,12 +207,9 @@ export class ObstacleManager {
             if (performance.memory) {
                 const usedMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
                 const totalMB = Math.round(performance.memory.totalJSHeapSize / 1048576);
-                const sceneObjects = this.scene.children.length;
                 
                 this.memoryMonitor.maxMemoryMB = Math.max(this.memoryMonitor.maxMemoryMB, usedMB);
-                this.memoryMonitor.objectCount = sceneObjects;
-                
-                console.log(`💾 Memory: ${usedMB}MB used, ${sceneObjects} scene objects, ${this.memoryMonitor.disposeCount} disposed, max: ${this.memoryMonitor.maxMemoryMB}MB`);
+                this.memoryMonitor.objectCount = this.scene.children.length;
                 
                 // EXPO WARNING: Alert if memory growing dangerously
                 if (usedMB > 150) {
@@ -230,7 +227,7 @@ export class ObstacleManager {
 
     // EXPO FIX: Emergency memory cleanup
     forceMemoryCleanup() {
-        console.log('🧹 Emergency memory cleanup...');
+        console.warn('🧹 Emergency memory cleanup triggered');
         
         // Remove distant obstacles more aggressively
         const player = this.gameController?.player;
@@ -245,8 +242,6 @@ export class ObstacleManager {
     }
 
     async initializeSmartPooling() {
-        console.log('🚀 Starting Smart Pooling + Progressive Enhancement...');
-        
         // PHASE 1: Load priority models first (fast game start)
         await this.loadPriorityModels();
         
@@ -255,7 +250,7 @@ export class ObstacleManager {
     }
 
     async loadPriorityModels() {
-        console.log('⚡ Phase 1: Loading priority obstacle models...');
+
         
         const priorityPromises = this.priorityModels.map(async (type) => {
             const config = this.modelConfig[type];
@@ -265,8 +260,6 @@ export class ObstacleManager {
                 const gltf = await this.loadModel(config.path);
                 if (gltf && gltf.scene) {
                     this.loadedModels.set(type, gltf.scene);
-                    console.log(`✅ Priority loaded: ${type}`);
-                    
                     // EXPO FIX: Progressive enhancement with visual verification
                     this.upgradeExistingFallbacks(type);
                     
@@ -283,11 +276,11 @@ export class ObstacleManager {
 
         await Promise.allSettled(priorityPromises);
         this.priorityModelsLoaded = true;
-        console.log('🎯 Priority models loaded - 80% consistency achieved!');
+
     }
 
     async loadBackgroundModels() {
-        console.log('🔄 Phase 2: Background loading remaining models...');
+
         
         const backgroundPromises = this.backgroundModels.map(async (type) => {
             const config = this.modelConfig[type];
@@ -297,8 +290,6 @@ export class ObstacleManager {
                 const gltf = await this.loadModel(config.path);
                 if (gltf && gltf.scene) {
                     this.loadedModels.set(type, gltf.scene);
-                    console.log(`✅ Background loaded: ${type}`);
-                    
                     // EXPO FIX: Progressive enhancement with visual verification
                     this.upgradeExistingFallbacks(type);
                     
@@ -315,13 +306,11 @@ export class ObstacleManager {
 
         await Promise.allSettled(backgroundPromises);
         this.allModelsLoaded = true;
-        console.log('🏆 All obstacle models loaded - 100% consistency achieved!');
+
     }
 
     // EXPO FIX: Enhanced upgradeExistingFallbacks with proper disposal
     upgradeExistingFallbacks(modelType) {
-        console.log(`🔄 Upgrading fallback objects for: ${modelType}`);
-        
         // Find all existing obstacles of this type that use fallback geometry
         for (let i = 0; i < this.obstacles.length; i++) {
             const obstacle = this.obstacles[i];
@@ -347,8 +336,6 @@ export class ObstacleManager {
                     // CRITICAL: Only enable collision after visual verification
                     obstacle.mesh = newMesh;
                     obstacle.collisionEnabled = true; // Now safe to enable collision
-                    
-                    console.log(`✨ Upgraded ${modelType} from fallback to GLB (verified visible)`);
                 } else {
                     console.warn(`❌ Failed to upgrade ${modelType} - GLB not visible`);
                     // Keep the old fallback if GLB upgrade fails
@@ -380,18 +367,6 @@ export class ObstacleManager {
         // Check if mesh is actually visible
         const isVisible = hasVisibleGeometry && hasValidTransform && mesh.visible;
         
-        // EXPO DEBUG: Log detailed visibility information
-        console.log(`🔍 GLB Visibility Check:`, {
-            type: mesh.userData.obstacleType,
-            hasGeometry: hasVisibleGeometry,
-            geometryCount: geometryCount,
-            hasValidTransform: hasValidTransform,
-            visible: mesh.visible,
-            scale: mesh.scale.length(),
-            position: `(${mesh.position.x.toFixed(1)}, ${mesh.position.y.toFixed(1)}, ${mesh.position.z.toFixed(1)})`,
-            isVisible: isVisible
-        });
-        
         if (!isVisible) {
             console.warn(`❌ GLB Model visibility check failed for ${mesh.userData.obstacleType}`);
         }
@@ -401,22 +376,16 @@ export class ObstacleManager {
 
     // EXPO FIX: CRITICAL - Create obstacle mesh with collision-visual synchronization
     createObstacleMesh(type) {
-        console.log(`🎨 createObstacleMesh called for type: ${type}`);
-        
         const config = this.modelConfig[type];
         if (!config) {
             console.error(`❌ No config found for obstacle type: ${type}`);
             return null;
         }
-        
-        console.log(`🎨 Config found for ${type}:`, config);
 
         const loadedModel = this.loadedModels.get(type);
-        console.log(`🎨 Loaded model for ${type}:`, !!loadedModel);
         
         if (loadedModel) {
             // GLB model is available - create with visual verification
-            console.log(`✅ Using GLB model for ${type}`);
             const clonedModel = loadedModel.clone();
             
             // Apply configuration
@@ -434,7 +403,6 @@ export class ObstacleManager {
             
             // CRITICAL: Verify visibility before allowing collision
             if (this.verifyMeshVisibility(clonedModel)) {
-                console.log(`✅ GLB obstacle created: ${type} (visible verified)`);
                 return clonedModel;
             } else {
                 // GLB failed visibility check - dispose and fall back to fallback
@@ -444,24 +412,18 @@ export class ObstacleManager {
             }
         } else {
             // GLB not loaded yet - use fallback
-            console.log(`⏳ GLB ${type} not loaded yet - using fallback`);
             return this.createFallbackMesh(type, config);
         }
     }
 
     // EXPO FIX: Create fallback mesh with proper marking
     createFallbackMesh(type, config) {
-        console.log(`🔶 Creating fallback mesh for type: ${type}`);
-        
         const fallbackGeometry = config.fallback();
         const fallbackMaterial = new THREE.MeshStandardMaterial({
             color: OBSTACLE_TYPES[type]?.color || 0x8B4513,
             roughness: 0.7,
             metalness: 0.1
         });
-        
-        console.log(`🔶 Fallback geometry created:`, !!fallbackGeometry);
-        console.log(`🔶 Fallback material created:`, !!fallbackMaterial);
         
         const fallbackMesh = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
         
@@ -482,7 +444,6 @@ export class ObstacleManager {
             createdAt: Date.now()
         };
         
-        console.log(`🔶 Fallback obstacle created: ${type} at Y=${config.yPos}`);
         return fallbackMesh;
     }
 
@@ -526,8 +487,6 @@ export class ObstacleManager {
             );
             
             if (collision) {
-                console.log(`💥 Collision detected with ${obstacle.type} (visible: ${obstacle.collisionEnabled})`);
-                
                 // Only trigger collision if obstacle is actually visible
                 if (this.verifyMeshVisibility(obstacle.mesh)) {
                     return obstacle;
@@ -566,7 +525,6 @@ export class ObstacleManager {
         }
         
         if (removedCount > 0) {
-            console.log(`🧹 Cleaned up ${removedCount} obstacles behind player`);
             this.memoryMonitor.disposeCount += removedCount;
         }
     }
@@ -598,8 +556,6 @@ export class ObstacleManager {
         // Clear userData and references
         mesh.userData = {};
         mesh.parent = null;
-        
-        console.log(`🗑️ Disposed mesh: ${mesh.userData.obstacleType || 'unknown'}`);
     }
 
     // EXPO FIX: Proper material disposal
@@ -678,8 +634,6 @@ export class ObstacleManager {
 
     // EXPO FIX: Complete cleanup for game reset
     cleanup() {
-        console.log('🧹 Starting complete obstacle cleanup...');
-        
         // Dispose all obstacles
         for (const obstacle of this.obstacles) {
             this.scene.remove(obstacle.mesh);
@@ -697,7 +651,6 @@ export class ObstacleManager {
         this.patternIndex = 0;
         this.obstaclePattern = this.generateObstaclePattern(50);
         
-        console.log(`✅ Obstacle cleanup complete. Disposed ${this.obstacles.length} obstacles.`);
         this.memoryMonitor.disposeCount += this.obstacles.length;
     }
 
@@ -716,7 +669,6 @@ export class ObstacleManager {
     // COMPATIBILITY: Methods expected by game.js
     startSpawning() {
         // Spawning logic is handled in update() method
-        console.log('✅ Obstacle spawning started');
     }
 
     updateObstacles(gameSpeed, cameraZ, gameActive) {
@@ -739,6 +691,5 @@ export class ObstacleManager {
 
     reset() {
         this.cleanup();
-        console.log('✅ Obstacle manager reset');
     }
 }
