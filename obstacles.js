@@ -12,10 +12,10 @@ export class ObstacleManager {
         this.gameController = null;
         
         // EXPO FIX: Smart spawning system (replaces distance-based spawning)
-        this.SPAWN_HORIZON = 40; // Spawn 40 units ahead (beyond camera view)
+        this.SPAWN_HORIZON = 15; // Spawn 15 units ahead (much closer to player)
         this.DESPAWN_DISTANCE = 25; // Remove obstacles 25 units behind player
-        this.MIN_OBSTACLE_SPACING = 8; // Minimum distance between obstacles
-        this.MAX_OBSTACLE_SPACING = 16; // Maximum distance between obstacles
+        this.MIN_OBSTACLE_SPACING = 4; // Minimum distance between obstacles (closer)
+        this.MAX_OBSTACLE_SPACING = 8; // Maximum distance between obstacles (closer)
         this.TARGET_DENSITY = 0.75; // 75% of possible positions have obstacles
         this.obstaclePattern = this.generateObstaclePattern(50); // Pre-generate pattern
         this.patternIndex = 0;

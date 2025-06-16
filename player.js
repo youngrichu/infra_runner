@@ -322,15 +322,19 @@ export class Player {
     jump() {
         // Regular jump if not jumping
         if (!this.isJumping) {
+            console.log('👍 DEBUG: Regular jump executed');
             this.isJumping = true;
             this.velocityY = GAME_CONFIG.INITIAL_JUMP_VELOCITY;
             this.hasDoubleJumped = false;
         } 
         // Double jump if Wind Power is active and we haven't used double jump yet
         else if (this.canDoubleJump && !this.hasDoubleJumped) {
+            console.log(`✨ DEBUG: Double jump executed! (canDoubleJump: ${this.canDoubleJump}, hasDoubleJumped: ${this.hasDoubleJumped})`);
             this.velocityY = GAME_CONFIG.DOUBLE_JUMP_VELOCITY;
             this.hasDoubleJumped = true;
             this.createJumpEffect();
+        } else {
+            console.log(`⚠️ DEBUG: Jump ignored (isJumping: ${this.isJumping}, canDoubleJump: ${this.canDoubleJump}, hasDoubleJumped: ${this.hasDoubleJumped})`);
         }
     }
 
@@ -644,6 +648,7 @@ export class Player {
     }
 
     setDoubleJumpAbility(canDoubleJump) {
+        console.log(`💨 DEBUG: Setting double jump ability to ${canDoubleJump}`);
         this.canDoubleJump = canDoubleJump;
         if (!canDoubleJump) {
             this.hasDoubleJumped = false;

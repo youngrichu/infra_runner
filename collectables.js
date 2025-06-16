@@ -52,7 +52,7 @@ export class CollectableManager {
             },
             'waterDrop': {
                 path: './assets/Collectibles/A_simple_water_droplet.glb',  // Your new model
-                scale: [0.5, 0.5, 0.5],        // Start with this, adjust if needed
+                scale: [0.3, 0.3, 0.3],        // Start with this, adjust if needed
                 yPos: 0.7,                     // Standard collectible height
                 rotation: [0, 0, 0],
                 animation: 'float',
@@ -68,7 +68,7 @@ export class CollectableManager {
             },
             'hardHat': {
                 path: './assets/Collectibles/Hardhat.glb',
-                scale: [0.001, 0.001, 0.001], // SUPER TINY - practically invisible for testing
+                scale: [0.003, 0.003, 0.003], // SUPER TINY - practically invisible for testing
                 yPos: 0.6,
                 rotation: [0, 0, 0],
                 animation: 'float',
@@ -76,7 +76,7 @@ export class CollectableManager {
             },
             'helicopter': {
                 path: './assets/Collectibles/Jetpack.glb',
-                scale: [0.3, 0.3, 0.3],
+                scale: [0.4, 0.4, 0.4],
                 yPos: 0.6,
                 rotation: [0, 0, 0],
                 animation: 'helicopter',
@@ -84,15 +84,15 @@ export class CollectableManager {
             },
             'solarPower': {
                 path: './assets/Collectibles/Flat Solar Panel.glb',
-                scale: [0.7, 0.7, 0.7],
+                scale: [0.4, 0.4, 0.],
                 yPos: 0.7,
                 rotation: [0, 0, 0], // Flat orientation to show solar cells from the front
                 animation: 'pulse',
                 fallback: () => new THREE.CircleGeometry(0.25, 16)
             },
             'windPower': {
-                path: './assets/Collectibles/Trampoline.glb',
-                scale: [0.15, 0.15, 0.15], // Balanced size - visible but not overwhelming
+                path: './assets/Collectibles/Spring.glb',
+                scale: [0.4, 0.4, 0.4], // Balanced size - visible but not overwhelming
                 yPos: 0.1,
                 rotation: [0, 0, 0],
                 animation: 'float',
@@ -903,6 +903,7 @@ export class CollectableManager {
     }
 
     applyMagnetEffect(playerPosition, magnetRadius, magnetSpeed) {
+        let affectedCount = 0;
         for (const collectable of this.collectables) {
             const distance = playerPosition.distanceTo(collectable.mesh.position);
             if (distance < magnetRadius) {
@@ -910,7 +911,11 @@ export class CollectableManager {
                     .subVectors(playerPosition, collectable.mesh.position)
                     .normalize();
                 collectable.mesh.position.add(direction.multiplyScalar(magnetSpeed));
+                affectedCount++;
             }
+        }
+        if (affectedCount > 0) {
+            console.log(`🧢 DEBUG: Magnet effect applied to ${affectedCount} collectibles (radius: ${magnetRadius}, speed: ${magnetSpeed})`);
         }
     }
 
@@ -943,7 +948,16 @@ export class CollectableManager {
         this.collectiblePatternIndex = 0;
         this.collectiblePattern = this.generateCollectiblePattern(60);
         
-
+        // CRITICAL FIX: Reset spawn history for power-up distance tracking
+        this.spawnHistory = {
+            lastTypes: [],
+            maxHistory: 5,
+            lastPowerUpDistance: -100,  // ✅ FIXED: Allows immediate power-up spawning
+            minPowerUpSpacing: 80,
+            currentDistance: 0
+        };
+        
+        console.log('✅ CollectableManager reset - power-up distance tracking reset to -100');
     }
 
     removeAerialStars() {

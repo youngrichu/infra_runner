@@ -7,6 +7,8 @@ import { PowerUpManager } from './powerups.js';
 import { UIManager } from './ui.js';
 import { InputManager } from './input.js';
 import { GAME_CONFIG, SCORING, SPAWN_CONFIG, PHYSICS } from './constants.js';
+import { GameStateManager, STATES } from './game-state.js';
+import { LeaderboardManager } from './leaderboard.js';
 
 export class Game {
     constructor() {
@@ -23,10 +25,28 @@ export class Game {
         this.powerUpManager = null;
         this.uiManager = null;
         this.inputManager = null;
+
+        // New managers for state & leaderboard
+        this.stateManager = new GameStateManager();
+        this.leaderboardManager = new LeaderboardManager();
+        
+        // Performance optimization: Cache playing state to avoid checking every frame
+        this.isCurrentlyPlaying = false;
         
         // Game state
         this.gameActive = true;
         this.gameSpeed = { value: GAME_CONFIG.INITIAL_SPEED }; // Using object for reference
+        
+        // CRITICAL FIX: Improved spawning system to handle dual tracking
+        this.improvedSpawningFix = {
+            reset: () => {
+                // Reset any additional spawning state if needed
+                if (this.collectableManager && this.collectableManager.spawnHistory) {
+                    this.collectableManager.spawnHistory.lastPowerUpDistance = -100;
+                    console.log('✅ Improved spawning system reset - dual tracking synchronized');
+                }
+            }
+        };
         
         this.init();
     }
@@ -35,8 +55,12 @@ export class Game {
         this.setupThreeJS();
         await this.createManagers(); // Await manager creation
         this.setupInputManager();
+        this.setupStateHandlers();
         this.startSpawning();
         this.animate();
+
+        // Kick off splash -> menu flow
+        this.stateManager.startSplashScreen();
     }
 
     setupThreeJS() {
@@ -85,6 +109,68 @@ export class Game {
         this.inputManager.setupMobileControls();
     }
 
+    // ------------------------------------------------------------------
+    //                     STATE & UI EVENT HANDLERS
+    // ------------------------------------------------------------------
+
+    setupStateHandlers() {
+        // React to state changes
+        this.stateManager.onStateChange((state) => {
+            // Performance optimization: Cache playing state
+            this.isCurrentlyPlaying = (state === STATES.PLAYING);
+            
+            switch (state) {
+                case STATES.SPLASH:
+                    this.uiManager.showSplash();
+                    break;
+                case STATES.START_MENU:
+                    this.uiManager.hideSplash();
+                    this.uiManager.hideLeaderboard();
+                    this.uiManager.hideUserInfo();
+                    this.uiManager.showStartMenu();
+                    // Pause game logic
+                    this.gameActive = false;
+                    break;
+                case STATES.PLAYING:
+                    this.uiManager.hideStartMenu();
+                    this.uiManager.hideLeaderboard();
+                    this.uiManager.hideUserInfo();
+                    this.restartGame(); // Ensure fresh run
+                    this.gameActive = true;
+                    break;
+                case STATES.USER_INFO:
+                    this.uiManager.showUserInfo();
+                    break;
+                case STATES.LEADERBOARD:
+                    // Update table then show
+                    this.uiManager.updateLeaderboard(this.leaderboardManager.getScores());
+                    this.uiManager.hideUserInfo();
+                    this.uiManager.showLeaderboard();
+                    // Stop gameplay until menu
+                    this.gameActive = false;
+                    break;
+            }
+        });
+
+        // Wire UI events
+        this.uiManager.onStartButtonClicked = () => this.handleStartGame();
+        this.uiManager.onUserInfoSubmitted   = (name) => this.handleUserInfo(name);
+        this.uiManager.onLeaderboardBack     = () => this.stateManager.returnToMenu();
+    }
+
+    handleStartGame() {
+        this.stateManager.startGame(); // Triggers PLAYING state
+    }
+
+    handleUserInfo(name) {
+        // Save info into state manager
+        this.stateManager.saveUserInfo(name);
+        // Persist to leaderboard
+        this.leaderboardManager.addScore(this.stateManager.getPlayerData());
+        // Show leaderboard
+        this.stateManager.showLeaderboard();
+    }
+
     getGameSpeed() {
         return this.gameSpeed.value;
     }
@@ -100,7 +186,8 @@ export class Game {
     }
 
     updateGameLogic() {
-        if (!this.gameActive) return;
+        // Performance optimization: Use cached playing state instead of checking every frame
+        if (!this.isCurrentlyPlaying || !this.gameActive) return;
         
         // Pause most game logic if player is stumbling
         if (this.player.isStumbling) {
@@ -159,6 +246,11 @@ export class Game {
 
         // Apply magnet effect if solar boost is active
         if (this.powerUpManager.getSolarBoostStatus()) {
+            // Performance: Only log occasionally to avoid console spam
+            if (!this.magnetLogCounter) this.magnetLogCounter = 0;
+            if (this.magnetLogCounter++ % 300 === 0) {
+                console.log('✨ DEBUG: Applying magnet effect - Solar boost is active');
+            }
             this.collectableManager.applyMagnetEffect(
                 this.player.getPosition(),
                 PHYSICS.MAGNET_RADIUS,
@@ -201,6 +293,7 @@ export class Game {
             );
             
             if (collision) {
+                // Performance: Reduce collision logging
                 console.log('*** COLLISION DETECTED ***');
                 
                 // Try to trigger stumble animation with game over callback
@@ -316,10 +409,12 @@ export class Game {
 
     gameOver() {
         this.gameActive = false;
-        this.uiManager.showGameOver();
-        console.log('Game Over! Final Score:', Math.floor(this.uiManager.getScore()));
+        // Capture stats & hand off to state manager
+        const finalScore = this.uiManager.getScore();
         const stats = this.uiManager.getCollectableStats();
-        console.log(`Blueprints: ${stats.blueprints}, Water Drops: ${stats.waterDrops}, Energy Cells: ${stats.energyCells}`);
+        this.stateManager.endGame(finalScore, stats);
+        // Directly transition to user info capture
+        this.stateManager.showUserInfoScreen();
     }
 
     restartGame() {
@@ -341,8 +436,17 @@ export class Game {
         this.uiManager.reset();
         this.inputManager.reset();
         
+        // CRITICAL FIX: Reset improved spawning system that was blocking power-ups
+        if (this.improvedSpawningFix) {
+            this.improvedSpawningFix.reset();
+            console.log('✅ Reset improved spawning system - power-ups will now spawn after restart');
+        }
+        
         // Restart spawning
         this.startSpawning();
+
+        // Ensure score counters start at zero
+        this.uiManager.updateScoreDisplay && this.uiManager.updateScoreDisplay();
     }
 
     handleWindowResize() {
