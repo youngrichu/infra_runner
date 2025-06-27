@@ -13,7 +13,7 @@ export class CollectableManager {
         this.shufflePowerUpDeck();
 
         // Fair power-up spawning system (like Subway Surfers)
-        this.lastPowerUpTime = 0;
+        this.lastPowerUpTime = Date.now(); // Initialize with current time
         this.powerUpInterval = 25000; // Guarantee power-up every 25 seconds
         this.regularCollectionsCount = 0;
         this.powerUpAfterCollections = 8; // Or after collecting 8 regular items
