@@ -4,8 +4,8 @@ import * as THREE from 'three';
 export const GAME_CONFIG = {
     INITIAL_SPEED: 0.13,
     SPEED_INCREMENT: 0.000050,
-    GRAVITY: -0.02,
-    INITIAL_JUMP_VELOCITY: 0.35,
+    GRAVITY: -0.025,
+    INITIAL_JUMP_VELOCITY: 0.28,
     DOUBLE_JUMP_VELOCITY: 0.3,
     GROUND_HEIGHT: 0.5,
     PLAYER_VISUAL_OFFSET: -0.35, // Offset to align GLB model visual center with collision box

@@ -481,9 +481,17 @@ export class Player {
         }
         
         const targetX = LANES.POSITIONS[this.lane];
+        const currentX = this.mesh.position.x;
+        const distance = targetX - currentX;
+
+        // --- FIX: Snap to lane if very close to prevent "sticky" movement ---
+        if (Math.abs(distance) < 0.01) {
+            this.mesh.position.x = targetX;
+        } else {
+            this.mesh.position.x += distance * GAME_CONFIG.LANE_SWITCH_SPEED;
+        }
         
         // Update all mesh positions (running, flying, stumble)
-        this.mesh.position.x += (targetX - this.mesh.position.x) * GAME_CONFIG.LANE_SWITCH_SPEED;
         if (this.flyingMesh) {
             // Always keep flying mesh in sync with main position, but add floating effect when flying
             this.flyingMesh.position.x = this.mesh.position.x;
@@ -605,16 +613,14 @@ export class Player {
         // Switch to flying animation
         if (isFlying && this.flyingMesh && this.flyingAction && !this.flyingMesh.visible) {
             console.log('Switching to flying animation');
-            console.log('Flying mesh position before switch:', this.flyingMesh.position);
-            console.log('Running mesh position before switch:', this.mesh.position);
+            
+            // --- FIX: Sync position and rotation BEFORE making the mesh visible ---
+            this.flyingMesh.position.copy(this.mesh.position);
+            this.flyingMesh.rotation.copy(this.mesh.rotation);
             
             // Hide running mesh, show flying mesh
             this.mesh.visible = false;
             this.flyingMesh.visible = true;
-            
-            // Sync positions before switching
-            this.flyingMesh.position.copy(this.mesh.position);
-            console.log('Flying mesh position after sync:', this.flyingMesh.position);
             
             // Stop running animation
             if (this.currentAction) {
@@ -639,18 +645,18 @@ export class Player {
             }
             
             console.log('Flying animation locked to static pose at time:', goodPoseTime, '- mesh visible:', this.flyingMesh.visible);
-            console.log('Animation should now be completely static with no looping');
         }
         // Switch back to running animation
         else if (!isFlying && this.flyingMesh && this.flyingMesh.visible) {
             console.log('Switching back to running animation');
             
+            // --- FIX: Sync position and rotation BEFORE making the mesh visible ---
+            this.mesh.position.copy(this.flyingMesh.position);
+            this.mesh.rotation.copy(this.flyingMesh.rotation);
+
             // Hide flying mesh, show running mesh
             this.flyingMesh.visible = false;
             this.mesh.visible = true;
-            
-            // Sync positions before switching
-            this.mesh.position.copy(this.flyingMesh.position);
             
             // Reset flying animation for next use
             if (this.flyingAction) {
