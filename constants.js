@@ -173,7 +173,18 @@ export const OBSTACLE_TYPES = {
 
 export const COLLECTABLE_SPAWN_WEIGHTS = {
     REGULAR: ['blueprint', 'waterDrop', 'energyCell'],
-    POWER_UPS: ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'],
-    REGULAR_WEIGHT: 6, // Reduced from 15 to make power-ups more frequent
+    // New weighted array for power-ups to control rarity. This will be used
+    // as a "deck" to ensure all power-ups spawn.
+    // Common: windPower (4 instances)
+    // Uncommon: hardHat (2), waterPipeline (2)
+    // Rare: helicopter (1), solarPower (1)
+    POWER_UPS: [
+        'windPower', 'windPower', 'windPower', 'windPower',
+        'hardHat', 'hardHat',
+        'waterPipeline', 'waterPipeline',
+        'helicopter',
+        'solarPower'
+    ],
+    REGULAR_WEIGHT: 6,
     POWER_UP_WEIGHT: 1
 };

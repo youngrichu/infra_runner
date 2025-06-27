@@ -1,302 +1,245 @@
-# Infrastructure Runner - Performance Optimization Guide
+# Infrastructure Runner: Performance and Gameplay Optimization Guide
 
-## 🎯 Performance Issues Identified & Solutions Implemented
+This guide provides a detailed analysis and actionable recommendations to improve the performance, visual quality, and gameplay of your Three.js game, with the goal of achieving a production-ready, "Subway Surfers"-like experience.
 
-### ⚡ **IMMEDIATE OPTIMIZATIONS APPLIED**
+---
 
-#### 1. **Reduced Building Spawning Frequency**
-- **Before**: 2 buildings every 1.2 seconds (85% chance each side)
-- **After**: 1 building every 2 seconds (60% chance, alternating sides)
-- **Impact**: ~75% reduction in building creation overhead
+## 1. Critical Refactoring (Highest Impact)
 
-#### 2. **Improved Object Culling**
-- **Before**: Buildings removed at camera+80 units
-- **After**: Buildings removed at camera+50 units
-- **Impact**: Fewer objects in memory, better frame rates
+These changes require significant effort but will yield the most substantial improvements in performance and code maintainability.
 
-#### 3. **Shadow Optimization**
-- **Before**: All buildings cast and receive shadows
-- **After**: Buildings only receive shadows (no casting)
-- **Impact**: Significant GPU performance improvement
+### 1.1. Unify the Player into a Single Animated Model
 
-#### 4. **Animation System Optimization**
-- **Before**: All animation mixers updated every frame
-- **After**: Only active/visible meshes update animations
-- **Impact**: Reduced CPU overhead from animation processing
+**Why:** Currently, you load separate GLB files for the player's `Running`, `Flying`, and `Stumble` states. Managing multiple meshes for a single character is inefficient, complex, and error-prone. It increases memory usage, complicates position syncing, and makes animation management difficult.
 
-#### 5. **Spawn Interval Increases**
-- **Obstacles**: 1800-3500ms → 2200-4000ms
-- **Collectables**: 2000-5000ms → 3000-6000ms
-- **Trees**: Much less frequent (0.1 chance vs 0.3)
-- **Impact**: Fewer objects spawning = better performance
+**How:**
+1.  **Combine Animations:** Use a 3D modeling tool like Blender to combine all animations (`Running`, `Jump`, `Stumble Backwards`, `Flying`) into a single GLB file associated with a single player model.
+2.  **Refactor `player.js`:**
+    *   Load the single player model.
+    *   Initialize one `AnimationMixer`.
+    *   Store all animations (`gltf.animations`) in a map by name (e.g., `this.actions = {'running': clip1, 'jumping': clip2, ...}`).
+    *   Create a `playAction(name)` method that gracefully cross-fades from the current animation to the new one using `AnimationAction.crossFadeTo()`. This will provide smooth transitions between states like running and jumping.
+    *   This eliminates the need for multiple meshes (`flyingMesh`, `stumbleMesh`) and the complex logic to switch between them.
 
-### 🔧 **ADDITIONAL OPTIMIZATIONS TO IMPLEMENT**
+**Example `player.js` structure:**
 
-#### 1. **Level of Detail (LOD) System**
 ```javascript
-// Add to direct-model-environment.js
-createLODBuilding(zPosition, distance) {
-    const cameraDistance = Math.abs(zPosition - this.camera.position.z);
-    
-    if (cameraDistance > 100) {
-        // Use simple box geometry for distant buildings
-        return this.createSimpleBuildingLOD(zPosition);
-    } else if (cameraDistance > 50) {
-        // Use medium detail model
-        return this.createMediumBuildingLOD(zPosition);
-    } else {
-        // Use full detail GLB model
-        return this.spawnSpecificBuilding(zPosition);
-    }
-}
-```
+// In Player.js
 
-#### 2. **Geometry Instancing for Repeated Objects**
-```javascript
-// For obstacles that appear frequently
-createInstancedObstacles() {
-    const coneGeometry = new THREE.ConeGeometry(0.3, 0.8, 32);
-    const coneMaterial = new THREE.MeshStandardMaterial({ color: 0xff8800 });
-    
-    this.coneInstancedMesh = new THREE.InstancedMesh(
-        coneGeometry, 
-        coneMaterial, 
-        100 // Max 100 cones at once
-    );
-    this.scene.add(this.coneInstancedMesh);
-}
-```
+async loadModel() {
+    const gltf = await loader.loadAsync('assets/models/Player_All_Animations.glb');
+    this.mesh = gltf.scene;
+    this.scene.add(this.mesh);
 
-#### 3. **Texture Atlas for Buildings**
-```javascript
-// Combine multiple building textures into one atlas
-createTextureAtlas() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 2048;
-    canvas.height = 2048;
-    // ... combine textures
-    return new THREE.CanvasTexture(canvas);
-}
-```
+    this.mixer = new THREE.AnimationMixer(this.mesh);
+    this.actions = {};
 
-#### 4. **Object Pooling System**
-```javascript
-// Reuse objects instead of creating/destroying
-export class ObjectPool {
-    constructor(createFn, resetFn, initialSize = 10) {
-        this.createFn = createFn;
-        this.resetFn = resetFn;
-        this.pool = [];
-        this.active = [];
-        
-        // Pre-create objects
-        for (let i = 0; i < initialSize; i++) {
-            this.pool.push(this.createFn());
-        }
-    }
-    
-    get() {
-        if (this.pool.length > 0) {
-            const obj = this.pool.pop();
-            this.active.push(obj);
-            return obj;
-        }
-        return this.createFn();
-    }
-    
-    release(obj) {
-        const index = this.active.indexOf(obj);
-        if (index > -1) {
-            this.active.splice(index, 1);
-            this.resetFn(obj);
-            this.pool.push(obj);
-        }
-    }
-}
-```
-
-#### 5. **Frustum Culling Enhancement**
-```javascript
-// Only render objects in camera view
-updateVisibility(camera) {
-    const frustum = new THREE.Frustum();
-    const matrix = new THREE.Matrix4().multiplyMatrices(
-        camera.projectionMatrix, 
-        camera.matrixWorldInverse
-    );
-    frustum.setFromProjectionMatrix(matrix);
-    
-    this.activeBuildings.forEach(building => {
-        building.object.visible = frustum.intersectsObject(building.object);
+    gltf.animations.forEach((clip) => {
+        this.actions[clip.name] = this.mixer.clipAction(clip);
     });
+
+    this.activeAction = this.actions['Running'];
+    this.activeAction.play();
+}
+
+playAction(name) {
+    if (this.activeAction.name === name) return;
+
+    const newAction = this.actions[name];
+    const oldAction = this.activeAction;
+
+    newAction.reset();
+    newAction.play();
+    newAction.crossFadeFrom(oldAction, 0.3, true); // 0.3s fade duration
+
+    this.activeAction = newAction;
+}
+
+// In update loop:
+// this.mixer.update(deltaTime);
+
+// When jumping:
+// this.playAction('Jumping');
+```
+
+### 1.2. Optimize Environment Rendering with Instancing
+
+**Why:** The environment is composed of many individual building models, each resulting in a separate draw call. This is the most significant performance bottleneck in the game.
+
+**How:** Use `THREE.InstancedMesh` to render all instances of the same building model in a single draw call.
+
+1.  **In `direct-model-environment.js`:**
+    *   For each building type (e.g., `001.glb`), create one `InstancedMesh`.
+    *   When you need to spawn a building, instead of cloning the mesh, you will calculate its position and orientation and set it in the `InstancedMesh` using `instancedMesh.setMatrixAt(index, matrix)`.
+    *   You will need to manage the pool of available indices for instances.
+
+**Example `direct-model-environment.js` structure:**
+
+```javascript
+// In DirectModelEnvironment.js
+
+async loadModels() {
+    // For each building file...
+    const gltf = await this.gltfLoader.loadAsync(path);
+    const sourceMesh = gltf.scene.children[0]; // Assuming one mesh per file
+
+    // Create an InstancedMesh for this building type
+    const instancedMesh = new THREE.InstancedMesh(sourceMesh.geometry, sourceMesh.material, 200); // 200 max instances
+    this.scene.add(instancedMesh);
+    this.buildingTemplates[filename] = {
+        mesh: instancedMesh,
+        count: 0
+    };
+}
+
+spawnSpecificBuilding(zPosition) {
+    const template = this.buildingTemplates[buildingKey];
+    if (template.count >= template.mesh.count) return; // Pool is full
+
+    const matrix = new THREE.Matrix4();
+    // Set position, rotation, scale on the matrix
+    matrix.setPosition(x, y, z);
+
+    template.mesh.setMatrixAt(template.count, matrix);
+    template.mesh.instanceMatrix.needsUpdate = true;
+    template.count++;
+}
+```
+This same technique should be applied to trees and any other frequently repeated decoration.
+
+---
+
+## 2. Performance Enhancements (High Impact)
+
+### 2.1. Use a Package Manager and Bundler
+
+**Why:** Loading Three.js from a CDN via an import map is good for prototyping but not for production. A build step gives you dependency management, code minification, and tree-shaking (removing unused code), which reduces the final bundle size.
+
+**How:**
+1.  **Setup:** Initialize a `package.json` (`npm init -y`).
+2.  **Install Dependencies:** `npm install three`.
+3.  **Use a Bundler:** Use Vite or Webpack. Vite is recommended for its speed and simplicity.
+    *   `npm install --save-dev vite`
+    *   Create a `vite.config.js` file.
+    *   Change your `index.html` script tag to `<script type="module" src="/game.js"></script>`.
+    *   Run `npx vite` to start the dev server and `npx vite build` for a production build.
+
+### 2.2. Optimize Shadow Casting
+
+**Why:** Shadows are computationally expensive. Not every object needs to cast a shadow.
+
+**How:**
+*   **Player:** `player.mesh.castShadow = true;` (Correct)
+*   **Obstacles:** `obstacle.mesh.castShadow = true;` (Correct, as they are gameplay-relevant)
+*   **Buildings & Scenery:** `building.castShadow = false;` (Correctly implemented). Ensure trees and other decorations also have shadows disabled or use a very cheap form of shadow (like a plane with a shadow texture under them).
+*   **Light Frustum:** In `setupLighting`, tighten the `directionalLight.shadow.camera` bounds (`left`, `right`, `top`, `bottom`) to be as small as possible while still covering the visible gameplay area. This increases shadow resolution and performance.
+
+### 2.3. Share Geometries and Materials
+
+**Why:** Creating new geometries and materials (`new THREE.BoxGeometry()`, `material.clone()`) in the game loop or for every object instance consumes significant memory.
+
+**How:**
+*   **Obstacles:** In `ObstacleManager`, create one geometry and one material for each obstacle type *once* during initialization. When creating an obstacle, reuse them: `new THREE.Mesh(this.boxGeometry, this.boxMaterial)`.
+*   **Collectibles:** Apply the same principle to `CollectableManager`.
+
+---
+
+## 3. Gameplay & "Feel" Improvements
+
+### 3.1. Rework the Stumble Mechanic
+
+**Why:** In *Subway Surfers*, stumbling is a penalty, not an immediate game over. It resets your score multiplier and briefly slows you down, making you vulnerable. Your current implementation triggers a game over after the animation.
+
+**How:**
+1.  **In `Game.js` `checkCollisions`:**
+    *   When a collision occurs, instead of setting a game over callback, put the player in a "stumbling" state for a short duration (e.g., 1-2 seconds).
+    *   In this state, the player is invincible.
+    *   Briefly reduce `gameSpeed`.
+    *   If the player hits another obstacle *while* stumbling, then it's game over.
+2.  **In `Player.js`:**
+    *   Use the unified animation system to play the "stumble" animation.
+    *   After the stumble duration, transition back to the "running" animation and restore normal game speed.
+
+### 3.2. Improve Player Lane Switching
+
+**Why:** The current movement is linear (`position.x += ...`). A smoother, eased movement feels more polished and responsive.
+
+**How:** Use a tweening library or a simple easing function.
+
+**Example with easing (no library needed):**
+
+```javascript
+// In Player.js updatePosition()
+const targetX = LANES.POSITIONS[this.lane];
+const currentX = this.mesh.position.x;
+const distance = targetX - currentX;
+
+// If very close, snap to position to prevent endless easing
+if (Math.abs(distance) < 0.01) {
+    this.mesh.position.x = targetX;
+} else {
+    // Ease out function
+    this.mesh.position.x += distance * 0.2; // Adjust 0.2 for different feel
 }
 ```
 
-### 📊 **Performance Monitoring**
+### 3.3. Implement Collectible Magnet Effect
 
-#### Add FPS Counter
-```javascript
-// Add to game.js constructor
-this.stats = new Stats();
-this.stats.showPanel(0); // 0: fps, 1: ms, 2: mb
-document.body.appendChild(this.stats.dom);
+**Why:** The solar power-up is intended to have a magnet effect, but the `applyMagnetEffect` method is missing from `CollectableManager`.
 
-// In animate() method
-animate() {
-    this.stats.begin();
-    // ... game logic
-    this.stats.end();
-}
-```
-
-#### Memory Usage Tracking
-```javascript
-logMemoryUsage() {
-    if (performance.memory) {
-        console.log({
-            used: Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB',
-            total: Math.round(performance.memory.totalJSHeapSize / 1048576) + ' MB',
-            limit: Math.round(performance.memory.jsHeapSizeLimit / 1048576) + ' MB'
+**How:**
+1.  **In `CollectableManager.js`, add the method:**
+    ```javascript
+    applyMagnetEffect(playerPosition, radius, pullSpeed) {
+        this.collectables.forEach(item => {
+            const distance = item.mesh.position.distanceTo(playerPosition);
+            if (distance < radius) {
+                const direction = playerPosition.clone().sub(item.mesh.position).normalize();
+                item.mesh.position.add(direction.multiplyScalar(pullSpeed));
+            }
         });
     }
-}
-```
+    ```
+2.  **In `game.js`, ensure it's called in the update loop when the power-up is active.** (This is already correctly set up).
 
-### 🎮 **Renderer Optimizations**
+---
 
-#### Update Renderer Settings
-```javascript
-// In game.js setupThreeJS()
-this.renderer = new THREE.WebGLRenderer({ 
-    antialias: false, // Disable for better performance
-    powerPreference: "high-performance"
-});
-this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-this.renderer.shadowMap.enabled = true;
-this.renderer.shadowMap.type = THREE.PCFShadowMap; // Faster than PCFSoft
-```
+## 4. Visual & Rendering Quality
 
-#### Reduce Shadow Map Resolution
-```javascript
-// In environment setup
-directionalLight.shadow.mapSize.width = 512;  // Reduced from 1024
-directionalLight.shadow.mapSize.height = 512; // Reduced from 1024
-```
+### 4.1. Enhance Scene Lighting
 
-### 🔄 **Model Loading Optimizations**
+**Why:** The current lighting is functional but can be improved for better atmosphere.
 
-#### Progressive Loading
-```javascript
-async loadModelsProgressively() {
-    // Load essential models first
-    await this.loadPlayerModel();
-    await this.loadCriticalBuildings(['001.glb', '002.glb']);
-    
-    // Start game with basic models
-    this.startGame();
-    
-    // Load remaining models in background
-    this.loadRemainingModels();
-}
-```
+**How:**
+*   Replace `AmbientLight` with `HemisphereLight`. It provides more natural-looking ambient light by having different colors for the sky and the ground.
+    ```javascript
+    // In setupLighting()
+    const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 0.7); // Sky, Ground, Intensity
+    this.scene.add(hemisphereLight);
+    ```
+*   Adjust the `DirectionalLight` color to be a warmer, more sun-like color (e.g., `#FFDDBB`).
 
-#### Geometry Optimization
-```javascript
-optimizeGeometry(geometry) {
-    geometry.deleteAttribute('uv2'); // Remove unused UV maps
-    geometry.deleteAttribute('color'); // Remove vertex colors if not needed
-    
-    // Reduce vertex precision if possible
-    const positionAttribute = geometry.getAttribute('position');
-    if (positionAttribute.array instanceof Float32Array) {
-        // Consider using Float16Array for distant objects
-    }
-    
-    return geometry;
-}
-```
+### 4.2. Add Post-Processing
 
-### 🎯 **Target Performance Metrics**
+**Why:** Post-processing effects can dramatically improve the game's visual appeal.
 
-#### Desktop (60 FPS target):
-- **CPU Usage**: < 30% on mid-range hardware
-- **Memory Usage**: < 200MB
-- **Draw Calls**: < 500 per frame
-- **Triangles**: < 100K visible triangles
+**How:**
+1.  **Setup:** Use `EffectComposer` and `RenderPass`.
+2.  **Bloom:** Add `UnrealBloomPass` to make bright objects like collectibles and power-ups glow. This adds a high-quality, vibrant feel.
+    ```javascript
+    // In Game.js after renderer setup
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
 
-#### Mobile (30 FPS target):
-- **CPU Usage**: < 50% on mid-range mobile
-- **Memory Usage**: < 100MB
-- **Draw Calls**: < 200 per frame
-- **Triangles**: < 50K visible triangles
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+    bloomPass.threshold = 0; // Adjust these values
+    bloomPass.strength = 0.6;
+    bloomPass.radius = 0;
+    this.composer.addPass(bloomPass);
 
-### 🔍 **Debugging Performance Issues**
+    // In animate() loop, replace renderer.render() with:
+    // this.composer.render();
+    ```
 
-#### Use Browser Dev Tools
-```javascript
-// Profile specific functions
-console.time('buildingUpdate');
-this.updateBuildings();
-console.timeEnd('buildingUpdate');
-
-// Track object counts
-console.log('Active buildings:', this.activeBuildings.length);
-console.log('Active obstacles:', this.obstacles.length);
-console.log('Scene children:', this.scene.children.length);
-```
-
-#### WebGL Debug Extension
-- Install "WebGL Insight" browser extension
-- Monitor draw calls, state changes, and memory usage
-- Identify performance bottlenecks in real-time
-
-### 🚀 **Implementation Priority**
-
-1. **High Priority** (Immediate 20-30% improvement):
-   - ✅ Object culling optimization
-   - ✅ Shadow system optimization  
-   - ✅ Animation update optimization
-   - ✅ Spawn frequency reduction
-
-2. **Medium Priority** (Additional 15-20% improvement):
-   - LOD system implementation
-   - Object pooling for obstacles/collectables
-   - Frustum culling enhancement
-   - Texture atlas creation
-
-3. **Low Priority** (Polish and edge cases):
-   - Progressive model loading
-   - Geometry optimization
-   - Advanced instancing
-   - Memory compression techniques
-
-### 📝 **Performance Testing Checklist**
-
-- [ ] Test on low-end hardware (integrated graphics)
-- [ ] Monitor frame rate during intensive scenes
-- [ ] Check memory usage over extended play sessions
-- [ ] Test on mobile devices (if targeting mobile)
-- [ ] Profile with browser dev tools
-- [ ] Verify no memory leaks during restart cycles
-
-### 🔧 **Quick Performance Fixes Applied**
-
-The following optimizations have already been implemented in your codebase:
-
-1. **Building spawn reduced** from every 1.2s to every 2s
-2. **Building culling** more aggressive (camera+50 vs camera+80)
-3. **Shadow optimization** disabled building shadow casting
-4. **Animation updates** only for visible meshes
-5. **Spawn intervals increased** for all object types
-6. **Tree spawning** significantly reduced (10% vs 30% chance)
-
-### 📈 **Expected Performance Improvements**
-
-With the current optimizations, you should see:
-- **20-30% FPS increase** in dense building areas
-- **15-25% reduction** in memory usage
-- **Smoother gameplay** during high-speed sections
-- **Better consistency** in frame timing
-- **Reduced stuttering** when spawning new objects
-
-The game should now maintain 60 FPS on most mid-range hardware and 30+ FPS on lower-end systems.
+---
+By following this guide, you can systematically refactor and enhance your game, turning your solid prototype into a polished, performant, and engaging experience.

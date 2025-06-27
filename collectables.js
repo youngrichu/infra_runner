@@ -8,11 +8,26 @@ export class CollectableManager {
         this.collectables = [];
         this.gameController = null; // Will be set by game.js
         
+        // "Shuffle bag" system for fair power-up spawning
+        this.powerUpDeck = [];
+        this.shufflePowerUpDeck();
+
         // Fair power-up spawning system (like Subway Surfers)
         this.lastPowerUpTime = 0;
         this.powerUpInterval = 25000; // Guarantee power-up every 25 seconds
         this.regularCollectionsCount = 0;
         this.powerUpAfterCollections = 8; // Or after collecting 8 regular items
+    }
+
+    shufflePowerUpDeck() {
+        console.log('Shuffling power-up deck...');
+        this.powerUpDeck = [...COLLECTABLE_SPAWN_WEIGHTS.POWER_UPS];
+        // Fisher-Yates shuffle algorithm
+        for (let i = this.powerUpDeck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.powerUpDeck[i], this.powerUpDeck[j]] = [this.powerUpDeck[j], this.powerUpDeck[i]];
+        }
+        console.log('Power-up deck shuffled:', this.powerUpDeck);
     }
 
     setGameController(gameController) {
@@ -64,10 +79,13 @@ export class CollectableManager {
         }
     }
 
-    // NEW: Separate method for power-up spawning
     createPowerUp(playerZ, obstacles) {
-        const powerUps = COLLECTABLE_SPAWN_WEIGHTS.POWER_UPS;
-        const type = powerUps[Math.floor(Math.random() * powerUps.length)];
+        if (this.powerUpDeck.length === 0) {
+            this.shufflePowerUpDeck();
+        }
+
+        const type = this.powerUpDeck.pop();
+        console.log(`Spawning power-up from deck: ${type}. Deck size: ${this.powerUpDeck.length}`);
 
         // Find clear position - ALWAYS use exact lane positions
         let spawnPosition;
@@ -494,6 +512,9 @@ export class CollectableManager {
     reset() {
         this.collectables.forEach(collectable => this.scene.remove(collectable.mesh));
         this.collectables = [];
+        
+        // Reset and reshuffle the power-up deck
+        this.shufflePowerUpDeck();
         
         // Reset fair spawning system
         this.lastPowerUpTime = Date.now();
