@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { LANES, COLORS, SPAWN_CONFIG } from './constants.js';
+
+// Verify DRACO loader is imported
+console.log('DRACOLoader imported:', DRACOLoader);
 
 export class DirectModelEnvironment {
     constructor(scene) {
@@ -16,6 +20,16 @@ export class DirectModelEnvironment {
         
         // Model templates
         this.gltfLoader = new GLTFLoader();
+        
+        // Setup DRACO loader for compressed GLB files
+        const dracoLoader = new DRACOLoader();
+        // Try both local and CDN paths for maximum compatibility
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        dracoLoader.setDecoderConfig({ type: 'js' });
+        this.gltfLoader.setDRACOLoader(dracoLoader);
+        
+        console.log('DRACO loader configured and attached to GLTFLoader');
+        
         this.buildingTemplates = {}; // Store loaded building models
         this.treeTemplate = null;
         this.currentBuildingIndex = 0;
@@ -134,7 +148,7 @@ export class DirectModelEnvironment {
             if (child.isMesh) {
                 // Performance optimization: only nearby buildings cast shadows
                 child.castShadow = false; // Disabled for performance
-                child.receiveShadow = true;
+                child.receiveShadow = false; // Also disable receive shadows for better performance
                 
                 // Apply African color theme based on building type
                 if (child.material && meshCount % 4 === 0) { // Every 4th mesh gets color
@@ -441,27 +455,27 @@ export class DirectModelEnvironment {
         const playerZ = this.gameController.getPlayerPosition().z;
         const spawnZ = playerZ - 150; // Spawn further ahead for better coverage
 
-        // OPTIMIZED: Spawn fewer buildings per cycle but maintain density through frequency
-        for (let i = 0; i < 2; i++) { // Reduced from 3 to 2 buildings per cycle
-            const buildingZ = spawnZ - (i * 20); // Slightly increased spacing: every 20 units
+        // RESTORED DENSITY: Back to dense urban environment with optimized models
+        for (let i = 0; i < 2; i++) { // Back to 2 buildings per cycle
+            const buildingZ = spawnZ - (i * 20); // Reduced spacing back to every 20 units
             
             // Try to spawn on both sides for maximum density
-            if (Math.random() < 0.85) { // Reduced from 90% to 85% chance for left side
+            if (Math.random() < 0.85) { // Restored to 85% chance for left side
                 const leftBuilding = this.spawnSpecificBuilding(buildingZ, 'left');
             }
-            if (Math.random() < 0.85) { // Reduced from 90% to 85% chance for right side
+            if (Math.random() < 0.85) { // Restored to 85% chance for right side
                 const rightBuilding = this.spawnSpecificBuilding(buildingZ - 10, 'right'); // Slight offset
             }
         }
 
-        // Very rarely spawn trees
-        if (Math.random() < 0.02) { // 2% chance - very rare
+        // Moderately spawn trees for urban ambiance
+        if (Math.random() < 0.15) { // 15% chance - moderate frequency
             this.spawnSpecificTree(spawnZ - 40);
         }
 
         setTimeout(() => {
             this.spawnElements();
-        }, 1200); // Slightly less frequent - every 1.2 seconds (was 0.8)
+        }, 1200); // Back to original frequency - every 1.2 seconds for dense city
     }
 
     updateModels(gameSpeed, cameraZ) {
@@ -471,8 +485,8 @@ export class DirectModelEnvironment {
             building.object.position.z += gameSpeed;
             building.zPosition += gameSpeed;
 
-            // More aggressive despawning for performance
-            if (building.zPosition > cameraZ + 80) { // Reduced from 120 to 80
+            // Balanced despawning - not too aggressive to maintain density
+            if (building.zPosition > cameraZ + 70) { // Increased back to 70 for better density
                 this.scene.remove(building.object);
                 this.activeBuildings.splice(i, 1);
             }

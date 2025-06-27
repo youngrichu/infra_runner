@@ -81,20 +81,20 @@ export const COLORS = {
 export const SPAWN_CONFIG = {
     OBSTACLE_MIN_DISTANCE: 12,
     OBSTACLE_SAFE_DISTANCE_MULTIPLIER: 1.5,
-    BUILDING_INTERVAL: { MIN: 8000, MAX: 15000 }, // Much longer intervals for minimal spawning
+    BUILDING_INTERVAL: { MIN: 8000, MAX: 15000 }, // Restored building density
     BUILDING_OFFSET_FROM_ROAD: 20,
     BUILDING_SPAWN_DISTANCE_AHEAD: 100,
     BUILDING_CLUSTER_SIZE: { MIN: 1, MAX: 1 },
     BUILDING_CLUSTER_SPREAD: 0,
-    STREET_DECORATION_INTERVAL: { MIN: 2000, MAX: 4000 }, // Slower tree spawning
-    STREET_DECORATION_CHANCE: 0.3, // Much lower chance
+    STREET_DECORATION_INTERVAL: { MIN: 2000, MAX: 4000 }, // Restored tree spawning
+    STREET_DECORATION_CHANCE: 0.3, // Restored tree chance
     STREET_DECORATION_OFFSET: 2.5,
     SIDE_AREA_LENGTH: 25,
     SIDE_AREA_WIDTH: 30,
     SIDE_AREA_SPAWN_TRIGGER_OFFSET: 180,
     SIDE_AREA_DESPAWN_OFFSET: 25,
-    COLLECTABLE_INTERVAL: { MIN: 2000, MAX: 5000 },
-    OBSTACLE_INTERVAL: { MIN: 1800, MAX: 3500 }, // Base interval, used if dynamic interval is disabled or as a starting point
+    COLLECTABLE_INTERVAL: { MIN: 2000, MAX: 5000 }, // Restored collectable frequency
+    OBSTACLE_INTERVAL: { MIN: 1800, MAX: 3500 }, // Restored obstacle frequency
     AERIAL_SPAWN_CHANCE: 0.02,
     SOLAR_ORB_SPAWN_CHANCE: 0.03, // Slightly higher chance than aerial stars
     OBSTACLE_DYNAMIC_INTERVAL: {

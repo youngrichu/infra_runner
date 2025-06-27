@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { LANES, COLORS, SPAWN_CONFIG } from './constants.js';
 
 export class StructuredUrbanEnvironment {
@@ -19,6 +20,12 @@ export class StructuredUrbanEnvironment {
         
         // GLB model loader
         this.gltfLoader = new GLTFLoader();
+        
+        // Setup DRACO loader for compressed GLB files
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        this.gltfLoader.setDRACOLoader(dracoLoader);
+        
         this.buildingTemplates = [];
         this.isModelLoaded = false;
         

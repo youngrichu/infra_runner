@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { LANES, COLORS, GAME_CONFIG, PHYSICS } from './constants.js';
 
 export class Player {
@@ -50,6 +51,12 @@ export class Player {
     async loadRunningAnimation() {
         return new Promise((resolve, reject) => {
             const loader = new GLTFLoader();
+            
+            // Setup DRACO loader for compressed GLB files
+            const dracoLoader = new DRACOLoader();
+            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+            loader.setDRACOLoader(dracoLoader);
+            
             loader.load(
                 'assets/models/Running.glb',
                 (gltf) => {
@@ -99,6 +106,12 @@ export class Player {
     async loadFlyingAnimation() {
         return new Promise((resolve, reject) => {
             const loader = new GLTFLoader();
+            
+            // Setup DRACO loader for compressed GLB files
+            const dracoLoader = new DRACOLoader();
+            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+            loader.setDRACOLoader(dracoLoader);
+            
             console.log('Attempting to load flying animation...');
             loader.load(
                 'assets/models/Flying.glb',
@@ -149,6 +162,12 @@ export class Player {
     async loadStumbleAnimation() {
         return new Promise((resolve, reject) => {
             const loader = new GLTFLoader();
+            
+            // Setup DRACO loader for compressed GLB files
+            const dracoLoader = new DRACOLoader();
+            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+            loader.setDRACOLoader(dracoLoader);
+            
             console.log('Attempting to load stumble animation...');
             loader.load(
                 'assets/models/Stumble Backwards.glb',
@@ -446,11 +465,9 @@ export class Player {
         
         // If stumbling, only update animation mixers and exit - no movement allowed
         if (this.isStumbling) {
-            // Update animation mixers
+        // Update animation mixers - only stumble mixer during stumble
             const deltaTime = this.clock.getDelta();
-            if (this.mixer) {
-                this.mixer.update(deltaTime);
-            }
+            // Don't update main mixer during stumble to save CPU
             if (this.stumbleMixer) {
                 this.stumbleMixer.update(deltaTime);
                 
@@ -563,14 +580,20 @@ export class Player {
             }
         }
 
-        // Update animation mixers
+        // Update animation mixers with performance optimization
         const deltaTime = this.clock.getDelta();
-        if (this.mixer) {
+        
+        // Only update active mixers to save CPU
+        if (this.mixer && this.mesh && this.mesh.visible) {
             this.mixer.update(deltaTime);
         }
-        // Only update flying mixer if not in static flying mode
-        if (this.flyingMixer && (!this.isFlying || !this.flyingMesh || !this.flyingMesh.visible)) {
-            this.flyingMixer.update(deltaTime);
+        
+        // Only update flying mixer when needed
+        if (this.flyingMixer && this.isFlying && this.flyingMesh && this.flyingMesh.visible) {
+            // For static flying pose, update much less frequently
+            if (Math.random() < 0.1) { // Only 10% of frames
+                this.flyingMixer.update(0);
+            }
         }
         // Note: stumbleMixer is only updated during stumble (handled above)
     }
@@ -782,7 +805,13 @@ export class Player {
 
     // For compatibility
     adjustAnimationSpeed(gameSpeed) {
-        // Can be used later for animation speed scaling
+        // Optimize animation speed based on game speed
+        if (this.currentAction && gameSpeed > 0.15) {
+            // Speed up animation slightly at high speeds
+            this.currentAction.setEffectiveTimeScale(1 + (gameSpeed - 0.15) * 2);
+        } else if (this.currentAction) {
+            this.currentAction.setEffectiveTimeScale(1);
+        }
     }
 
     playAnimation(name) {
