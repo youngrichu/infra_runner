@@ -484,11 +484,30 @@ export class Player {
         const currentX = this.mesh.position.x;
         const distance = targetX - currentX;
 
-        // --- FIX: Snap to lane if very close to prevent "sticky" movement ---
-        if (Math.abs(distance) < 0.01) {
+        // --- IMPROVED FIX: Better lane switching with multiple safeguards ---
+        const absDistance = Math.abs(distance);
+        
+        if (absDistance < 0.05) {
+            // Snap to target if very close
             this.mesh.position.x = targetX;
         } else {
-            this.mesh.position.x += distance * GAME_CONFIG.LANE_SWITCH_SPEED;
+            // Calculate movement for this frame
+            const movement = distance * GAME_CONFIG.LANE_SWITCH_SPEED;
+            
+            // Ensure minimum movement to prevent getting stuck
+            const minMovement = 0.02;
+            if (absDistance > minMovement && Math.abs(movement) < minMovement) {
+                // Force minimum movement in the correct direction
+                this.mesh.position.x += Math.sign(distance) * minMovement;
+            } else {
+                this.mesh.position.x += movement;
+            }
+            
+            // Safety check: if we overshot, snap to target
+            const newDistance = targetX - this.mesh.position.x;
+            if (Math.sign(distance) !== Math.sign(newDistance)) {
+                this.mesh.position.x = targetX;
+            }
         }
         
         // Update all mesh positions (running, flying, stumble)

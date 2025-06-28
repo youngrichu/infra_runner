@@ -10,7 +10,7 @@ export const GAME_CONFIG = {
     GROUND_HEIGHT: 0.5,
     PLAYER_VISUAL_OFFSET: -0.35, // Offset to align GLB model visual center with collision box
     CAMERA_FOLLOW_SPEED: 0.1,
-    LANE_SWITCH_SPEED: 0.25,
+    LANE_SWITCH_SPEED: 0.35,
     DEBUG_COLLISIONS: false // Set to true to visualize player collision box
 };
 

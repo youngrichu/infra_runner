@@ -169,11 +169,12 @@ export class DirectModelEnvironment {
     }
 
     enhanceTree(tree) {
-        // Enhance tree with natural colors
+        // Enhance tree with natural colors - PERFORMANCE OPTIMIZED
         tree.traverse((child) => {
             if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
+                // DISABLE SHADOWS for trees - major performance boost
+                child.castShadow = false;
+                child.receiveShadow = false;
                 
                 if (child.material) {
                     child.material = child.material.clone();
@@ -265,6 +266,7 @@ export class DirectModelEnvironment {
         rightSidewalk.position.y = 0.02;
         rightSidewalk.receiveShadow = true;
         this.scene.add(rightSidewalk);
+
     }
 
     createInitialScene() {
@@ -274,17 +276,21 @@ export class DirectModelEnvironment {
             return;
         }
         
-        console.log('Creating VERY dense urban scene with loaded models...');
+        console.log('Creating consistent dense urban scene with loaded models...');
         
-        // Create MANY more initial buildings for complete coverage
-        for (let i = 0; i < 25; i++) { // Increased from 12 to 25 for complete coverage
-            this.spawnSpecificBuilding(-20 - (i * 15)); // Every 15 units for dense coverage
+        // Create BALANCED initial buildings for both sides
+        for (let i = 0; i < 30; i++) { // Increased for better coverage
+            const z = -20 - (i * 12); // Every 12 units for denser coverage
+            
+            // Ensure BOTH sides get buildings consistently
+            this.spawnSpecificBuilding(z, 'left');
+            this.spawnSpecificBuilding(z - 6, 'right'); // Slight offset for variety
         }
         
-        // Create very few initial trees
-        for (let i = 0; i < 1; i++) { // Just 1 tree initially
-            this.spawnSpecificTree(-100 - (i * 200)); // Very sparse: every 200 units
-        }
+        // Trees disabled temporarily
+        // for (let i = 0; i < 2; i++) {
+        //     this.spawnSpecificTree(-100 - (i * 150));
+        // }
     }
 
     spawnSpecificBuilding(zPosition, forceSide = null) {
@@ -302,8 +308,8 @@ export class DirectModelEnvironment {
         const template = this.buildingTemplates[buildingKey];
         const building = template.clone();
         
-        // MUCH smaller scale to prevent road overlap
-        const scale = 0.004 + Math.random() * 0.004; // 0.004 to 0.008 scale (very small)
+        // Slightly larger scale for better visibility while maintaining performance
+        const scale = 0.006 + Math.random() * 0.006; // 0.006 to 0.012 scale (better visibility)
         building.scale.setScalar(scale);
         
         // Ensure building faces the road properly (not sideways)
@@ -319,13 +325,13 @@ export class DirectModelEnvironment {
         let xOffset;
         
         if (side === 'left') {
-            // Left side: closer to street edge for urban canyon effect
-            xOffset = -8 - Math.random() * 5; // X = -8 to -13 (closer to street)
+            // Left side: consistent positioning for urban canyon effect
+            xOffset = -10 - Math.random() * 3; // X = -10 to -13 (closer to street)
             // Additional safety: account for building width
             xOffset -= (size.x / 2); // Move further left by half building width
         } else {
-            // Right side: closer to street edge
-            xOffset = 8 + Math.random() * 5;  // X = +8 to +13 (closer to street)
+            // Right side: consistent positioning
+            xOffset = 10 + Math.random() * 3;  // X = +10 to +13 (closer to street)
             // Additional safety: account for building width
             xOffset += (size.x / 2); // Move further right by half building width
         }
@@ -359,22 +365,24 @@ export class DirectModelEnvironment {
         
         const tree = this.treeTemplate.clone();
         
-        // Smaller scale for trees but not too tiny
-        const scale = 0.015 + Math.random() * 0.01; // 0.015 to 0.025 scale
+        // Much smaller scale for trees - better performance
+        const scale = 0.008 + Math.random() * 0.005; // 0.008 to 0.013 scale (smaller)
         tree.scale.setScalar(scale);
         
         // Position tree AFTER scaling - CLOSE to road but not ON road
         const bbox = new THREE.Box3().setFromObject(tree);
         const groundY = -bbox.min.y;
         
-        // Road edges are at X=-4 and X=+4, so trees go just outside
-        const side = Math.random() < 0.5 ? 'left' : 'right';
-        let xOffset;
+        // HARDCODED SAFE POSITIONS - no calculations, no randomness, no math
+        // Just alternate between left and right with FIXED safe positions
+        const isEvenZ = Math.floor(Math.abs(zPosition / 100)) % 2 === 0;
+        const side = isEvenZ ? 'left' : 'right';
         
+        let xOffset;
         if (side === 'left') {
-            xOffset = -6 - Math.random() * 2; // X = -6 to -8 (just left of road)
+            xOffset = -5.5; // HARDCODED left sidewalk center
         } else {
-            xOffset = 6 + Math.random() * 2;  // X = +6 to +8 (just right of road)
+            xOffset = 5.5;  // HARDCODED right sidewalk center
         }
         
         tree.position.set(xOffset, groundY, zPosition);
@@ -388,7 +396,7 @@ export class DirectModelEnvironment {
         console.log(`Tree spawned: X=${xOffset.toFixed(1)} (${side} side), Y=${groundY.toFixed(1)}, Z=${zPosition}, scale=${scale.toFixed(4)}`);
     }
 
-    createFallbackBuilding(zPosition) {
+    createFallbackBuilding(zPosition, forceSide = null) {
         // Simple fallback if models fail to load
         const height = 3 + Math.random() * 3; // Smaller fallback buildings
         const width = 2 + Math.random() * 1.5;
@@ -405,15 +413,15 @@ export class DirectModelEnvironment {
         building.castShadow = true;
         building.receiveShadow = true;
         
-        // Use same close-to-street positioning as GLB buildings
-        const side = Math.random() < 0.5 ? 'left' : 'right';
+        // Use forced side or default behavior
+        const side = forceSide || (Math.random() < 0.5 ? 'left' : 'right');
         let xOffset;
         
         if (side === 'left') {
-            xOffset = -8 - Math.random() * 4; // X = -8 to -12 (closer to street)
+            xOffset = -10 - Math.random() * 3; // X = -10 to -13 (consistent with GLB)
             xOffset -= (width / 2); // Account for building width
         } else {
-            xOffset = 8 + Math.random() * 4;  // X = +8 to +12 (closer to street)
+            xOffset = 10 + Math.random() * 3;  // X = +10 to +13 (consistent with GLB)
             xOffset += (width / 2); // Account for building width
         }
         
@@ -437,9 +445,11 @@ export class DirectModelEnvironment {
     }
 
     createFallbackScene() {
-        console.log('Creating very dense fallback urban scene...');
-        for (let i = 0; i < 25; i++) { // Same high density for fallback
-            this.createFallbackBuilding(-20 - (i * 15)); // Same close spacing
+        console.log('Creating consistent dense fallback urban scene...');
+        for (let i = 0; i < 30; i++) { // Same high density for fallback
+            const z = -20 - (i * 12); // Same close spacing as GLB buildings
+            this.createFallbackBuilding(z, 'left');
+            this.createFallbackBuilding(z - 6, 'right'); // Ensure both sides
         }
     }
 
@@ -453,29 +463,29 @@ export class DirectModelEnvironment {
         }
 
         const playerZ = this.gameController.getPlayerPosition().z;
-        const spawnZ = playerZ - 150; // Spawn further ahead for better coverage
+        const spawnZ = playerZ - 120; // Spawn ahead for coverage
 
-        // RESTORED DENSITY: Back to dense urban environment with optimized models
-        for (let i = 0; i < 2; i++) { // Back to 2 buildings per cycle
-            const buildingZ = spawnZ - (i * 20); // Reduced spacing back to every 20 units
-            
-            // Try to spawn on both sides for maximum density
-            if (Math.random() < 0.85) { // Restored to 85% chance for left side
-                const leftBuilding = this.spawnSpecificBuilding(buildingZ, 'left');
-            }
-            if (Math.random() < 0.85) { // Restored to 85% chance for right side
-                const rightBuilding = this.spawnSpecificBuilding(buildingZ - 10, 'right'); // Slight offset
-            }
-        }
+        // GUARANTEED CONSISTENT SPAWNING: Always spawn on both sides
+        // Spawn buildings in pairs to ensure both sides are populated
+        const buildingZ1 = spawnZ;
+        const buildingZ2 = spawnZ - 15; // Second row for density
+        
+        // ALWAYS spawn on left side (no randomness)
+        this.spawnSpecificBuilding(buildingZ1, 'left');
+        this.spawnSpecificBuilding(buildingZ2, 'left');
+        
+        // ALWAYS spawn on right side (no randomness)
+        this.spawnSpecificBuilding(buildingZ1 - 8, 'right'); // Slight offset for variety
+        this.spawnSpecificBuilding(buildingZ2 - 8, 'right');
 
-        // Moderately spawn trees for urban ambiance
-        if (Math.random() < 0.15) { // 15% chance - moderate frequency
-            this.spawnSpecificTree(spawnZ - 40);
-        }
+        // Trees disabled temporarily
+        // if (Math.random() < 0.05) {
+        //     this.spawnSpecificTree(spawnZ - 30);
+        // }
 
         setTimeout(() => {
             this.spawnElements();
-        }, 1200); // Back to original frequency - every 1.2 seconds for dense city
+        }, 800); // Faster spawning for consistent density
     }
 
     updateModels(gameSpeed, cameraZ) {
@@ -498,7 +508,7 @@ export class DirectModelEnvironment {
             decoration.object.position.z += gameSpeed;
             decoration.zPosition += gameSpeed;
 
-            if (decoration.zPosition > cameraZ + 40) { // Reduced from 60 to 40
+            if (decoration.zPosition > cameraZ + 25) { // Very aggressive culling for trees
                 this.scene.remove(decoration.object);
                 this.streetDecorations.splice(i, 1);
             }
