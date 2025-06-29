@@ -712,9 +712,18 @@ export class Player {
             console.log('Using stumble mesh for collision box, position:', playerPos);
         }
         
-        const boxWidth = 0.2;
-        const boxHeight = 1.0;
-        const boxDepth = 0.3;
+        // Dynamically adjust collision box width during lane changes
+        let boxWidth = 0.2; // Base width
+        let boxHeight = 1.0;
+        let boxDepth = 0.3;
+        
+        // Shrink collision box width during lane changes
+        const targetX = LANES.POSITIONS[this.lane];
+        const currentX = this.mesh.position.x;
+        const distance = Math.abs(targetX - currentX);
+        if (distance > 0.05) { // If we're switching lanes
+            boxWidth *= 0.6; // Make collision box 40% narrower during lane changes
+        }
         
         const modelVisualCenter = playerPos.y + (boxHeight * 0.15);
         

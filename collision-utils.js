@@ -23,15 +23,24 @@ export class CollisionUtils {
             return true;
         }
 
-        // Method 2: Check if object is in the movement path
-        // Create an expanded box that covers the player's movement path
+        // Determine if we're in a lane change
         const currentPlayerCenter = new THREE.Vector3();
         currentPlayerBox.getCenter(currentPlayerCenter);
+        const xMovement = Math.abs(currentPlayerCenter.x - playerPrevPos.x);
+        const isLaneChange = xMovement > 0.05;
+
+        // Method 2: Check if object is in the movement path
+        // Create an expanded box that covers the player's movement path
         
         // Create a swept volume that covers the path from previous to current position
         const sweptBox = new THREE.Box3();
         const playerSize = new THREE.Vector3();
         currentPlayerBox.getSize(playerSize);
+        
+        // During lane changes, reduce the width of the swept box
+        if (isLaneChange) {
+            playerSize.x *= 0.6; // Make the swept volume 40% narrower during lane changes
+        }
         
         // Expand the box to cover movement path
         const minX = Math.min(playerPrevPos.x, currentPlayerCenter.x) - playerSize.x / 2;
