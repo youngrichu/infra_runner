@@ -260,7 +260,7 @@ export class CollectableManager {
         
         collectableMesh.position.set(
             LANES.POSITIONS[laneIndex],
-            playerPosition.y + 0.9, // Perfect visual offset to match flying character appearance
+            2.5, // Fixed height for aerial stars - high enough to be clearly aerial
             playerPosition.z - 30 - (Math.random() * 20)
         );
         

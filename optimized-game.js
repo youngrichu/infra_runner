@@ -372,7 +372,7 @@ export class OptimizedGame {
         
         // Update power-up timers
         this.powerUpManager.updateTimers(deltaTime);
-        this.uiManager.updatePowerUpTimers();
+        this.uiManager.updatePowerUpTimers(deltaTime);
 
         // Apply magnet effect
         this.applyMagnetEffect();

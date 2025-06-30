@@ -154,8 +154,8 @@ export class Game {
         const frameTime = 1000 / 60; // Assuming 60 FPS
         this.powerUpManager.updateTimers(frameTime);
         
-        // Update UI timers
-        this.uiManager.updatePowerUpTimers();
+        // Update UI timers with same deltaTime
+        this.uiManager.updatePowerUpTimers(frameTime);
 
         // Apply magnet effect if solar boost is active
         if (this.powerUpManager.getSolarBoostStatus()) {

@@ -329,8 +329,8 @@ export class EnhancedGame {
         const frameTime = 1000 / 60;
         this.powerUpManager.updateTimers(frameTime);
         
-        // Update UI timers
-        this.uiManager.updatePowerUpTimers && this.uiManager.updatePowerUpTimers();
+        // Update UI timers with same deltaTime
+        this.uiManager.updatePowerUpTimers && this.uiManager.updatePowerUpTimers(frameTime);
 
         // Apply magnet effect if solar boost is active
         if (this.powerUpManager.getSolarBoostStatus()) {

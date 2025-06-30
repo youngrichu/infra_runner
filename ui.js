@@ -100,15 +100,11 @@ export class UIManager {
         const powerUp = {
             element: powerUpElement,
             name: name,
-            duration: durationSeconds,
-            startTime: Date.now()
+            duration: durationSeconds * 1000, // Convert to milliseconds for consistency
+            remainingTime: durationSeconds * 1000
         };
         this.powerUpElements.push(powerUp);
         this.activePowerUps.push(powerUp);
-        
-        setTimeout(() => {
-            this.removePowerUpFromUI(powerUp);
-        }, durationSeconds * 1000);
     }
 
     removePowerUpFromUI(powerUp) {
@@ -126,12 +122,19 @@ export class UIManager {
         });
     }
 
-    updatePowerUpTimers() {
-        for (const powerUp of this.activePowerUps) {
-            const elapsed = (Date.now() - powerUp.startTime) / 1000;
-            const remaining = Math.max(0, powerUp.duration - elapsed);
-            if (powerUp.element) {
-                powerUp.element.innerHTML = `${powerUp.name}: ${remaining.toFixed(1)}s`;
+    updatePowerUpTimers(deltaTime) {
+        // Update timers and remove expired ones
+        for (let i = this.activePowerUps.length - 1; i >= 0; i--) {
+            const powerUp = this.activePowerUps[i];
+            powerUp.remainingTime -= deltaTime;
+            
+            if (powerUp.remainingTime <= 0) {
+                // Power-up expired, remove it
+                this.removePowerUpFromUI(powerUp);
+            } else if (powerUp.element) {
+                // Update display
+                const remainingSeconds = powerUp.remainingTime / 1000;
+                powerUp.element.innerHTML = `${powerUp.name}: ${remainingSeconds.toFixed(1)}s`;
             }
         }
     }
