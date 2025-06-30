@@ -14,6 +14,13 @@ export class DirectModelEnvironment {
         this.streetDecorations = [];
         this.gameController = null;
         
+        // Performance tracking - initialize immediately
+        this.performanceData = {
+            frameDrops: 0,
+            lastFrameTime: performance.now(),
+            spawnDelay: 800
+        };
+        
         // Road dimensions
         this.roadWidth = 8;
         this.sidewalkWidth = 3;
@@ -31,6 +38,7 @@ export class DirectModelEnvironment {
         console.log('DRACO loader configured and attached to GLTFLoader');
         
         this.buildingTemplates = {}; // Store loaded building models
+        this.buildingPool = new Map(); // Object pool for building instances
         this.treeTemplate = null;
         this.currentBuildingIndex = 0;
         this.modelsLoaded = false;
@@ -305,46 +313,37 @@ export class DirectModelEnvironment {
         const buildingKey = loadedBuildings[this.currentBuildingIndex % loadedBuildings.length];
         this.currentBuildingIndex++;
         
-        const template = this.buildingTemplates[buildingKey];
-        const building = template.clone();
+        // Try to get from pool first
+        let building = this.getBuildingFromPool(buildingKey);
+        if (!building) {
+            const template = this.buildingTemplates[buildingKey];
+            building = template.clone();
+        }
         
         // Slightly larger scale for better visibility while maintaining performance
         const scale = 0.006 + Math.random() * 0.006; // 0.006 to 0.012 scale (better visibility)
         building.scale.setScalar(scale);
         
-        // Ensure building faces the road properly (not sideways)
-        building.rotation.y = 0; // Face forward first
-        
-        // Calculate position AFTER scaling and rotation
+        // Calculate building dimensions and position with safety margin
         const bbox = new THREE.Box3().setFromObject(building);
         const size = bbox.getSize(new THREE.Vector3());
         const groundY = -bbox.min.y;
         
-        // Position buildings closer to street edge for dense urban feel (like the reference image)
         const side = forceSide || (Math.random() < 0.5 ? 'left' : 'right');
         let xOffset;
         
         if (side === 'left') {
-            // Left side: consistent positioning for urban canyon effect
-            xOffset = -10 - Math.random() * 3; // X = -10 to -13 (closer to street)
-            // Additional safety: account for building width
-            xOffset -= (size.x / 2); // Move further left by half building width
+            // Left side: Start from -6 (road edge) and move further left by building width + safety margin
+            xOffset = -6 - (size.x / 2) - 2; // 2 units safety margin
         } else {
-            // Right side: consistent positioning
-            xOffset = 10 + Math.random() * 3;  // X = +10 to +13 (closer to street)
-            // Additional safety: account for building width
-            xOffset += (size.x / 2); // Move further right by half building width
-        }
-        
-        // Safety check - if somehow too close to road center
-        if (xOffset > -6 && xOffset < 6) {
-            xOffset = side === 'left' ? -12 : 12; // Force to safe distance
+            // Right side: Start from +6 (road edge) and move further right by building width + safety margin  
+            xOffset = 6 + (size.x / 2) + 2; // 2 units safety margin
         }
         
         building.position.set(xOffset, groundY, zPosition);
+        building.rotation.y = (Math.random() - 0.5) * 0.3;
         
-        // Small random rotation AFTER positioning
-        building.rotation.y += (Math.random() - 0.5) * 0.3;
+        console.log(`Building: X=${xOffset.toFixed(1)}, width=${size.x.toFixed(1)}, side=${side}`);
         
         this.scene.add(building);
         this.activeBuildings.push({
@@ -354,7 +353,7 @@ export class DirectModelEnvironment {
             scale: scale
         });
 
-        console.log(`Building ${buildingKey}: X=${xOffset.toFixed(1)} (${side}), Y=${groundY.toFixed(1)}, Z=${zPosition}, scale=${scale.toFixed(4)}, size=${size.x.toFixed(1)}x${size.z.toFixed(1)}`);
+        // Removed detailed logging for performance
     }
 
     spawnSpecificTree(zPosition) {
@@ -465,27 +464,27 @@ export class DirectModelEnvironment {
         const playerZ = this.gameController.getPlayerPosition().z;
         const spawnZ = playerZ - 120; // Spawn ahead for coverage
 
-        // GUARANTEED CONSISTENT SPAWNING: Always spawn on both sides
-        // Spawn buildings in pairs to ensure both sides are populated
-        const buildingZ1 = spawnZ;
-        const buildingZ2 = spawnZ - 15; // Second row for density
+        // Batch spawn buildings for better performance
+        const buildingsToSpawn = [
+            { z: spawnZ, side: 'left' },
+            { z: spawnZ - 15, side: 'left' },
+            { z: spawnZ - 8, side: 'right' },
+            { z: spawnZ - 23, side: 'right' }
+        ];
         
-        // ALWAYS spawn on left side (no randomness)
-        this.spawnSpecificBuilding(buildingZ1, 'left');
-        this.spawnSpecificBuilding(buildingZ2, 'left');
-        
-        // ALWAYS spawn on right side (no randomness)
-        this.spawnSpecificBuilding(buildingZ1 - 8, 'right'); // Slight offset for variety
-        this.spawnSpecificBuilding(buildingZ2 - 8, 'right');
+        // Batch spawn in single operation
+        this.batchSpawnBuildings(buildingsToSpawn);
 
         // Trees disabled temporarily
         // if (Math.random() < 0.05) {
         //     this.spawnSpecificTree(spawnZ - 30);
         // }
 
+        // Adaptive spawn timing based on performance
+        const adaptiveDelay = this.calculateAdaptiveSpawnDelay();
         setTimeout(() => {
             this.spawnElements();
-        }, 800); // Faster spawning for consistent density
+        }, adaptiveDelay);
     }
 
     updateModels(gameSpeed, cameraZ) {
@@ -498,6 +497,7 @@ export class DirectModelEnvironment {
             // Balanced despawning - not too aggressive to maintain density
             if (building.zPosition > cameraZ + 70) { // Increased back to 70 for better density
                 this.scene.remove(building.object);
+                this.returnBuildingToPool(building.object, building.type);
                 this.activeBuildings.splice(i, 1);
             }
         }
@@ -537,6 +537,89 @@ export class DirectModelEnvironment {
 
     getGround() {
         return this.road;
+    }
+
+    getBuildingFromPool(buildingKey) {
+        if (!this.buildingPool.has(buildingKey)) {
+            this.buildingPool.set(buildingKey, []);
+        }
+        const pool = this.buildingPool.get(buildingKey);
+        return pool.length > 0 ? pool.pop() : null;
+    }
+
+    returnBuildingToPool(building, buildingKey) {
+        // Reset building state for reuse
+        building.position.set(0, 0, 0);
+        building.rotation.set(0, 0, 0);
+        building.scale.setScalar(1);
+        
+        if (!this.buildingPool.has(buildingKey)) {
+            this.buildingPool.set(buildingKey, []);
+        }
+        const pool = this.buildingPool.get(buildingKey);
+        
+        // Limit pool size to prevent memory bloat
+        if (pool.length < 10) {
+            pool.push(building);
+        }
+    }
+
+    batchSpawnBuildings(buildingsToSpawn) {
+        const loadedBuildings = Object.keys(this.buildingTemplates);
+        if (loadedBuildings.length === 0) return;
+        
+        // Process all buildings in a single batch to minimize DOM manipulation
+        buildingsToSpawn.forEach(({ z, side }) => {
+            const buildingKey = loadedBuildings[this.currentBuildingIndex % loadedBuildings.length];
+            this.currentBuildingIndex++;
+            
+            let building = this.getBuildingFromPool(buildingKey);
+            if (!building) {
+                const template = this.buildingTemplates[buildingKey];
+                building = template.clone();
+            }
+            
+            const scale = 0.006 + Math.random() * 0.006;
+            building.scale.setScalar(scale);
+            
+            // Calculate building width after scaling
+            const tempBuilding = building.clone();
+            tempBuilding.scale.copy(building.scale);
+            const bbox = new THREE.Box3().setFromObject(tempBuilding);
+            const buildingWidth = bbox.getSize(new THREE.Vector3()).x;
+            
+            let xOffset;
+            if (side === 'left') {
+                xOffset = -6 - (buildingWidth / 2) - 2; // Road edge - building width - safety margin
+            } else {
+                xOffset = 6 + (buildingWidth / 2) + 2; // Road edge + building width + safety margin
+            }
+            building.position.set(xOffset, 0.1, z);
+            building.rotation.y = (Math.random() - 0.5) * 0.3;
+            
+            this.scene.add(building);
+            this.activeBuildings.push({
+                object: building,
+                zPosition: z,
+                type: buildingKey,
+                scale: scale
+            });
+        });
+    }
+
+    calculateAdaptiveSpawnDelay() {
+        const currentTime = performance.now();
+        const frameTime = currentTime - this.performanceData.lastFrameTime;
+        this.performanceData.lastFrameTime = currentTime;
+        
+        // If frame time is high (>20ms = 50fps), increase spawn delay
+        if (frameTime > 20) {
+            this.performanceData.spawnDelay = Math.min(this.performanceData.spawnDelay + 100, 1500);
+        } else if (frameTime < 12) { // If performance is good (<12ms = 83fps), reduce delay
+            this.performanceData.spawnDelay = Math.max(this.performanceData.spawnDelay - 50, 400);
+        }
+        
+        return this.performanceData.spawnDelay;
     }
 
     updateBuildings(gameSpeed, cameraZ) {

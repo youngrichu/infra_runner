@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Runner - Enhanced Performance Edition</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        /* Loading screen */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            z-index: 2000;
+        }
+        
+        /* Version selector */
+        .version-selector {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            min-width: 200px;
+        }
+        
+        .version-selector h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .version-selector button {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .version-selector .original {
+            background: #ff6b35;
+            color: white;
+        }
+        
+        .version-selector .enhanced {
+            background: #00ff88;
+            color: black;
+            font-weight: bold;
+        }
+        
+        .version-selector button:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Performance overlay */
+        .performance-overlay {
+            position: fixed;
+            top: 200px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            min-width: 200px;
+            display: none;
+        }
+        
+        .performance-overlay.visible {
+            display: block;
+        }
+        
+        .perf-metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 2px 0;
+        }
+        
+        .perf-value {
+            font-weight: bold;
+        }
+        
+        .fps-good { color: #00ff88; }
+        .fps-ok { color: #ffaa00; }
+        .fps-bad { color: #ff4444; }
+        
+        /* Instructions */
+        #instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        
+        #instructions h3 {
+            margin: 0 0 10px 0;
+            color: #00ff88;
+        }
+        
+        #instructions ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        
+        #instructions li {
+            margin: 3px 0;
+        }
+        
+        .highlight {
+            color: #00ff88;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading Enhanced Version...</div>
+    <div id="game-container"></div>
+    
+    <!-- Version Selector -->
+    <div class="version-selector">
+        <h3>🎮 Game Version</h3>
+        <button class="original" onclick="loadOriginal()">📊 Original (new-take)</button>
+        <button class="enhanced" onclick="loadEnhanced()">🚀 Enhanced Performance</button>
+        <button style="background: #333; color: white; margin-top: 10px;" onclick="togglePerformanceOverlay()">
+            📈 Performance Monitor
+        </button>
+        <button style="background: #444; color: white;" onclick="showGamepadInfo()">
+            🎮 Gamepad Info
+        </button>
+    </div>
+    
+    <!-- Performance Overlay -->
+    <div id="performance-overlay" class="performance-overlay">
+        <div style="font-weight: bold; margin-bottom: 8px;">⚡ Performance Metrics</div>
+        <div class="perf-metric">
+            <span>FPS:</span>
+            <span id="fps-value" class="perf-value fps-good">--</span>
+        </div>
+        <div class="perf-metric">
+            <span>Frame Time:</span>
+            <span id="frametime-value" class="perf-value">-- ms</span>
+        </div>
+        <div class="perf-metric">
+            <span>Memory:</span>
+            <span id="memory-value" class="perf-value">-- MB</span>
+        </div>
+        <div class="perf-metric">
+            <span>Draw Calls:</span>
+            <span id="drawcalls-value" class="perf-value">--</span>
+        </div>
+        <div class="perf-metric">
+            <span>Quality:</span>
+            <span id="quality-value" class="perf-value">--</span>
+        </div>
+        <div class="perf-metric">
+            <span>Object Pools:</span>
+            <span id="pools-value" class="perf-value">--</span>
+        </div>
+        <div class="perf-metric">
+            <span>Gamepads:</span>
+            <span id="gamepads-value" class="perf-value">--</span>
+        </div>
+    </div>
+    
+    <div id="instructions">
+        <h3>🏗️ Infrastructure Runner - Enhanced Performance Edition</h3>
+        <p><strong>🎮 Enhanced Controls:</strong></p>
+        <ul>
+            <li>←/→ or A/D or <span class="highlight">Left Stick</span>: Move left/right</li>
+            <li>↑ or Space or W or <span class="highlight">A Button</span>: Jump</li>
+            <li>R or <span class="highlight">Select Button</span>: Restart (when game over)</li>
+            <li><span class="highlight">🎮 Full gamepad support with haptic feedback!</span></li>
+        </ul>
+        <p><strong>🚀 Performance Features:</strong></p>
+        <ul>
+            <li>⚡ <span class="highlight">Object pooling</span> for 60+ FPS performance</li>
+            <li>🔍 <span class="highlight">Frustum culling</span> for efficient rendering</li>
+            <li>📊 <span class="highlight">Adaptive quality</span> based on device performance</li>
+            <li>🎮 <span class="highlight">Cross-platform gamepad support</span> (Xbox, PS, Switch Pro)</li>
+            <li>📱 <span class="highlight">Optimized for mobile, tablet, and desktop</span></li>
+        </ul>
+        <p><strong>Collect:</strong> Blueprints (50pts), Water Drops (20pts), Energy Cells (30pts)</p>
+        <p><strong>Power-ups:</strong> Hard Hat (shield), Helicopter (fly + stars), Solar (speed + energy orbs), Wind (double jump), Water Pipeline (safe path)</p>
+        <p><em>Experience butter-smooth performance across all platforms!</em></p>
+    </div>
+
+    <!-- Vite will handle Three.js imports automatically -->
+
+    <!-- Game Version Loader -->
+    <script type="module">
+        let currentGame = null;
+        let performanceOverlayVisible = false;
+        let performanceInterval = null;
+
+        // Load enhanced version by default
+        window.addEventListener('load', () => {
+            loadEnhanced();
+        });
+
+        window.loadOriginal = async function() {
+            console.log('🔄 Loading original new-take version...');
+            
+            if (currentGame && currentGame.destroy) {
+                currentGame.destroy();
+            }
+            
+            document.getElementById('game-container').innerHTML = '';
+            
+            try {
+                const { Game } = await import('./game.js');
+                currentGame = new Game();
+                
+                updateVersionIndicator('original');
+                console.log('✅ Original new-take version loaded');
+            } catch (error) {
+                console.error('❌ Failed to load original version:', error);
+                alert('Failed to load original version. Check console for details.');
+            }
+        };
+
+        window.loadEnhanced = async function() {
+            console.log('🚀 Loading enhanced performance version...');
+            
+            if (currentGame && currentGame.destroy) {
+                currentGame.destroy();
+            }
+            
+            document.getElementById('game-container').innerHTML = '';
+            
+            try {
+                const { EnhancedGame } = await import('./enhanced-game.js');
+                currentGame = new EnhancedGame();
+                
+                updateVersionIndicator('enhanced');
+                setupPerformanceMonitoring();
+                console.log('✅ Enhanced performance version loaded');
+            } catch (error) {
+                console.error('❌ Failed to load enhanced version:', error);
+                console.error('Make sure all performance optimization files are present');
+                
+                // Fallback to original
+                console.log('🔄 Falling back to original version...');
+                loadOriginal();
+            }
+        };
+
+        function updateVersionIndicator(version) {
+            const buttons = document.querySelectorAll('.version-selector button');
+            buttons.forEach(btn => {
+                btn.style.opacity = '0.6';
+                btn.style.transform = 'scale(1)';
+            });
+            
+            const activeButton = document.querySelector(`.${version}`);
+            if (activeButton) {
+                activeButton.style.opacity = '1';
+                activeButton.style.transform = 'scale(1.1)';
+            }
+        }
+
+        window.togglePerformanceOverlay = function() {
+            performanceOverlayVisible = !performanceOverlayVisible;
+            const overlay = document.getElementById('performance-overlay');
+            
+            if (performanceOverlayVisible) {
+                overlay.classList.add('visible');
+                startPerformanceMonitoring();
+            } else {
+                overlay.classList.remove('visible');
+                stopPerformanceMonitoring();
+            }
+        };
+
+        window.showGamepadInfo = function() {
+            if (currentGame && currentGame.gamepadIntegration) {
+                const stats = currentGame.gamepadIntegration.getStats();
+                const gamepads = currentGame.gamepadIntegration.gamepadManager.getConnectedGamepads();
+                
+                let info = `🎮 Gamepad Status:\n`;
+                info += `Connected: ${stats.connected}\n`;
+                info += `Enabled: ${stats.enabled}\n\n`;
+                
+                if (gamepads.length > 0) {
+                    info += `Connected Controllers:\n`;
+                    gamepads.forEach((gp, i) => {
+                        info += `${i + 1}. ${gp.id}\n`;
+                        info += `   Type: ${gp.type}\n`;
+                        info += `   Vibration: ${gp.vibrationSupported ? 'Yes' : 'No'}\n`;
+                    });
+                } else {
+                    info += `No gamepads connected.\n`;
+                    info += `Connect an Xbox, PlayStation, or Switch Pro controller to test!`;
+                }
+                
+                alert(info);
+            } else {
+                alert('Gamepad support only available in Enhanced version!');
+            }
+        };
+
+        function setupPerformanceMonitoring() {
+            if (!currentGame || !currentGame.performanceMonitor) return;
+            
+            currentGame.performanceMonitor.onMetricsUpdate((metrics) => {
+                updatePerformanceDisplay(metrics);
+            });
+        }
+
+        function startPerformanceMonitoring() {
+            if (performanceInterval) clearInterval(performanceInterval);
+            
+            performanceInterval = setInterval(() => {
+                if (currentGame && performanceOverlayVisible) {
+                    updatePerformanceDisplay();
+                }
+            }, 1000);
+        }
+
+        function stopPerformanceMonitoring() {
+            if (performanceInterval) {
+                clearInterval(performanceInterval);
+                performanceInterval = null;
+            }
+        }
+
+        function updatePerformanceDisplay(metrics = null) {
+            if (!performanceOverlayVisible) return;
+            
+            // Get metrics from current game
+            if (!metrics && currentGame) {
+                if (currentGame.performanceMonitor) {
+                    metrics = currentGame.performanceMonitor.getMetrics();
+                } else {
+                    // Fallback for original version
+                    metrics = {
+                        fps: 'N/A',
+                        frameTime: 'N/A',
+                        memoryUsage: performance.memory ? (performance.memory.usedJSHeapSize / 1024 / 1024) : 'N/A',
+                        drawCalls: 'N/A'
+                    };
+                }
+            }
+            
+            if (!metrics) return;
+            
+            // Update FPS with color coding
+            const fpsElement = document.getElementById('fps-value');
+            fpsElement.textContent = metrics.fps !== 'N/A' ? metrics.fps : '--';
+            fpsElement.className = 'perf-value ' + 
+                (metrics.fps >= 45 ? 'fps-good' : metrics.fps >= 30 ? 'fps-ok' : 'fps-bad');
+            
+            // Update other metrics
+            document.getElementById('frametime-value').textContent = 
+                metrics.frameTime !== 'N/A' ? `${metrics.frameTime.toFixed(1)}ms` : '--';
+            document.getElementById('memory-value').textContent = 
+                metrics.memoryUsage !== 'N/A' ? `${metrics.memoryUsage.toFixed(1)}MB` : '--';
+            document.getElementById('drawcalls-value').textContent = 
+                metrics.drawCalls !== 'N/A' ? metrics.drawCalls : '--';
+            
+            // Update enhanced-specific metrics
+            if (currentGame && currentGame.adaptiveQuality) {
+                const qualityStats = currentGame.adaptiveQuality.getStats();
+                document.getElementById('quality-value').textContent = qualityStats.quality;
+            } else {
+                document.getElementById('quality-value').textContent = '--';
+            }
+            
+            // Update object pool info
+            if (currentGame && currentGame.obstacleManager && currentGame.obstacleManager.objectPools) {
+                document.getElementById('pools-value').textContent = 
+                    `${currentGame.obstacleManager.objectPools.size} types`;
+            } else {
+                document.getElementById('pools-value').textContent = '--';
+            }
+            
+            // Update gamepad info
+            if (currentGame && currentGame.gamepadIntegration) {
+                const gamepadStats = currentGame.gamepadIntegration.getStats();
+                document.getElementById('gamepads-value').textContent = gamepadStats.connected;
+            } else {
+                document.getElementById('gamepads-value').textContent = '--';
+            }
+        }
+
+        // Hide loading screen
+        document.getElementById('loading').style.display = 'none';
+        
+        // Hide instructions after 15 seconds
+        setTimeout(() => {
+            const instructions = document.getElementById('instructions');
+            instructions.style.transition = 'opacity 2s';
+            instructions.style.opacity = '0';
+            setTimeout(() => {
+                instructions.style.display = 'none';
+            }, 2000);
+        }, 15000);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case '1':
+                    loadOriginal();
+                    break;
+                case '2':
+                    loadEnhanced();
+                    break;
+                case 'p':
+                case 'P':
+                    togglePerformanceOverlay();
+                    break;
+                case 'g':
+                case 'G':
+                    showGamepadInfo();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>

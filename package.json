@@ -5,8 +5,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "vite build", 
+    "preview": "vite preview",
+    "serve": "vite --host",
+    "enhanced": "vite enhanced-launcher.html --host",
+    "original": "vite index.html --host"
   },
   "keywords": [],
   "author": "",
