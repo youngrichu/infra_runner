@@ -24,8 +24,10 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: white;
-            font-size: 24px;
+            font-size: clamp(18px, 5vw, 24px);
             z-index: 2000;
+            text-align: center;
+            padding: 20px;
         }
         
         /* Version selector */
@@ -118,9 +120,9 @@
             background: rgba(0, 0, 0, 0.7);
             padding: 15px;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: clamp(11px, 2.5vw, 13px);
             z-index: 1000;
-            max-width: 400px;
+            max-width: min(400px, calc(100vw - 20px));
         }
         
         #instructions h3 {
@@ -140,6 +142,72 @@
         .highlight {
             color: #00ff88;
             font-weight: bold;
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .version-selector {
+                top: 10px;
+                right: 10px;
+                padding: 10px;
+                min-width: 150px;
+                font-size: 11px;
+            }
+            
+            .version-selector h3 {
+                font-size: 12px;
+            }
+            
+            .version-selector button {
+                padding: 6px 8px;
+                font-size: 10px;
+            }
+            
+            .performance-overlay {
+                top: 120px;
+                right: 10px;
+                padding: 8px;
+                min-width: 150px;
+                font-size: 9px;
+            }
+            
+            #instructions {
+                position: fixed;
+                top: auto;
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+                padding: 10px;
+            }
+            
+            #instructions h3 {
+                font-size: clamp(12px, 3vw, 14px);
+                margin-bottom: 8px;
+            }
+            
+            #instructions ul {
+                margin: 3px 0;
+                padding-left: 15px;
+            }
+            
+            #instructions li {
+                margin: 2px 0;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .version-selector {
+                min-width: 120px;
+            }
+            
+            .performance-overlay {
+                min-width: 120px;
+            }
+            
+            #instructions {
+                padding: 8px;
+            }
         }
     </style>
 </head>
@@ -416,7 +484,8 @@
         // Hide loading screen
         document.getElementById('loading').style.display = 'none';
         
-        // Hide instructions after 15 seconds
+        // Hide instructions after 15 seconds (20 seconds on mobile)
+        const hideDelay = window.innerWidth <= 768 ? 20000 : 15000;
         setTimeout(() => {
             const instructions = document.getElementById('instructions');
             instructions.style.transition = 'opacity 2s';
@@ -424,7 +493,7 @@
             setTimeout(() => {
                 instructions.style.display = 'none';
             }, 2000);
-        }, 15000);
+        }, hideDelay);
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {

@@ -11,6 +11,7 @@ export class UIManager {
         this.energyCells = 0;
         
         this.createUI();
+        this.setupResizeHandler();
     }
 
     createUI() {
@@ -25,25 +26,42 @@ export class UIManager {
         this.scoreElement.style.left = '10px';
         this.scoreElement.style.color = 'white';
         this.scoreElement.style.fontFamily = 'Arial, sans-serif';
-        this.scoreElement.style.fontSize = '24px';
+        this.scoreElement.style.fontSize = 'clamp(16px, 4vw, 24px)';
         this.scoreElement.style.zIndex = '1000';
+        this.scoreElement.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
+        this.scoreElement.style.padding = '5px';
+        this.scoreElement.style.borderRadius = '5px';
+        this.scoreElement.style.backgroundColor = 'rgba(0,0,0,0.3)';
+        this.scoreElement.style.maxWidth = 'calc(100vw - 20px)';
+        this.scoreElement.style.wordWrap = 'break-word';
         document.body.appendChild(this.scoreElement);
         this.updateScoreDisplay();
     }
 
     createGameOverScreen() {
         this.gameOverElement = document.createElement('div');
-        this.gameOverElement.style.position = 'absolute';
+        this.gameOverElement.style.position = 'fixed';
         this.gameOverElement.style.top = '50%';
         this.gameOverElement.style.left = '50%';
         this.gameOverElement.style.transform = 'translate(-50%, -50%)';
-        this.gameOverElement.style.color = 'red';
+        this.gameOverElement.style.color = '#ff4444';
         this.gameOverElement.style.fontFamily = 'Arial, sans-serif';
-        this.gameOverElement.style.fontSize = '48px';
+        this.gameOverElement.style.fontSize = 'clamp(24px, 8vw, 48px)';
         this.gameOverElement.style.textAlign = 'center';
         this.gameOverElement.style.zIndex = '1001';
         this.gameOverElement.style.display = 'none';
-        this.gameOverElement.innerHTML = 'GAME OVER<br>Press R to Restart';
+        this.gameOverElement.style.backgroundColor = 'rgba(0,0,0,0.9)';
+        this.gameOverElement.style.padding = 'clamp(15px, 5vw, 30px)';
+        this.gameOverElement.style.borderRadius = '15px';
+        this.gameOverElement.style.border = '2px solid #ff4444';
+        this.gameOverElement.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+        this.gameOverElement.style.maxWidth = '95vw';
+        this.gameOverElement.style.minWidth = '280px';
+        this.gameOverElement.style.maxHeight = '85vh';
+        this.gameOverElement.style.overflow = 'auto';
+        this.gameOverElement.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
+        this.gameOverElement.style.wordWrap = 'break-word';
+        this.gameOverElement.innerHTML = 'GAME OVER<br><span style="font-size: 0.5em; color: #ffaaaa;">Press R to Restart</span>';
         document.body.appendChild(this.gameOverElement);
     }
 
@@ -73,7 +91,25 @@ export class UIManager {
 
     showGameOver() {
         this.gameOverElement.style.display = 'block';
-        this.gameOverElement.innerHTML = `GAME OVER<br>Press R to Restart<br><br>Final Score: ${Math.floor(this.score)}<br>Blueprints: ${this.blueprints}<br>Water Drops: ${this.waterDrops}<br>Energy Cells: ${this.energyCells}`;
+        const isMobile = window.innerWidth <= 768;
+        const isVerySmall = window.innerWidth <= 480;
+        const statsSize = isVerySmall ? '0.5em' : isMobile ? '0.6em' : '0.7em';
+        const instructionSize = isVerySmall ? '0.35em' : isMobile ? '0.4em' : '0.5em';
+        const titleSize = isVerySmall ? '0.8em' : '1em';
+        const gapSize = isVerySmall ? '5px' : '10px';
+        
+        this.gameOverElement.innerHTML = `
+            <div style="margin-bottom: 15px; font-size: ${titleSize};">GAME OVER</div>
+            <div style="font-size: ${instructionSize}; color: #ffaaaa; margin-bottom: 15px;">Press R to Restart</div>
+            <div style="font-size: ${statsSize}; color: #ffffff; line-height: 1.3;">
+                <div style="margin-bottom: 8px;"><strong>Final Score: ${Math.floor(this.score)}</strong></div>
+                <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: ${gapSize}; margin-top: 10px; padding: 0 5px;">
+                    <div style="text-align: center; min-width: 60px;">🔵<br><span style="font-size: 0.9em;">Blueprints</span><br><strong>${this.blueprints}</strong></div>
+                    <div style="text-align: center; min-width: 60px;">💧<br><span style="font-size: 0.9em;">Water Drops</span><br><strong>${this.waterDrops}</strong></div>
+                    <div style="text-align: center; min-width: 60px;">⚡<br><span style="font-size: 0.9em;">Energy Cells</span><br><strong>${this.energyCells}</strong></div>
+                </div>
+            </div>
+        `;
         console.log('Game Over! Final Score:', Math.floor(this.score));
         console.log(`Blueprints: ${this.blueprints}, Water Drops: ${this.waterDrops}, Energy Cells: ${this.energyCells}`);
     }
@@ -85,15 +121,19 @@ export class UIManager {
     addPowerUpToUI(name, durationSeconds) {
         const powerUpElement = document.createElement('div');
         powerUpElement.style.position = 'absolute';
-        powerUpElement.style.top = `${70 + this.powerUpElements.length * 30}px`;
+        const topOffset = 50 + (window.innerWidth <= 768 ? 35 : 50); // Account for score display height
+        powerUpElement.style.top = `${topOffset + this.powerUpElements.length * (window.innerWidth <= 768 ? 25 : 30)}px`;
         powerUpElement.style.left = '10px';
         powerUpElement.style.color = 'white';
         powerUpElement.style.fontFamily = 'Arial, sans-serif';
-        powerUpElement.style.fontSize = '16px';
-        powerUpElement.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        powerUpElement.style.padding = '5px';
+        powerUpElement.style.fontSize = 'clamp(12px, 3vw, 16px)';
+        powerUpElement.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        powerUpElement.style.padding = 'clamp(3px, 1vw, 5px)';
         powerUpElement.style.borderRadius = '5px';
         powerUpElement.style.zIndex = '1000';
+        powerUpElement.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+        powerUpElement.style.maxWidth = 'calc(100vw - 20px)';
+        powerUpElement.style.wordWrap = 'break-word';
         powerUpElement.innerHTML = `${name}: ${durationSeconds}s`;
         document.body.appendChild(powerUpElement);
         
@@ -117,7 +157,8 @@ export class UIManager {
         // Reposition remaining power-ups
         this.powerUpElements.forEach((p, index) => {
             if (p.element) {
-                p.element.style.top = `${70 + index * 30}px`;
+                const topOffset = 50 + (window.innerWidth <= 768 ? 35 : 50);
+                p.element.style.top = `${topOffset + index * (window.innerWidth <= 768 ? 25 : 30)}px`;
             }
         });
     }
@@ -168,5 +209,30 @@ export class UIManager {
         
         this.hideGameOver();
         this.updateScoreDisplay();
+    }
+    
+    setupResizeHandler() {
+        window.addEventListener('resize', () => {
+            // Update power-up positions on resize
+            this.repositionPowerUps();
+        });
+        
+        // Also handle orientation change
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                this.repositionPowerUps();
+            }, 100); // Small delay to allow for orientation change to complete
+        });
+    }
+    
+    repositionPowerUps() {
+        this.powerUpElements.forEach((p, index) => {
+            if (p.element) {
+                const topOffset = 50 + (window.innerWidth <= 768 ? 35 : 50);
+                p.element.style.top = `${topOffset + index * (window.innerWidth <= 768 ? 25 : 30)}px`;
+                p.element.style.fontSize = 'clamp(12px, 3vw, 16px)';
+                p.element.style.padding = 'clamp(3px, 1vw, 5px)';
+            }
+        });
     }
 }
