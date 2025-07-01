@@ -43,11 +43,18 @@ export class DirectModelEnvironment {
         this.currentBuildingIndex = 0;
         this.modelsLoaded = false;
         
-        // Building file names
+        // Building file names categorized by complexity for LOD
         this.buildingFiles = [
             '001.glb', '002.glb', '006.glb', '007.glb', '008.glb', 
             '009.glb', '0010.glb', '0011.glb', '0012.glb'
         ];
+        
+        // LOD categorization: simpler models for distance rendering
+        this.lodCategories = {
+            detailed: ['001.glb', '002.glb', '006.glb'],  // Complex models for close viewing
+            medium: ['007.glb', '008.glb', '009.glb'],    // Medium complexity for mid-distance  
+            simple: ['0010.glb', '0011.glb', '0012.glb']  // Simpler models for far distance
+        };
         
         this.setupScene();
         this.setupLighting();
@@ -176,6 +183,22 @@ export class DirectModelEnvironment {
         console.log(`Enhanced ${filename} with ${meshCount} meshes, color: #${color.toString(16)}`);
     }
 
+    selectLODModel(distanceFromCamera) {
+        // Select appropriate building category based on distance
+        let category;
+        if (distanceFromCamera < 60) {
+            category = 'detailed';  // Close: use detailed models
+        } else if (distanceFromCamera < 120) {
+            category = 'medium';    // Medium: use medium complexity
+        } else {
+            category = 'simple';    // Far: use simple models
+        }
+        
+        const modelsInCategory = this.lodCategories[category];
+        const modelIndex = this.currentBuildingIndex % modelsInCategory.length;
+        return modelsInCategory[modelIndex];
+    }
+
     enhanceTree(tree) {
         // Enhance tree with natural colors - PERFORMANCE OPTIMIZED
         tree.traverse((child) => {
@@ -261,20 +284,19 @@ export class DirectModelEnvironment {
             roughness: 0.9
         });
         
-        const leftSidewalk = new THREE.Mesh(sidewalkGeometry, sidewalkMaterial);
-        leftSidewalk.rotation.x = -Math.PI / 2;
-        leftSidewalk.position.x = -(this.roadWidth/2 + this.sidewalkWidth/2);
-        leftSidewalk.position.y = 0.02;
-        leftSidewalk.receiveShadow = true;
-        this.scene.add(leftSidewalk);
+        this.leftSidewalk = new THREE.Mesh(sidewalkGeometry, sidewalkMaterial);
+        this.leftSidewalk.rotation.x = -Math.PI / 2;
+        this.leftSidewalk.position.x = -(this.roadWidth/2 + this.sidewalkWidth/2);
+        this.leftSidewalk.position.y = 0.02;
+        this.leftSidewalk.receiveShadow = true;
+        this.scene.add(this.leftSidewalk);
         
-        const rightSidewalk = new THREE.Mesh(sidewalkGeometry, sidewalkMaterial.clone());
-        rightSidewalk.rotation.x = -Math.PI / 2;
-        rightSidewalk.position.x = (this.roadWidth/2 + this.sidewalkWidth/2);
-        rightSidewalk.position.y = 0.02;
-        rightSidewalk.receiveShadow = true;
-        this.scene.add(rightSidewalk);
-
+        this.rightSidewalk = new THREE.Mesh(sidewalkGeometry, sidewalkMaterial.clone());
+        this.rightSidewalk.rotation.x = -Math.PI / 2;
+        this.rightSidewalk.position.x = (this.roadWidth/2 + this.sidewalkWidth/2);
+        this.rightSidewalk.position.y = 0.02;
+        this.rightSidewalk.receiveShadow = true;
+        this.scene.add(this.rightSidewalk);
     }
 
     createInitialScene() {
@@ -286,13 +308,13 @@ export class DirectModelEnvironment {
         
         console.log('Creating consistent dense urban scene with loaded models...');
         
-        // Create BALANCED initial buildings for both sides
+        // Create BALANCED initial buildings for both sides with LOD
         for (let i = 0; i < 30; i++) { // Increased for better coverage
             const z = -20 - (i * 12); // Every 12 units for denser coverage
             
-            // Ensure BOTH sides get buildings consistently
-            this.spawnSpecificBuilding(z, 'left');
-            this.spawnSpecificBuilding(z - 6, 'right'); // Slight offset for variety
+            // Ensure BOTH sides get buildings consistently, using LOD based on distance
+            this.spawnSpecificBuilding(z, 'left', 0); // Camera starts at Z=0
+            this.spawnSpecificBuilding(z - 6, 'right', 0); // Slight offset for variety
         }
         
         // Trees disabled temporarily
@@ -301,7 +323,7 @@ export class DirectModelEnvironment {
         // }
     }
 
-    spawnSpecificBuilding(zPosition, forceSide = null) {
+    spawnSpecificBuilding(zPosition, forceSide = null, cameraZ = 0) {
         const loadedBuildings = Object.keys(this.buildingTemplates);
         if (loadedBuildings.length === 0) {
             console.log('No buildings loaded, creating fallback');
@@ -309,8 +331,17 @@ export class DirectModelEnvironment {
             return;
         }
         
-        // Cycle through loaded buildings in order
-        const buildingKey = loadedBuildings[this.currentBuildingIndex % loadedBuildings.length];
+        let buildingKey;
+        
+        // Only use LOD system if models are fully loaded
+        if (this.modelsLoaded) {
+            // Calculate distance from camera for LOD selection
+            const distanceFromCamera = Math.abs(zPosition - cameraZ);
+            buildingKey = this.selectLODModel(distanceFromCamera);
+        } else {
+            // Fallback to original cycling method while models are loading
+            buildingKey = loadedBuildings[this.currentBuildingIndex % loadedBuildings.length];
+        }
         this.currentBuildingIndex++;
         
         // Try to get from pool first
@@ -462,6 +493,7 @@ export class DirectModelEnvironment {
         }
 
         const playerZ = this.gameController.getPlayerPosition().z;
+        const gameSpeed = this.gameController.getGameSpeed();
         const spawnZ = playerZ - 120; // Spawn ahead for coverage
 
         // Batch spawn buildings for better performance
@@ -472,16 +504,16 @@ export class DirectModelEnvironment {
             { z: spawnZ - 23, side: 'right' }
         ];
         
-        // Batch spawn in single operation
-        this.batchSpawnBuildings(buildingsToSpawn);
+        // Batch spawn in single operation with camera position for LOD
+        this.batchSpawnBuildings(buildingsToSpawn, playerZ);
 
         // Trees disabled temporarily
         // if (Math.random() < 0.05) {
         //     this.spawnSpecificTree(spawnZ - 30);
         // }
 
-        // Adaptive spawn timing based on performance
-        const adaptiveDelay = this.calculateAdaptiveSpawnDelay();
+        // Adaptive spawn timing based on game speed and performance
+        const adaptiveDelay = this.calculateAdaptiveSpawnDelay(gameSpeed);
         setTimeout(() => {
             this.spawnElements();
         }, adaptiveDelay);
@@ -516,8 +548,18 @@ export class DirectModelEnvironment {
     }
 
     updateGround(cameraZ) {
+        const groundZ = cameraZ - 750 + 75; // Calculate common Z position
+        
         if (this.road) {
-            this.road.position.z = cameraZ - (this.road.geometry.parameters.height / 2) + 75;
+            this.road.position.z = groundZ;
+        }
+        
+        // Update sidewalks to follow camera - fixes disappearing sidewalks at high speeds
+        if (this.leftSidewalk) {
+            this.leftSidewalk.position.z = groundZ;
+        }
+        if (this.rightSidewalk) {
+            this.rightSidewalk.position.z = groundZ;
         }
     }
 
@@ -564,13 +606,23 @@ export class DirectModelEnvironment {
         }
     }
 
-    batchSpawnBuildings(buildingsToSpawn) {
+    batchSpawnBuildings(buildingsToSpawn, cameraZ = 0) {
         const loadedBuildings = Object.keys(this.buildingTemplates);
         if (loadedBuildings.length === 0) return;
         
         // Process all buildings in a single batch to minimize DOM manipulation
         buildingsToSpawn.forEach(({ z, side }) => {
-            const buildingKey = loadedBuildings[this.currentBuildingIndex % loadedBuildings.length];
+            let buildingKey;
+            
+            // Only use LOD system if models are fully loaded
+            if (this.modelsLoaded) {
+                // Calculate distance from camera for LOD selection
+                const distanceFromCamera = Math.abs(z - cameraZ);
+                buildingKey = this.selectLODModel(distanceFromCamera);
+            } else {
+                // Fallback to original cycling method while models are loading
+                buildingKey = loadedBuildings[this.currentBuildingIndex % loadedBuildings.length];
+            }
             this.currentBuildingIndex++;
             
             let building = this.getBuildingFromPool(buildingKey);
@@ -607,19 +659,29 @@ export class DirectModelEnvironment {
         });
     }
 
-    calculateAdaptiveSpawnDelay() {
+    calculateAdaptiveSpawnDelay(gameSpeed = 0.13) {
         const currentTime = performance.now();
         const frameTime = currentTime - this.performanceData.lastFrameTime;
         this.performanceData.lastFrameTime = currentTime;
         
-        // If frame time is high (>20ms = 50fps), increase spawn delay
+        // Base spawn delay, adjusted for game speed to maintain density
+        let baseDelay = 800; // Base delay in ms
+        
+        // Speed compensation: faster game = faster spawning to maintain visual density
+        const speedMultiplier = Math.max(0.3, 1 / (gameSpeed * 5)); // Inverse relationship with speed
+        let speedAdjustedDelay = baseDelay * speedMultiplier;
+        
+        // Performance compensation: bad performance = slower spawning
         if (frameTime > 20) {
             this.performanceData.spawnDelay = Math.min(this.performanceData.spawnDelay + 100, 1500);
-        } else if (frameTime < 12) { // If performance is good (<12ms = 83fps), reduce delay
-            this.performanceData.spawnDelay = Math.max(this.performanceData.spawnDelay - 50, 400);
+        } else if (frameTime < 12) { // If performance is good, allow faster spawning
+            this.performanceData.spawnDelay = Math.max(this.performanceData.spawnDelay - 50, 200);
         }
         
-        return this.performanceData.spawnDelay;
+        // Combine speed adjustment with performance adjustment
+        const finalDelay = Math.min(speedAdjustedDelay, this.performanceData.spawnDelay);
+        
+        return Math.max(200, finalDelay); // Minimum 200ms to prevent overload
     }
 
     updateBuildings(gameSpeed, cameraZ) {
