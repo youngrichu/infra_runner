@@ -26,6 +26,7 @@ export class Game {
         
         // Game state
         this.gameActive = true;
+        this.gamePaused = false; // Add pause state
         this.gameSpeed = { value: GAME_CONFIG.INITIAL_SPEED }; // Using object for reference
         
         this.init();
@@ -100,7 +101,7 @@ export class Game {
     }
 
     updateGameLogic() {
-        if (!this.gameActive) return;
+        if (!this.gameActive || this.gamePaused) return;
         
         // Pause most game logic if player is stumbling
         if (this.player.isStumbling) {
@@ -362,9 +363,20 @@ export class Game {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
+    // Game pause/resume functionality
+    pauseGame() {
+        this.gamePaused = true;
+        console.log('Game paused for onboarding');
+    }
+
+    resumeGame() {
+        this.gamePaused = false;
+        console.log('Game resumed after onboarding');
+    }
+
     // Public methods for managers to access current game state
     isGameActive() {
-        return this.gameActive;
+        return this.gameActive && !this.gamePaused;
     }
 
     getPlayerPosition() {
@@ -383,7 +395,19 @@ export class Game {
     }
 }
 
-// Initialize the game when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    new Game();
-});
+// Game will be initialized by the loading manager or onboarding system
+// No auto-initialization here
+
+// Function to initialize game after onboarding
+window.initializeGame = function() {
+    // Prevent multiple game instances - clean up any existing instance
+    if (window.gameInstance) {
+        console.log('Cleaning up existing game instance');
+        window.gameInstance.gameActive = false; // Stop the existing game
+        window.gameInstance = null;
+    }
+    
+    console.log('Initializing new game instance after onboarding completion');
+    window.gameInstance = new Game();
+    return window.gameInstance;
+};

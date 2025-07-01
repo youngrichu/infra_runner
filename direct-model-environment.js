@@ -60,7 +60,7 @@ export class DirectModelEnvironment {
         this.setupLighting();
         this.createOptimizedRoad();
         
-        // Load the specific models
+        // Load the specific models (restore original working system)
         this.loadSpecificModels();
     }
 
@@ -95,17 +95,130 @@ export class DirectModelEnvironment {
         console.log('Direct model environment setup complete');
     }
 
+    async startProgressiveLoading() {
+        // Progressive loading: Essential models first, then detailed models
+        console.log('🚀 Starting progressive loading...');
+        
+        // Phase 1: Load essential simple models first for immediate gameplay
+        if (window.gameLoadingManager) {
+            window.gameLoadingManager.updateProgress(1, 'Loading essential models...');
+        }
+        
+        try {
+            // Load simple models first (can start playing with these)
+            const essentialModels = this.lodCategories.simple;
+            const essentialCount = await this.loadModelBatch(essentialModels, 'Essential');
+            
+            // Verify we have models loaded before proceeding
+            if (essentialCount > 0) {
+                // Create a basic scene so the game can start
+                this.modelsLoaded = true; // Mark as loaded so game can start
+                this.createInitialScene();
+                console.log(`✅ Game ready with ${essentialCount} essential models`);
+            } else {
+                // Fall back to creating a fallback scene
+                console.warn('No essential models loaded, using fallback');
+                this.createFallbackScene();
+                this.modelsLoaded = true;
+            }
+            
+            if (window.gameLoadingManager) {
+                window.gameLoadingManager.updateProgress(3, 'Game ready! Loading enhanced models...');
+            }
+            
+            // Phase 2: Load remaining models in background
+            setTimeout(() => this.loadRemainingModels(), 100);
+            
+        } catch (error) {
+            console.error('Error in progressive loading:', error);
+            this.createFallbackScene();
+        }
+    }
+
+    async loadRemainingModels() {
+        // Load medium and detailed models in background
+        console.log('📦 Loading remaining models in background...');
+        
+        try {
+            // Load medium complexity models
+            const mediumModels = this.lodCategories.medium;
+            await this.loadModelBatch(mediumModels, 'Medium');
+            
+            // Load detailed models
+            const detailedModels = this.lodCategories.detailed;
+            await this.loadModelBatch(detailedModels, 'Detailed');
+            
+            // Load tree model
+            await this.loadTreeModel();
+            
+            console.log('✅ All models loaded! Enhanced graphics available.');
+            
+            if (window.gameLoadingManager) {
+                window.gameLoadingManager.updateProgress(5, 'All models loaded!');
+            }
+            
+        } catch (error) {
+            console.error('Error loading remaining models:', error);
+        }
+    }
+
+    async loadModelBatch(modelFiles, batchName) {
+        console.log(`Loading ${batchName} models:`, modelFiles);
+        
+        const promises = modelFiles.map(async (filename) => {
+            try {
+                const gltf = await this.gltfLoader.loadAsync(`./assets/city/model/${filename}`);
+                this.buildingTemplates[filename] = gltf.scene.clone();
+                this.enhanceBuilding(this.buildingTemplates[filename], filename);
+                console.log(`✅ Loaded ${batchName}: ${filename}`);
+                return filename;
+            } catch (error) {
+                console.error(`❌ Failed to load ${batchName}: ${filename}`, error);
+                return null;
+            }
+        });
+        
+        const results = await Promise.all(promises);
+        const successCount = results.filter(r => r !== null).length;
+        console.log(`${batchName} batch complete: ${successCount}/${modelFiles.length} models loaded`);
+        
+        return successCount;
+    }
+
+    async loadTreeModel() {
+        try {
+            const gltf = await this.gltfLoader.loadAsync('./assets/city/model/lowpolytrees.glb');
+            this.treeTemplate = gltf.scene.clone();
+            this.enhanceTree(this.treeTemplate);
+            console.log('✅ Loaded tree model');
+        } catch (error) {
+            console.error('❌ Failed to load tree model', error);
+        }
+    }
+
     async loadSpecificModels() {
         console.log('Loading specific building and tree models...');
         
+        // Update loading progress
+        if (window.gameLoadingManager) {
+            window.gameLoadingManager.updateProgress(1, 'Loading building models...');
+        }
+        
         try {
-            // Load all building models
-            const buildingPromises = this.buildingFiles.map(async (filename) => {
+            // Load all building models with progress tracking
+            const buildingPromises = this.buildingFiles.map(async (filename, index) => {
                 try {
                     const gltf = await this.gltfLoader.loadAsync(`./assets/city/model/${filename}`);
                     this.buildingTemplates[filename] = gltf.scene.clone();
                     this.enhanceBuilding(this.buildingTemplates[filename], filename);
                     console.log(`✅ Loaded building: ${filename}`);
+                    
+                    // Update progress for each building loaded
+                    if (window.gameLoadingManager) {
+                        const progress = 1 + (index + 1) / this.buildingFiles.length * 2; // Buildings take 2 steps (1-3)
+                        window.gameLoadingManager.updateProgress(progress, `Loading models... (${index + 1}/${this.buildingFiles.length})`);
+                    }
+                    
                     return filename;
                 } catch (error) {
                     console.error(`❌ Failed to load building: ${filename}`, error);
@@ -114,6 +227,10 @@ export class DirectModelEnvironment {
             });
 
             // Load tree model
+            if (window.gameLoadingManager) {
+                window.gameLoadingManager.updateProgress(3, 'Loading tree models...');
+            }
+            
             const treePromise = this.gltfLoader.loadAsync('./assets/city/model/lowpolytrees.glb')
                 .then(gltf => {
                     this.treeTemplate = gltf.scene.clone();
@@ -132,14 +249,28 @@ export class DirectModelEnvironment {
             
             console.log(`Loaded ${successfulBuildings.length} buildings and ${results.includes('tree') ? '1 tree model' : 'no tree'}`);
             
+            if (window.gameLoadingManager) {
+                window.gameLoadingManager.updateProgress(4, 'Creating urban scene...');
+            }
+            
             this.modelsLoaded = true;
             
             // Create initial urban scene
             this.createInitialScene();
             
+            // Scene creation complete
+            if (window.gameLoadingManager) {
+                window.gameLoadingManager.updateProgress(5, 'Ready to play!');
+            }
+            
         } catch (error) {
             console.error('Error loading models:', error);
             this.createFallbackScene();
+            
+            // Still complete loading even if models failed
+            if (window.gameLoadingManager) {
+                window.gameLoadingManager.updateProgress(5, 'Ready to play!');
+            }
         }
     }
 
@@ -348,6 +479,11 @@ export class DirectModelEnvironment {
         let building = this.getBuildingFromPool(buildingKey);
         if (!building) {
             const template = this.buildingTemplates[buildingKey];
+            if (!template) {
+                console.warn(`Template ${buildingKey} not found, creating fallback building`);
+                this.createFallbackBuilding(zPosition, forceSide);
+                return;
+            }
             building = template.clone();
         }
         
@@ -628,6 +764,10 @@ export class DirectModelEnvironment {
             let building = this.getBuildingFromPool(buildingKey);
             if (!building) {
                 const template = this.buildingTemplates[buildingKey];
+                if (!template) {
+                    console.warn(`Template ${buildingKey} not found in batch spawn, skipping`);
+                    return; // Skip this building
+                }
                 building = template.clone();
             }
             
@@ -688,3 +828,4 @@ export class DirectModelEnvironment {
         this.updateModels(gameSpeed, cameraZ);
     }
 }
+

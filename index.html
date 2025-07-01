@@ -19,74 +19,567 @@
         
         /* Loading screen */
         #loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 24px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #FF6B35, #FFD700);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             z-index: 2000;
+            font-family: Arial, sans-serif;
         }
         
-        /* Instructions overlay */
-        #instructions {
-            position: absolute;
-            top: 10px;
-            right: 10px;
+        .loading-content {
+            text-align: center;
             color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 5px;
+        }
+        
+        .loading-title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .loading-subtitle {
+            font-size: 18px;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .progress-container {
+            width: 300px;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: white;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
             font-size: 14px;
-            z-index: 1000;
+            opacity: 0.8;
         }
         
-        #instructions h3 {
-            margin: 0 0 10px 0;
+        /* Professional Onboarding System */
+        #onboarding-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
         }
         
-        #instructions ul {
-            margin: 0;
-            padding-left: 20px;
+        #onboarding-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .onboarding-modal {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            padding: 30px;
+            text-align: center;
+            color: white;
+            border: 2px solid #FF6B35;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .onboarding-header {
+            margin-bottom: 25px;
+        }
+        
+        .onboarding-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #FFD700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .onboarding-subtitle {
+            font-size: 16px;
+            color: #FF6B35;
+            margin-bottom: 20px;
+        }
+        
+        .onboarding-content {
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+        
+        .onboarding-step {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .onboarding-step.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .control-demo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .control-key {
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-weight: bold;
+            font-size: 14px;
+            min-width: 40px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .collectible-demo {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .collectible-item {
+            text-align: center;
+            margin: 10px;
+        }
+        
+        .collectible-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .onboarding-navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 30px;
+        }
+        
+        .onboarding-btn {
+            background: #FF6B35;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+        
+        .onboarding-btn:hover {
+            background: #e55a2b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+        }
+        
+        .onboarding-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .onboarding-btn.secondary {
+            background: transparent;
+            border: 2px solid #FF6B35;
+            color: #FF6B35;
+        }
+        
+        .onboarding-btn.secondary:hover {
+            background: #FF6B35;
+            color: white;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 20px 0;
+        }
+        
+        .step-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #555;
+            transition: background 0.3s ease;
+        }
+        
+        .step-dot.active {
+            background: #FF6B35;
+        }
+        
+        .skip-option {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+        
+        .skip-btn {
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        
+        .skip-btn:hover {
+            color: #FF6B35;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .onboarding-modal {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .onboarding-title {
+                font-size: 24px;
+            }
+            
+            .control-demo {
+                gap: 10px;
+            }
+            
+            .control-key {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="loading">Loading...</div>
+    <div id="loading">
+        <div class="loading-content">
+            <div class="loading-title">🏗️ Infrastructure Runner</div>
+            <div class="loading-subtitle">Building the Future, One Run at a Time</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="progress-text" id="progress-text">Initializing...</div>
+        </div>
+    </div>
     <div id="game-container"></div>
     
-    <div id="instructions">
-        <h3>🏗️ Infrastructure Runner - African City Edition</h3>
-        <p><strong>Controls:</strong></p>
-        <ul>
-            <li>←/→ or A/D: Move left/right</li>
-            <li>↑ or Space or W: Jump</li>
-            <li>R: Restart (when game over)</li>
-        </ul>
-        <p><strong>Collect:</strong> Blueprints (50pts), Water Drops (20pts), Energy Cells (30pts)</p>
-        <p><strong>Power-ups:</strong> Hard Hat (shield), Helicopter (fly + stars), Solar (speed + energy orbs), Wind (double jump), Water Pipeline (safe path)</p>
-        <p><strong>Special:</strong> ⭐ Aerial Stars (150pts, helicopter only), 💡 Solar Orbs (120pts, solar boost only)</p>
-        <p><em>Run through a vibrant African metropolis while building critical infrastructure!</em></p>
+    <!-- Professional Onboarding System -->
+    <div id="onboarding-overlay">
+        <div class="onboarding-modal">
+            <div class="skip-option">
+                <button class="skip-btn" onclick="skipOnboarding()">Skip Tutorial</button>
+            </div>
+            
+            <div class="onboarding-header">
+                <div class="onboarding-title">🏗️ Infrastructure Runner</div>
+                <div class="onboarding-subtitle">Build the Future, One Run at a Time</div>
+            </div>
+            
+            <!-- Step 1: Welcome -->
+            <div class="onboarding-step active" id="step-0">
+                <div class="onboarding-content">
+                    <h3>Welcome to Infrastructure Runner!</h3>
+                    <p>You're an infrastructure engineer running through a vibrant African metropolis. Your mission: collect blueprints, water drops, and energy cells to build critical infrastructure while avoiding obstacles.</p>
+                    <p>Ready to learn how to play?</p>
+                </div>
+            </div>
+            
+            <!-- Step 2: Controls -->
+            <div class="onboarding-step" id="step-1">
+                <div class="onboarding-content">
+                    <h3>Master the Controls</h3>
+                    <p>Use these keys to navigate through the city:</p>
+                    <div class="control-demo">
+                        <div class="control-key">←→</div>
+                        <div class="control-key">A D</div>
+                        <span style="margin: 0 10px;">Move Left/Right</span>
+                    </div>
+                    <div class="control-demo">
+                        <div class="control-key">↑</div>
+                        <div class="control-key">W</div>
+                        <div class="control-key">Space</div>
+                        <span style="margin: 0 10px;">Jump</span>
+                    </div>
+                    <div class="control-demo">
+                        <div class="control-key">R</div>
+                        <span style="margin: 0 10px;">Restart (when game over)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 3: Collectibles -->
+            <div class="onboarding-step" id="step-2">
+                <div class="onboarding-content">
+                    <h3>Collect Infrastructure Materials</h3>
+                    <p>Gather these essential materials as you run:</p>
+                    <div class="collectible-demo">
+                        <div class="collectible-item">
+                            <div class="collectible-icon">🔵</div>
+                            <div><strong>Blueprints</strong><br>50 points</div>
+                        </div>
+                        <div class="collectible-item">
+                            <div class="collectible-icon">💧</div>
+                            <div><strong>Water Drops</strong><br>20 points</div>
+                        </div>
+                        <div class="collectible-item">
+                            <div class="collectible-icon">⚡</div>
+                            <div><strong>Energy Cells</strong><br>30 points</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 4: Power-ups -->
+            <div class="onboarding-step" id="step-3">
+                <div class="onboarding-content">
+                    <h3>Unlock Amazing Power-ups</h3>
+                    <p>Special power-ups give you incredible abilities:</p>
+                    <div style="text-align: left; max-width: 400px; margin: 0 auto;">
+                        <p><strong>🛡️ Hard Hat Shield:</strong> Temporary invincibility</p>
+                        <p><strong>🚁 Helicopter Ride:</strong> Fly above obstacles and collect aerial stars</p>
+                        <p><strong>🌟 Solar Power Boost:</strong> Speed boost with magnetic collection</p>
+                        <p><strong>💨 Wind Power:</strong> Double jump ability</p>
+                        <p><strong>🚰 Water Pipeline:</strong> Safe path that clears obstacles</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 5: Ready to Play -->
+            <div class="onboarding-step" id="step-4">
+                <div class="onboarding-content">
+                    <h3>You're Ready to Build!</h3>
+                    <p>Now you know everything you need to become a master infrastructure engineer. Remember:</p>
+                    <ul style="text-align: left; max-width: 350px; margin: 0 auto;">
+                        <li>Avoid obstacles like potholes and construction barriers</li>
+                        <li>Collect materials to build critical infrastructure</li>
+                        <li>Use power-ups strategically for maximum points</li>
+                        <li>The game gets faster as you progress - stay alert!</li>
+                    </ul>
+                    <p><strong>Good luck building the future!</strong></p>
+                </div>
+            </div>
+            
+            <div class="step-indicator">
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+            </div>
+            
+            <div class="onboarding-navigation">
+                <button class="onboarding-btn secondary" id="prev-btn" onclick="previousStep()" disabled>Previous</button>
+                <button class="onboarding-btn" id="next-btn" onclick="nextStep()">Next</button>
+            </div>
+        </div>
     </div>
 
     <!-- Game Modules -->
     <script type="module" src="./game.js"></script>
     
     <script>
-        // Hide loading screen once everything is loaded
-        window.addEventListener('load', () => {
-            document.getElementById('loading').style.display = 'none';
-        });
+        // Global loading progress manager
+        window.gameLoadingManager = {
+            totalSteps: 5,
+            currentStep: 0,
+            
+            updateProgress(step, message) {
+                this.currentStep = step;
+                const percentage = (step / this.totalSteps) * 100;
+                
+                const progressBar = document.getElementById('progress-bar');
+                const progressText = document.getElementById('progress-text');
+                
+                if (progressBar) {
+                    progressBar.style.width = percentage + '%';
+                }
+                if (progressText) {
+                    progressText.textContent = message;
+                }
+                
+                console.log(`Loading Progress: ${percentage.toFixed(0)}% - ${message}`);
+                
+                // Hide loading screen when complete and trigger onboarding
+                if (step >= this.totalSteps) {
+                    setTimeout(() => {
+                        const loading = document.getElementById('loading');
+                        if (loading) {
+                            loading.style.opacity = '0';
+                            loading.style.transition = 'opacity 0.5s ease';
+                            setTimeout(() => {
+                                loading.style.display = 'none';
+                                // Check if we should show onboarding
+                                const completed = localStorage.getItem('infrastructureRunner_onboardingCompleted');
+                                if (!completed) {
+                                    // Show onboarding - game will start when user completes it
+                                    showOnboarding();
+                                } else {
+                                    // Start game directly for returning users
+                                    if (!window.gameInitialized && window.initializeGame) {
+                                        window.gameInitialized = true;
+                                        window.initializeGame();
+                                    }
+                                }
+                            }, 500);
+                        }
+                    }, 1000); // Show complete state for 1 second
+                }
+            }
+        };
         
-        // Hide instructions after 10 seconds
+        // Initialize loading and start the loading process
+        window.gameLoadingManager.updateProgress(0, 'Initializing...');
+        
+        // Start loading progress simulation
         setTimeout(() => {
-            const instructions = document.getElementById('instructions');
-            instructions.style.transition = 'opacity 2s';
-            instructions.style.opacity = '0';
+            window.gameLoadingManager.updateProgress(1, 'Loading building models...');
+            
             setTimeout(() => {
-                instructions.style.display = 'none';
+                window.gameLoadingManager.updateProgress(2, 'Loading models... (3/9)');
+            }, 500);
+            
+            setTimeout(() => {
+                window.gameLoadingManager.updateProgress(3, 'Loading tree models...');
+            }, 1000);
+            
+            setTimeout(() => {
+                window.gameLoadingManager.updateProgress(4, 'Creating urban scene...');
+            }, 1500);
+            
+            setTimeout(() => {
+                window.gameLoadingManager.updateProgress(5, 'Ready to play!');
             }, 2000);
-        }, 10000);
+        }, 500);
+        
+        // Professional Onboarding System
+        let currentOnboardingStep = 0;
+        const totalSteps = 5;
+        
+        window.nextStep = function() {
+            if (currentOnboardingStep < totalSteps - 1) {
+                // Hide current step
+                document.getElementById(`step-${currentOnboardingStep}`).classList.remove('active');
+                document.getElementsByClassName('step-dot')[currentOnboardingStep].classList.remove('active');
+                
+                // Show next step
+                currentOnboardingStep++;
+                document.getElementById(`step-${currentOnboardingStep}`).classList.add('active');
+                document.getElementsByClassName('step-dot')[currentOnboardingStep].classList.add('active');
+                
+                // Update navigation buttons
+                document.getElementById('prev-btn').disabled = false;
+                
+                if (currentOnboardingStep === totalSteps - 1) {
+                    document.getElementById('next-btn').textContent = 'Start Playing!';
+                }
+            } else {
+                // Final step - start the game
+                completeOnboarding();
+            }
+        };
+        
+        window.previousStep = function() {
+            if (currentOnboardingStep > 0) {
+                // Hide current step
+                document.getElementById(`step-${currentOnboardingStep}`).classList.remove('active');
+                document.getElementsByClassName('step-dot')[currentOnboardingStep].classList.remove('active');
+                
+                // Show previous step
+                currentOnboardingStep--;
+                document.getElementById(`step-${currentOnboardingStep}`).classList.add('active');
+                document.getElementsByClassName('step-dot')[currentOnboardingStep].classList.add('active');
+                
+                // Update navigation buttons
+                if (currentOnboardingStep === 0) {
+                    document.getElementById('prev-btn').disabled = true;
+                }
+                document.getElementById('next-btn').textContent = 'Next';
+            }
+        };
+        
+        window.skipOnboarding = function() {
+            completeOnboarding();
+        };
+        
+        function completeOnboarding() {
+            // Prevent multiple game initializations
+            if (window.gameInitialized) {
+                console.log('Game already initialized, skipping');
+                return;
+            }
+            
+            // Store preference to not show onboarding again
+            localStorage.setItem('infrastructureRunner_onboardingCompleted', 'true');
+            
+            // Hide onboarding overlay
+            const overlay = document.getElementById('onboarding-overlay');
+            overlay.classList.remove('active');
+            
+            // Mark as initialized and start the game
+            window.gameInitialized = true;
+            if (window.initializeGame) {
+                window.initializeGame();
+            }
+        }
+        
+        function showOnboarding() {
+            console.log('showOnboarding called');
+            // Check if user has already completed onboarding
+            const completed = localStorage.getItem('infrastructureRunner_onboardingCompleted');
+            console.log('Onboarding completed before:', completed);
+            
+            if (!completed) {
+                console.log('Showing onboarding overlay');
+                const overlay = document.getElementById('onboarding-overlay');
+                console.log('Overlay element:', overlay);
+                overlay.classList.add('active');
+                
+                // No need to pause game - it hasn't started yet!
+            } else {
+                console.log('Onboarding already completed, skipping');
+            }
+        }
+        
+        // Clear localStorage for testing (remove this line in production)
+        localStorage.removeItem('infrastructureRunner_onboardingCompleted');
     </script>
 </body>
 </html>
