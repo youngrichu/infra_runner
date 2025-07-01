@@ -91,12 +91,13 @@ export class Game {
         this.obstacleManager = new ObstacleManager(this.scene);
         this.collectableManager = new CollectableManager(this.scene);
         this.powerUpManager = new PowerUpManager(this.scene, this.player);
-        this.uiManager = new UIManager();
+        this.uiManager = new UIManager(this);
         
         // Set game controller references so managers can access current game state
         this.environment.setGameController(this);
         this.obstacleManager.setGameController(this);
         this.collectableManager.setGameController(this);
+        this.uiManager.setGameController(this);
         
         // Set game speed reference for power-ups
         this.powerUpManager.setGameSpeedReference(this.gameSpeed);

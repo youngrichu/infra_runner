@@ -134,7 +134,7 @@ export class EnhancedGame {
         this.powerUpManager = new PowerUpManager(this.scene, this.player);
         this.powerUpManager.setGameSpeedReference(this.gameSpeed);
 
-        this.uiManager = new UIManager();
+        this.uiManager = new UIManager(this);
         
         console.log('✅ Enhanced managers created');
     }

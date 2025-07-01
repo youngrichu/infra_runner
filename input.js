@@ -15,6 +15,9 @@ export class InputManager {
         document.addEventListener('keydown', (event) => this.onKeyDown(event));
         document.addEventListener('keyup', (event) => this.onKeyUp(event));
         window.addEventListener('resize', () => this.onWindowResize(), false);
+        
+        // Add universal restart support
+        this.setupUniversalRestart();
     }
 
     onKeyDown(event) {
@@ -154,6 +157,77 @@ export class InputManager {
         });
 
         return button;
+    }
+
+    setupUniversalRestart() {
+        // Touch/click restart - listen for taps on game over screen
+        document.addEventListener('click', (event) => {
+            if (!this.gameController.isGameActive()) {
+                // Check if clicking on game over element or canvas
+                const gameOverElement = this.gameController.uiManager?.gameOverElement;
+                const canvas = this.gameController.renderer?.domElement;
+                
+                if (gameOverElement && gameOverElement.style.display === 'block' && 
+                    (event.target === gameOverElement || gameOverElement.contains(event.target) || event.target === canvas)) {
+                    event.preventDefault();
+                    this.gameController.restartGame();
+                }
+            }
+        });
+        
+        // Touch restart for mobile
+        document.addEventListener('touchend', (event) => {
+            if (!this.gameController.isGameActive()) {
+                const gameOverElement = this.gameController.uiManager?.gameOverElement;
+                const canvas = this.gameController.renderer?.domElement;
+                
+                if (gameOverElement && gameOverElement.style.display === 'block') {
+                    event.preventDefault();
+                    this.gameController.restartGame();
+                }
+            }
+        });
+        
+        // Gamepad restart support
+        this.setupGamepadRestart();
+    }
+    
+    setupGamepadRestart() {
+        // Check for gamepad restart every frame when game is over
+        const checkGamepadRestart = () => {
+            if (!this.gameController.isGameActive()) {
+                const gamepads = navigator.getGamepads();
+                for (let i = 0; i < gamepads.length; i++) {
+                    const gamepad = gamepads[i];
+                    if (gamepad) {
+                        // Check for common restart buttons: A, Start, Select, or any face button
+                        if (gamepad.buttons[0]?.pressed ||  // A button (Xbox) / X button (PS)
+                            gamepad.buttons[1]?.pressed ||  // B button (Xbox) / Circle button (PS)
+                            gamepad.buttons[2]?.pressed ||  // X button (Xbox) / Square button (PS)
+                            gamepad.buttons[3]?.pressed ||  // Y button (Xbox) / Triangle button (PS)
+                            gamepad.buttons[9]?.pressed ||  // Start button
+                            gamepad.buttons[8]?.pressed) {  // Select/Back button
+                            this.gameController.restartGame();
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // Continue checking if game is still over
+            if (!this.gameController.isGameActive()) {
+                requestAnimationFrame(checkGamepadRestart);
+            }
+        };
+        
+        // Start checking when game becomes inactive
+        const originalGameOver = this.gameController.gameOver?.bind(this.gameController);
+        if (originalGameOver) {
+            this.gameController.gameOver = () => {
+                originalGameOver();
+                setTimeout(() => checkGamepadRestart(), 100); // Small delay to avoid immediate restart
+            };
+        }
     }
 
     // Get current input state

@@ -1,9 +1,10 @@
 export class UIManager {
-    constructor() {
+    constructor(gameController = null) {
         this.scoreElement = null;
         this.gameOverElement = null;
         this.powerUpElements = [];
         this.activePowerUps = [];
+        this.gameController = gameController;
         
         this.score = 0;
         this.blueprints = 0;
@@ -61,7 +62,8 @@ export class UIManager {
         this.gameOverElement.style.overflow = 'auto';
         this.gameOverElement.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
         this.gameOverElement.style.wordWrap = 'break-word';
-        this.gameOverElement.innerHTML = 'GAME OVER<br><span style="font-size: 0.5em; color: #ffaaaa;">Press R to Restart</span>';
+        this.gameOverElement.style.cursor = 'pointer';
+        this.gameOverElement.innerHTML = 'GAME OVER<br><span style="font-size: 0.5em; color: #ffaaaa;">Tap to Restart</span>';
         document.body.appendChild(this.gameOverElement);
     }
 
@@ -98,9 +100,22 @@ export class UIManager {
         const titleSize = isVerySmall ? '0.8em' : '1em';
         const gapSize = isVerySmall ? '5px' : '10px';
         
+        // Detect device type for appropriate restart instructions
+        const hasGamepad = navigator.getGamepads().some(gp => gp !== null);
+        const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        let restartText = '';
+        if (hasTouch && isMobile) {
+            restartText = 'Tap anywhere to restart';
+        } else if (hasGamepad) {
+            restartText = 'Press any button or R to restart';
+        } else {
+            restartText = 'Press R or click to restart';
+        }
+        
         this.gameOverElement.innerHTML = `
             <div style="margin-bottom: 15px; font-size: ${titleSize};">GAME OVER</div>
-            <div style="font-size: ${instructionSize}; color: #ffaaaa; margin-bottom: 15px;">Press R to Restart</div>
+            <div style="font-size: ${instructionSize}; color: #ffaaaa; margin-bottom: 15px; animation: pulse 2s infinite;">${restartText}</div>
             <div style="font-size: ${statsSize}; color: #ffffff; line-height: 1.3;">
                 <div style="margin-bottom: 8px;"><strong>Final Score: ${Math.floor(this.score)}</strong></div>
                 <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: ${gapSize}; margin-top: 10px; padding: 0 5px;">
@@ -108,8 +123,60 @@ export class UIManager {
                     <div style="text-align: center; min-width: 60px;">💧<br><span style="font-size: 0.9em;">Water Drops</span><br><strong>${this.waterDrops}</strong></div>
                     <div style="text-align: center; min-width: 60px;">⚡<br><span style="font-size: 0.9em;">Energy Cells</span><br><strong>${this.energyCells}</strong></div>
                 </div>
+                <div style="margin-top: 20px;">
+                    <button id="restart-button" style="
+                        background: linear-gradient(45deg, #FF6B35, #FFD700);
+                        border: none;
+                        color: white;
+                        padding: ${isVerySmall ? '8px 16px' : '12px 24px'};
+                        font-size: ${instructionSize};
+                        font-weight: bold;
+                        border-radius: 25px;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        text-transform: uppercase;
+                        box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+                    ">🔄 Restart Game</button>
+                </div>
             </div>
         `;
+        
+        // Add pulse animation for restart text
+        if (!document.getElementById('restart-animation-style')) {
+            const style = document.createElement('style');
+            style.id = 'restart-animation-style';
+            style.textContent = `
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.6; }
+                }
+                #restart-button:hover {
+                    transform: translateY(-2px) scale(1.05);
+                    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+                }
+                #restart-button:active {
+                    transform: translateY(0) scale(0.98);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Add restart button functionality
+        setTimeout(() => {
+            const restartButton = document.getElementById('restart-button');
+            if (restartButton && this.gameController) {
+                restartButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.gameController.restartGame();
+                });
+                restartButton.addEventListener('touchend', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    this.gameController.restartGame();
+                });
+            }
+        }, 100);
+        
         console.log('Game Over! Final Score:', Math.floor(this.score));
         console.log(`Blueprints: ${this.blueprints}, Water Drops: ${this.waterDrops}, Energy Cells: ${this.energyCells}`);
     }
@@ -192,6 +259,10 @@ export class UIManager {
         };
     }
 
+    setGameController(gameController) {
+        this.gameController = gameController;
+    }
+    
     reset() {
         this.score = 0;
         this.blueprints = 0;
