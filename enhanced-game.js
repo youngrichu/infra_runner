@@ -75,19 +75,34 @@ export class EnhancedGame {
         this.camera.position.y = 2;
         this.camera.lookAt(0, 0, 0);
 
-        // Enhanced renderer
-        this.renderer = new THREE.WebGLRenderer({ 
-            antialias: true,
+        // Enhanced renderer with mobile optimization
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const rendererOptions = {
+            antialias: !isMobile, // Disable antialiasing on mobile for better performance
             alpha: false,
             stencil: false,
-            powerPreference: 'high-performance'
-        });
+            powerPreference: isMobile ? 'low-power' : 'high-performance'
+        };
+        
+        this.renderer = new THREE.WebGLRenderer(rendererOptions);
+        
+        // Set proper pixel ratio for crisp rendering on high-DPI displays
+        const pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 2 : 3); // Limit to 2 on mobile
+        this.renderer.setPixelRatio(pixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        
         this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         
+        // Add canvas styles for proper mobile display
+        this.renderer.domElement.style.display = 'block';
+        this.renderer.domElement.style.touchAction = 'none'; // Prevent scrolling on touch
+        
         document.getElementById('game-container').appendChild(this.renderer.domElement);
+        
+        // Store mobile flag for later use
+        this.isMobile = isMobile;
 
         // Initialize performance systems
         this.adaptiveQuality = new AdaptiveQualityManager(this.renderer);
@@ -263,11 +278,27 @@ export class EnhancedGame {
             }
         });
         
-        // Window resize handling
-        window.addEventListener('resize', () => {
+        // Enhanced window resize handling with mobile optimization
+        const handleResize = () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
+            
+            // Update renderer size with proper pixel ratio
+            const pixelRatio = Math.min(window.devicePixelRatio, this.isMobile ? 2 : 3);
+            this.renderer.setPixelRatio(pixelRatio);
             this.renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Force canvas to fill container properly
+            this.renderer.domElement.style.width = '100%';
+            this.renderer.domElement.style.height = '100%';
+            
+            console.log(`Enhanced screen resized: ${window.innerWidth}x${window.innerHeight}, pixelRatio: ${pixelRatio}`);
+        };
+        
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', () => {
+            // Add delay to handle orientation change properly
+            setTimeout(handleResize, 100);
         });
         
         console.log('✅ Performance monitoring active');

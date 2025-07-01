@@ -50,11 +50,36 @@ export class Game {
         this.camera.position.y = 2;
         this.camera.lookAt(0, 0, 0);
 
-        // Renderer setup
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        // Enhanced renderer setup with mobile optimization
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const rendererOptions = {
+            antialias: !isMobile, // Disable antialiasing on mobile for better performance
+            alpha: false,
+            stencil: false,
+            powerPreference: isMobile ? 'low-power' : 'high-performance'
+        };
+        
+        this.renderer = new THREE.WebGLRenderer(rendererOptions);
+        
+        // Set proper pixel ratio for crisp rendering on high-DPI displays
+        const pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 2 : 3); // Limit to 2 on mobile
+        this.renderer.setPixelRatio(pixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        
         this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+        
+        // Set output color space for better color accuracy
+        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+        
+        // Add canvas styles for proper mobile display
+        this.renderer.domElement.style.display = 'block';
+        this.renderer.domElement.style.touchAction = 'none'; // Prevent scrolling on touch
+        
         document.getElementById('game-container').appendChild(this.renderer.domElement);
+        
+        // Store mobile flag for later use
+        this.isMobile = isMobile;
     }
 
     async createManagers() { // Make createManagers async
@@ -78,6 +103,9 @@ export class Game {
         
         // Set collectable manager reference for power-ups (to remove aerial stars)
         this.powerUpManager.setCollectableManager(this.collectableManager);
+        
+        // Setup resize handling
+        this.setupResizeHandling();
     }
 
     setupInputManager() {
@@ -357,10 +385,30 @@ export class Game {
         this.startSpawning();
     }
 
+    setupResizeHandling() {
+        // Add event listeners for resize
+        window.addEventListener('resize', () => this.handleWindowResize());
+        window.addEventListener('orientationchange', () => {
+            // Add delay to handle orientation change properly
+            setTimeout(() => this.handleWindowResize(), 100);
+        });
+    }
+    
     handleWindowResize() {
+        // Update camera aspect ratio
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
+        
+        // Update renderer size with proper pixel ratio
+        const pixelRatio = Math.min(window.devicePixelRatio, this.isMobile ? 2 : 3);
+        this.renderer.setPixelRatio(pixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        // Force canvas to fill container properly
+        this.renderer.domElement.style.width = '100%';
+        this.renderer.domElement.style.height = '100%';
+        
+        console.log(`Screen resized: ${window.innerWidth}x${window.innerHeight}, pixelRatio: ${pixelRatio}`);
     }
 
     // Game pause/resume functionality
