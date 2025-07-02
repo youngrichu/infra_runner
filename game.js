@@ -105,6 +105,9 @@ export class Game {
         // Set collectable manager reference for power-ups (to remove aerial stars)
         this.powerUpManager.setCollectableManager(this.collectableManager);
         
+        // Set obstacle manager reference for power-ups (for water pipe targeting)
+        this.powerUpManager.setObstacleManager(this.obstacleManager);
+        
         // Setup resize handling
         this.setupResizeHandling();
     }
