@@ -79,16 +79,7 @@ export class DirectModelEnvironment {
 
         const directionalLight = new THREE.DirectionalLight(0xFFFFE0, 0.6);
         directionalLight.position.set(10, 15, 10);
-        directionalLight.castShadow = true;
-        
-        directionalLight.shadow.mapSize.width = 1024;
-        directionalLight.shadow.mapSize.height = 1024;
-        directionalLight.shadow.camera.near = 1;
-        directionalLight.shadow.camera.far = 80;
-        directionalLight.shadow.camera.left = -40;
-        directionalLight.shadow.camera.right = 40;
-        directionalLight.shadow.camera.top = 40;
-        directionalLight.shadow.camera.bottom = -40;
+        directionalLight.castShadow = false;
         
         this.scene.add(directionalLight);
         

@@ -66,8 +66,7 @@ export class Game {
         this.renderer.setPixelRatio(pixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+        this.renderer.shadowMap.enabled = false;
         
         // Set output color space for better color accuracy
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
