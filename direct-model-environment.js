@@ -4,7 +4,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { LANES, COLORS, SPAWN_CONFIG } from './constants.js';
 
 // Verify DRACO loader is imported
-console.log('DRACOLoader imported:', DRACOLoader);
+// console.log('DRACOLoader imported:', DRACOLoader);
 
 export class DirectModelEnvironment {
     constructor(scene) {
@@ -197,7 +197,7 @@ export class DirectModelEnvironment {
     }
 
     async loadSpecificModels() {
-        console.log('Loading specific building and tree models...');
+        // console.log('Loading specific building and tree models...');
         
         // Update loading progress
         if (window.gameLoadingManager) {
@@ -211,7 +211,7 @@ export class DirectModelEnvironment {
                     const gltf = await this.gltfLoader.loadAsync(`./assets/city/model/${filename}`);
                     this.buildingTemplates[filename] = gltf.scene.clone();
                     this.enhanceBuilding(this.buildingTemplates[filename], filename);
-                    console.log(`✅ Loaded building: ${filename}`);
+                    // console.log(`✅ Loaded building: ${filename}`);
                     
                     // Update progress for each building loaded
                     if (window.gameLoadingManager) {
@@ -235,7 +235,7 @@ export class DirectModelEnvironment {
                 .then(gltf => {
                     this.treeTemplate = gltf.scene.clone();
                     this.enhanceTree(this.treeTemplate);
-                    console.log('✅ Loaded tree model');
+                    // console.log('✅ Loaded tree model');
                     return 'tree';
                 })
                 .catch(error => {
@@ -247,7 +247,7 @@ export class DirectModelEnvironment {
             const results = await Promise.all([...buildingPromises, treePromise]);
             const successfulBuildings = results.filter(r => r && r !== 'tree');
             
-            console.log(`Loaded ${successfulBuildings.length} buildings and ${results.includes('tree') ? '1 tree model' : 'no tree'}`);
+            // console.log(`Loaded ${successfulBuildings.length} buildings and ${results.includes('tree') ? '1 tree model' : 'no tree'}`);
             
             if (window.gameLoadingManager) {
                 window.gameLoadingManager.updateProgress(4, 'Creating urban scene...');
@@ -510,7 +510,7 @@ export class DirectModelEnvironment {
         building.position.set(xOffset, groundY, zPosition);
         building.rotation.y = (Math.random() - 0.5) * 0.3;
         
-        console.log(`Building: X=${xOffset.toFixed(1)}, width=${size.x.toFixed(1)}, side=${side}`);
+        // console.log(`Building: X=${xOffset.toFixed(1)}, width=${size.x.toFixed(1)}, side=${side}`);
         
         this.scene.add(building);
         this.activeBuildings.push({
@@ -525,7 +525,7 @@ export class DirectModelEnvironment {
 
     spawnSpecificTree(zPosition) {
         if (!this.treeTemplate) {
-            console.log('Tree template not loaded');
+            // console.log('Tree template not loaded');
             return;
         }
         
@@ -607,11 +607,11 @@ export class DirectModelEnvironment {
             scale: 1.0
         });
         
-        console.log(`Fallback building: X=${xOffset.toFixed(1)} (${side}), Z=${zPosition}, size=${width.toFixed(1)}x${depth.toFixed(1)}`);
+        // console.log(`Fallback building: X=${xOffset.toFixed(1)} (${side}), Z=${zPosition}, size=${width.toFixed(1)}x${depth.toFixed(1)}`);
     }
 
     createFallbackScene() {
-        console.log('Creating consistent dense fallback urban scene...');
+        // console.log('Creating consistent dense fallback urban scene...');
         for (let i = 0; i < 30; i++) { // Same high density for fallback
             const z = -20 - (i * 12); // Same close spacing as GLB buildings
             this.createFallbackBuilding(z, 'left');

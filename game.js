@@ -90,6 +90,7 @@ export class Game {
 
         this.obstacleManager = new ObstacleManager(this.scene);
         this.collectableManager = new CollectableManager(this.scene);
+        await this.collectableManager.initializeModelLoading(); // Await model loading before game starts
         this.powerUpManager = new PowerUpManager(this.scene, this.player);
         this.uiManager = new UIManager(this);
         

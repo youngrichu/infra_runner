@@ -471,11 +471,11 @@ export class Player {
             if (this.stumbleMixer) {
                 this.stumbleMixer.update(deltaTime);
                 
-                // Debug stumble animation during playback
-                if (this.stumbleAction) {
-                    console.log('Stumble animation time:', this.stumbleAction.time.toFixed(2), '/', this.stumbleAnimationDuration/1000);
-                    console.log('Stumble action still running:', this.stumbleAction.isRunning());
-                }
+                // Debug stumble animation during playback (commented out for cleaner logs)
+                // if (this.stumbleAction) {
+                //     console.log('Stumble animation time:', this.stumbleAction.time.toFixed(2), '/', this.stumbleAnimationDuration/1000);
+                //     console.log('Stumble action still running:', this.stumbleAction.isRunning());
+                // }
             }
             return; // Exit early - no other movement during stumble
         }

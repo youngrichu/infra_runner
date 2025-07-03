@@ -24,18 +24,28 @@ export class ObstacleManager {
         const availableTypes = Object.keys(OBSTACLE_TYPES).filter(type => type !== this.lastObstacleType);
         const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
         const obstacleConfig = OBSTACLE_TYPES[type];
-
-        const material = new THREE.MeshStandardMaterial({ color: obstacleConfig.color });
-        const obstacleMesh = new THREE.Mesh(obstacleConfig.geometry(), material);
         const laneIndex = Math.floor(Math.random() * LANES.COUNT);
         
-        obstacleMesh.position.set(
+        const spawnPosition = new THREE.Vector3(
             LANES.POSITIONS[laneIndex], 
             obstacleConfig.yPos, 
             playerZ - 50
         );
-        obstacleMesh.castShadow = true;
-        this.scene.add(obstacleMesh);
+
+        // Try to create GLB model first (using collectables manager GLB system)
+        let obstacleMesh = null;
+        if (this.gameController && this.gameController.collectableManager) {
+            obstacleMesh = this.gameController.collectableManager.createObstacleGLBMesh(type, spawnPosition);
+        }
+        
+        // Fallback to original geometry if GLB failed
+        if (!obstacleMesh) {
+            const material = new THREE.MeshStandardMaterial({ color: obstacleConfig.color });
+            obstacleMesh = new THREE.Mesh(obstacleConfig.geometry(), material);
+            obstacleMesh.position.copy(spawnPosition);
+            obstacleMesh.castShadow = true;
+            this.scene.add(obstacleMesh);
+        }
         
         this.obstacles.push({ mesh: obstacleMesh, type: type });
         this.lastObstacleType = type;

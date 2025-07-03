@@ -456,36 +456,28 @@ export class OptimizedObstacleManager {
     }
     
     getModelConfig(type) {
+        // Use our analyzed configurations with verified scale factors
         const configs = {
             'pothole': {
-                path: './assets/Obstacles/Pothole.glb',
-                scale: [0.8, 0.8, 0.8],
+                path: '/assets/models/obstacles/Floor Hole.glb',
+                scale: [0.833, 0.833, 0.833], // From analysis
                 rotation: [0, 0, 0]
             },
             'constructionBarrier': {
-                path: './assets/Obstacles/Barricade.glb',
-                scale: [0.6, 0.6, 0.6],
+                path: '/assets/models/obstacles/Plastic Barrier.glb',
+                scale: [0.898, 0.898, 0.898], // From analysis
                 rotation: [0, 0, 0]
             },
             'cone': {
-                path: './assets/Obstacles/Traffic Cone.glb',
-                scale: [0.8, 0.8, 0.8],
+                path: '/assets/models/obstacles/Cone.glb',
+                scale: [0.886, 0.886, 0.886], // From analysis
                 rotation: [0, 0, 0]
             },
             'rubble': {
-                path: './assets/Obstacles/rubble.glb',
-                scale: [0.1, 0.1, 0.1],
-                rotation: [0, Math.random() * Math.PI, 0]
-            },
-            'trafficBarrier': {
-                path: './assets/Obstacles/Traffic Barrier.glb',
-                scale: [0.8, 0.7, 0.8],
-                rotation: [0, 0, 0]
-            },
-            'floorHole': {
-                path: './assets/Obstacles/Floor Hole.glb',
-                scale: [0.9, 0.9, 0.9],
-                rotation: [0, 0, 0]
+                path: '/assets/models/obstacles/Cinder block.glb',
+                scale: [0.000002, 0.000002, 0.000002], // Extremely oversized model - use fallback
+                rotation: [0, Math.random() * Math.PI, 0],
+                useModelLoading: false // Skip this model, use fallback
             }
         };
         
