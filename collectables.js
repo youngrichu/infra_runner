@@ -1,6 +1,9 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { LANES, COLORS, SPAWN_CONFIG, SCORING, COLLECTABLE_SPAWN_WEIGHTS, PHYSICS } from './constants.js';
 import { CollisionUtils } from './collision-utils.js';
+import { MODEL_CONFIGURATIONS, getModelConfig, shouldLoadModel, PRIORITY_LOADING_ORDER } from './model-configurations.js';
 
 export class CollectableManager {
     constructor(scene) {
@@ -17,17 +20,80 @@ export class CollectableManager {
         this.powerUpInterval = 10000; // Guarantee power-up every 10 seconds
         this.regularCollectionsCount = 0;
         this.powerUpAfterCollections = 3; // Or after collecting 3 regular items
+        
+        // GLB Model loading system with Draco support (maintaining performance optimizations)
+        this.loader = new GLTFLoader();
+        this.dracoLoader = new DRACOLoader();
+        this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        this.loader.setDRACOLoader(this.dracoLoader);
+        this.loadedModels = new Map();
+        this.loadingPromises = new Map();
+        this.priorityModelsLoaded = false;
+        
+        // Model loading will be initialized explicitly by game.js during setup
     }
 
     shufflePowerUpDeck() {
-        console.log('Shuffling power-up deck...');
         this.powerUpDeck = [...COLLECTABLE_SPAWN_WEIGHTS.POWER_UPS];
         // Fisher-Yates shuffle algorithm
         for (let i = this.powerUpDeck.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [this.powerUpDeck[i], this.powerUpDeck[j]] = [this.powerUpDeck[j], this.powerUpDeck[i]];
         }
-        console.log('Power-up deck shuffled:', this.powerUpDeck);
+    }
+    
+    async initializeModelLoading() {
+        console.log('🎨 Loading models (collectables, power-ups, obstacles)...');
+        
+        // Load priority models first (collectables, power-ups, and obstacles)
+        const priorityTypes = PRIORITY_LOADING_ORDER;
+        
+        await this.loadPriorityModels(priorityTypes);
+        this.priorityModelsLoaded = true;
+        console.log('✅ Models ready (collectables, power-ups, obstacles)');
+    }
+    
+    async loadPriorityModels(modelTypes) {
+        const loadPromises = modelTypes
+            .filter(type => shouldLoadModel(type))
+            .map(type => this.loadModel(type));
+            
+        const results = await Promise.allSettled(loadPromises);
+        
+        // Log results
+        results.forEach((result, index) => {
+            const type = modelTypes.filter(t => shouldLoadModel(t))[index];
+            if (result.status === 'fulfilled' && result.value) {
+                console.log(`✅ ${type}: Ready`);
+            } else {
+                console.log(`❌ ${type}: Failed`);
+            }
+        });
+    }
+    
+    async loadModel(type) {
+        if (this.loadedModels.has(type) || this.loadingPromises.has(type)) {
+            return this.loadingPromises.get(type);
+        }
+        
+        const config = getModelConfig(type);
+        if (!config || !shouldLoadModel(type)) {
+            return null;
+        }
+        
+        const loadPromise = this.loader.loadAsync(config.path)
+            .then(gltf => {
+                this.loadedModels.set(type, gltf);
+                console.log(`✅ ${type} model loaded`);
+                return gltf;
+            })
+            .catch(error => {
+                console.warn(`❌ ${type} failed:`, error.message);
+                return null;
+            });
+        
+        this.loadingPromises.set(type, loadPromise);
+        return loadPromise;
     }
 
     setGameController(gameController) {
@@ -85,7 +151,7 @@ export class CollectableManager {
         }
 
         const type = this.powerUpDeck.pop();
-        console.log(`Spawning power-up from deck: ${type}. Deck size: ${this.powerUpDeck.length}`);
+        // console.log(`Spawning power-up from deck: ${type}. Deck size: ${this.powerUpDeck.length}`);
 
         // Find clear position - ALWAYS use exact lane positions
         let spawnPosition;
@@ -125,11 +191,19 @@ export class CollectableManager {
         const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
         if (collectableMesh) {
             this.collectables.push({ mesh: collectableMesh, type: type });
-            console.log(`Guaranteed power-up spawned: ${type}`);
+            // console.log(`Guaranteed power-up spawned: ${type}`);
         }
     }
 
     createCollectableMesh(type, spawnPosition, obstacles) {
+        // Try to create GLB model first, fallback to original geometry
+        const glbMesh = this.tryCreateGLBMesh(type, spawnPosition);
+        if (glbMesh) {
+            this.adjustHeightForObstacles(glbMesh, obstacles);
+            return glbMesh;
+        }
+        
+        // Fallback to original geometry system
         let geometry, material, color;
 
         switch (type) {
@@ -165,7 +239,7 @@ export class CollectableManager {
         
         material = new THREE.MeshStandardMaterial({ color: color });
         const collectableMesh = new THREE.Mesh(geometry, material);
-        collectableMesh.position.copy(spawnPosition); // Use exact spawn position
+        collectableMesh.position.copy(spawnPosition);
         
         // Adjust height if above obstacles
         this.adjustHeightForObstacles(collectableMesh, obstacles);
@@ -174,8 +248,127 @@ export class CollectableManager {
         this.scene.add(collectableMesh);
         return collectableMesh;
     }
+    
+    tryCreateGLBMesh(type, spawnPosition) {
+        const config = getModelConfig(type);
+        if (!config || !shouldLoadModel(type)) {
+            console.log(`⚠️ ${type}: No config or skipped`);
+            return null;
+        }
+        
+        const gltf = this.loadedModels.get(type);
+        if (!gltf) {
+            // Model not loaded yet, trigger loading for next time
+            console.log(`⏳ ${type}: Model not loaded yet, using fallback`);
+            this.loadModel(type);
+            return null;
+        }
+        
+        try {
+            // Clone the GLB scene
+            const modelScene = gltf.scene.clone();
+            
+            // Apply the calculated scale from our analysis
+            const scale = config.scale;
+            modelScene.scale.set(scale[0], scale[1], scale[2]);
+            
+            
+            // Position the model
+            modelScene.position.copy(spawnPosition);
+            
+            // Enhanced lighting and visibility for all meshes in the model
+            modelScene.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    
+                    // Enhanced material processing for problem models
+                    if (child.material) {
+                        // Clone material to avoid affecting other instances
+                        child.material = child.material.clone();
+                        
+                        // Special handling for problematic dark models  
+                        const isDarkModel = ['waterDrop', 'rubble', 'blueprint', 'constructionBarrier', 'windPower', 'pothole', 'waterPipeline', 'solarPower', 'helicopter', 'hardHat'].includes(type);
+                        
+                        // Ensure materials respond well to lighting
+                        child.material.roughness = Math.min(child.material.roughness || 0.7, 0.8);
+                        child.material.metalness = Math.max(child.material.metalness || 0.0, 0.1);
+                        
+                        // Add stronger emissive glow for better visibility
+                        if (!child.material.emissive || child.material.emissive.isColor) {
+                            child.material.emissive = child.material.emissive || new THREE.Color(0x222222);
+                            child.material.emissiveIntensity = isDarkModel ? 0.25 : 0.15; // Extra glow for dark models
+                        }
+                        
+                        // More aggressive brightening for problem models
+                        if (child.material.color && child.material.color.isColor) {
+                            const brightness = (child.material.color.r + child.material.color.g + child.material.color.b) / 3;
+                            
+                            if (isDarkModel) {
+                                // Force brighten problematic models regardless of current brightness
+                                child.material.color.multiplyScalar(3.0);
+                                console.log(`🔆 Force brightened ${type} material (brightness was: ${brightness.toFixed(3)})`);
+                            } else {
+                                if (brightness < 0.5) {
+                                    child.material.color.multiplyScalar(2.0);
+                                } else if (brightness < 0.7) {
+                                    child.material.color.multiplyScalar(1.3);
+                                }
+                            }
+                        }
+                        
+                        // Force material properties for dark models
+                        if (isDarkModel) {
+                            child.material.roughness = 0.6; // Less rough for more reflection
+                            child.material.metalness = 0.2; // Slight metallic for better light response
+                            
+                            // Add ambient enhancement
+                            if (child.material.emissive) {
+                                child.material.emissive.multiplyScalar(1.5);
+                            }
+                            
+                            // Special pothole road-blending effect
+                            if (type === 'pothole') {
+                                // Create a gradient effect by adding a darker ring around edges
+                                child.material.transparent = true;
+                                child.material.opacity = 0.9; // Slightly transparent for blending
+                                
+                                // Add road-like coloring to blend with asphalt
+                                if (child.material.color) {
+                                    // Mix with road color (#404040) for better blending
+                                    const roadColor = new THREE.Color(0x404040);
+                                    child.material.color.lerp(roadColor, 0.3); // 30% road color mix
+                                }
+                                
+                                // Add subtle emission to make it look like a real hole
+                                child.material.emissive = new THREE.Color(0x1a1a1a); // Very dark emission
+                                child.material.emissiveIntensity = 0.1;
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Add to scene
+            this.scene.add(modelScene);
+            
+            console.log(`🎨 USING ${type} GLB model (scale: ${scale[0].toFixed(3)})`);
+            return modelScene;
+            
+        } catch (error) {
+            console.warn(`❌ ${type} GLB creation failed:`, error.message);
+            return null;
+        }
+    }
 
     createHelicopterMesh(spawnPosition) {
+        // Try GLB model first (Jet-Pack)
+        const glbMesh = this.tryCreateGLBMesh('helicopter', spawnPosition);
+        if (glbMesh) {
+            return glbMesh;
+        }
+        
+        // Fallback to original helicopter geometry
         const geometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8);
         const rotorGeometry = new THREE.BoxGeometry(0.5, 0.05, 0.1);
         const material = new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.HELICOPTER });
@@ -185,7 +378,6 @@ export class CollectableManager {
         rotor.position.y = 0.1;
         collectableMesh.add(rotor);
         
-        // STRICT: Use exact spawn position with NO deviation
         collectableMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
         
         collectableMesh.castShadow = true;
@@ -194,6 +386,13 @@ export class CollectableManager {
     }
 
     createSolarPowerMesh(spawnPosition) {
+        // Try GLB model first (Solar Panel Ground)
+        const glbMesh = this.tryCreateGLBMesh('solarPower', spawnPosition);
+        if (glbMesh) {
+            return glbMesh;
+        }
+        
+        // Fallback to original solar panel geometry
         const geometry = new THREE.CircleGeometry(0.25, 16);
         const material = new THREE.MeshStandardMaterial({ 
             color: COLORS.COLLECTABLES.SOLAR_POWER, 
@@ -202,7 +401,6 @@ export class CollectableManager {
         const solarMesh = new THREE.Mesh(geometry, material);
         solarMesh.rotation.x = -Math.PI / 2;
         
-        // STRICT: Use exact spawn position with NO deviation
         solarMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
         
         solarMesh.castShadow = true;
@@ -211,6 +409,13 @@ export class CollectableManager {
     }
 
     createWindPowerMesh(spawnPosition) {
+        // Try GLB model first (Boots)
+        const glbMesh = this.tryCreateGLBMesh('windPower', spawnPosition);
+        if (glbMesh) {
+            return glbMesh;
+        }
+        
+        // Fallback to original wind power geometry with particles
         const geometry = new THREE.SphereGeometry(0.2, 16, 16);
         const material = new THREE.MeshStandardMaterial({ 
             color: COLORS.COLLECTABLES.WIND_POWER, 
@@ -237,7 +442,6 @@ export class CollectableManager {
             windMesh.add(particle);
         }
         
-        // STRICT: Use exact spawn position with NO deviation
         windMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
         
         windMesh.castShadow = true;
@@ -246,6 +450,24 @@ export class CollectableManager {
     }
 
     createAerialCollectable(playerPosition) {
+        const laneIndex = Math.floor(Math.random() * LANES.COUNT);
+        const spawnPosition = new THREE.Vector3(
+            LANES.POSITIONS[laneIndex],
+            2.5, // Fixed height for aerial stars - high enough to be clearly aerial
+            playerPosition.z - 30 - (Math.random() * 20)
+        );
+        
+        // Try GLB model first (Star)
+        const glbMesh = this.tryCreateGLBMesh('aerialStar', spawnPosition);
+        if (glbMesh) {
+            glbMesh.userData = {
+                rotationSpeed: 0.05 + Math.random() * 0.05
+            };
+            this.collectables.push({ mesh: glbMesh, type: 'aerialStar' });
+            return;
+        }
+        
+        // Fallback to original octahedron geometry
         const geometry = new THREE.OctahedronGeometry(0.3, 0);
         const material = new THREE.MeshStandardMaterial({ 
             color: COLORS.COLLECTABLES.AERIAL_STAR,
@@ -255,14 +477,7 @@ export class CollectableManager {
         });
         
         const collectableMesh = new THREE.Mesh(geometry, material);
-        
-        const laneIndex = Math.floor(Math.random() * LANES.COUNT);
-        
-        collectableMesh.position.set(
-            LANES.POSITIONS[laneIndex],
-            2.5, // Fixed height for aerial stars - high enough to be clearly aerial
-            playerPosition.z - 30 - (Math.random() * 20)
-        );
+        collectableMesh.position.copy(spawnPosition);
         
         collectableMesh.userData = {
             rotationSpeed: 0.05 + Math.random() * 0.05
@@ -377,10 +592,10 @@ export class CollectableManager {
             const collectable = this.collectables[i];
             collectable.mesh.position.z += gameSpeed;
             
-            // Rotate aerial stars
+            // Rotate aerial stars (simple Y-axis rotation only)
             if (collectable.type === 'aerialStar' && collectable.mesh.userData.rotationSpeed) {
                 collectable.mesh.rotation.y += collectable.mesh.userData.rotationSpeed;
-                collectable.mesh.rotation.x += collectable.mesh.userData.rotationSpeed * 0.5;
+                // Removed X-axis rotation to prevent distracting swirling
             }
             
             // Animate solar orbs
@@ -542,6 +757,133 @@ export class CollectableManager {
                 this.collectables.splice(i, 1);
                 console.log('Removed solar orb after solar boost ended');
             }
+        }
+    }
+    
+    // NEW: Create obstacle GLB mesh (for use by obstacle manager)
+    createObstacleGLBMesh(type, spawnPosition) {
+        const config = getModelConfig(type);
+        if (!config || !shouldLoadModel(type)) {
+            console.log(`⚠️ Obstacle ${type}: No config or skipped`);
+            return null;
+        }
+        
+        const gltf = this.loadedModels.get(type);
+        if (!gltf) {
+            // Model not loaded yet, trigger loading for next time
+            console.log(`⏳ Obstacle ${type}: Model not loaded yet, using fallback`);
+            this.loadModel(type);
+            return null;
+        }
+        
+        try {
+            // Clone the GLB scene
+            const modelScene = gltf.scene.clone();
+            
+            // Apply the calculated scale from our analysis
+            const scale = config.scale;
+            modelScene.scale.set(scale[0], scale[1], scale[2]);
+            
+            // Position the model
+            modelScene.position.copy(spawnPosition);
+            
+            // Fix Y positioning for GLB obstacle models (ground them properly)
+            if (type === 'constructionBarrier') {
+                // Plastic barrier should sit on ground
+                modelScene.position.y = 0.3; // Half the height of the barrier
+            } else if (type === 'rubble') {
+                // Cinder block should sit on ground
+                modelScene.position.y = 0.1; // Lower to ground level
+            } else if (type === 'cone') {
+                // Traffic cone should sit on ground
+                modelScene.position.y = 0.2; // Adjust to ground level
+            } else if (type === 'pothole') {
+                // Pothole should be visible at ground level (not below)
+                modelScene.position.y = 0.05; // Slightly above ground to ensure visibility
+            }
+            
+            // Enhanced lighting and visibility for all meshes in the obstacle model
+            modelScene.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    
+                    // Enhanced material processing for problem models
+                    if (child.material) {
+                        // Clone material to avoid affecting other instances
+                        child.material = child.material.clone();
+                        
+                        // Special handling for problematic dark models  
+                        const isDarkModel = ['waterDrop', 'rubble', 'blueprint', 'constructionBarrier', 'windPower', 'pothole', 'waterPipeline', 'solarPower', 'helicopter', 'hardHat'].includes(type);
+                        
+                        // Ensure materials respond well to lighting
+                        child.material.roughness = Math.min(child.material.roughness || 0.7, 0.8);
+                        child.material.metalness = Math.max(child.material.metalness || 0.0, 0.1);
+                        
+                        // Add stronger emissive glow for better visibility
+                        if (!child.material.emissive || child.material.emissive.isColor) {
+                            child.material.emissive = child.material.emissive || new THREE.Color(0x222222);
+                            child.material.emissiveIntensity = isDarkModel ? 0.25 : 0.15; // Extra glow for dark models
+                        }
+                        
+                        // More aggressive brightening for problem models
+                        if (child.material.color && child.material.color.isColor) {
+                            const brightness = (child.material.color.r + child.material.color.g + child.material.color.b) / 3;
+                            
+                            if (isDarkModel) {
+                                // Force brighten problematic models regardless of current brightness
+                                child.material.color.multiplyScalar(3.0);
+                                console.log(`🔆 Force brightened obstacle ${type} material (brightness was: ${brightness.toFixed(3)})`);
+                            } else {
+                                if (brightness < 0.5) {
+                                    child.material.color.multiplyScalar(2.0);
+                                } else if (brightness < 0.7) {
+                                    child.material.color.multiplyScalar(1.3);
+                                }
+                            }
+                        }
+                        
+                        // Force material properties for dark models
+                        if (isDarkModel) {
+                            child.material.roughness = 0.6; // Less rough for more reflection
+                            child.material.metalness = 0.2; // Slight metallic for better light response
+                            
+                            // Add ambient enhancement
+                            if (child.material.emissive) {
+                                child.material.emissive.multiplyScalar(1.5);
+                            }
+                            
+                            // Special pothole road-blending effect
+                            if (type === 'pothole') {
+                                // Create a gradient effect by adding a darker ring around edges
+                                child.material.transparent = true;
+                                child.material.opacity = 0.9; // Slightly transparent for blending
+                                
+                                // Add road-like coloring to blend with asphalt
+                                if (child.material.color) {
+                                    // Mix with road color (#404040) for better blending
+                                    const roadColor = new THREE.Color(0x404040);
+                                    child.material.color.lerp(roadColor, 0.3); // 30% road color mix
+                                }
+                                
+                                // Add subtle emission to make it look like a real hole
+                                child.material.emissive = new THREE.Color(0x1a1a1a); // Very dark emission
+                                child.material.emissiveIntensity = 0.1;
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Add to scene
+            this.scene.add(modelScene);
+            
+            console.log(`🎨 USING ${type} GLB obstacle model (scale: ${scale[0].toFixed(3)})`);
+            return modelScene;
+            
+        } catch (error) {
+            console.warn(`❌ ${type} GLB obstacle creation failed:`, error.message);
+            return null;
         }
     }
 }
