@@ -1,2 +1,2 @@
 - Don't put Claude as collaborator when making commits
-- Always use npmp, never npm
+- Always use pnpm, never npm

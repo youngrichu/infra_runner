@@ -200,6 +200,8 @@ export class CollectableManager {
         const glbMesh = this.tryCreateGLBMesh(type, spawnPosition);
         if (glbMesh) {
             this.adjustHeightForObstacles(glbMesh, obstacles);
+            // Add spinning animation to GLB models
+            this.addSpinningAnimation(glbMesh, type);
             return glbMesh;
         }
         
@@ -243,6 +245,9 @@ export class CollectableManager {
         
         // Adjust height if above obstacles
         this.adjustHeightForObstacles(collectableMesh, obstacles);
+        
+        // Add spinning animation to fallback geometry
+        this.addSpinningAnimation(collectableMesh, type);
         
         collectableMesh.castShadow = true;
         this.scene.add(collectableMesh);
@@ -349,6 +354,9 @@ export class CollectableManager {
                 }
             });
             
+            // Add animation data to the GLB model
+            this.addSpinningAnimation(modelScene, type);
+            
             // Add to scene
             this.scene.add(modelScene);
             
@@ -380,6 +388,9 @@ export class CollectableManager {
         
         collectableMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
         
+        // Add spinning animation
+        this.addSpinningAnimation(collectableMesh, 'helicopter');
+        
         collectableMesh.castShadow = true;
         this.scene.add(collectableMesh);
         return collectableMesh;
@@ -402,6 +413,9 @@ export class CollectableManager {
         solarMesh.rotation.x = -Math.PI / 2;
         
         solarMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
+        
+        // Add spinning animation
+        this.addSpinningAnimation(solarMesh, 'solarPower');
         
         solarMesh.castShadow = true;
         this.scene.add(solarMesh);
@@ -444,6 +458,9 @@ export class CollectableManager {
         
         windMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
         
+        // Add spinning animation
+        this.addSpinningAnimation(windMesh, 'windPower');
+        
         windMesh.castShadow = true;
         this.scene.add(windMesh);
         return windMesh;
@@ -461,7 +478,7 @@ export class CollectableManager {
         const glbMesh = this.tryCreateGLBMesh('aerialStar', spawnPosition);
         if (glbMesh) {
             glbMesh.userData = {
-                rotationSpeed: 0.05 + Math.random() * 0.05
+                rotationSpeed: 0.015 + Math.random() * 0.005  // Match the subtle speed
             };
             this.collectables.push({ mesh: glbMesh, type: 'aerialStar' });
             return;
@@ -480,7 +497,7 @@ export class CollectableManager {
         collectableMesh.position.copy(spawnPosition);
         
         collectableMesh.userData = {
-            rotationSpeed: 0.05 + Math.random() * 0.05
+            rotationSpeed: 0.015 + Math.random() * 0.005  // Match the subtle speed
         };
         
         collectableMesh.castShadow = true;
@@ -555,6 +572,24 @@ export class CollectableManager {
         this.collectables.push({ mesh: collectableMesh, type: 'solarOrb' });
     }
 
+    addSpinningAnimation(collectableMesh, type) {
+        collectableMesh.userData = collectableMesh.userData || {};
+        
+        const powerUps = ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'];
+        
+        if (powerUps.includes(type)) {
+            // Power-ups get subtle bouncing animation (no rotation to preserve front face)
+            collectableMesh.userData.bounceSpeed = 1.0; // Subtle bounce speed
+            collectableMesh.userData.bounceOffset = Math.random() * Math.PI * 2; // Random phase offset
+            collectableMesh.userData.bounceHeight = 0.12; // Subtle bounce height
+            collectableMesh.userData.baseY = collectableMesh.position.y; // Store original Y position
+            collectableMesh.userData.isPowerUp = true; // Flag to identify power-ups
+        } else {
+            // Regular collectibles get very subtle, consistent spinning
+            collectableMesh.userData.rotationSpeed = 0.015 + (Math.random() * 0.005); // Subtle spinning
+        }
+    }
+
     adjustHeightForObstacles(collectableMesh, obstacles) {
         let yOffset = 0;
         for (const obstacle of obstacles) {
@@ -588,26 +623,40 @@ export class CollectableManager {
     }
 
     updateCollectables(gameSpeed, cameraZ) {
+        const time = Date.now() * 0.001;
+        
         for (let i = this.collectables.length - 1; i >= 0; i--) {
             const collectable = this.collectables[i];
             collectable.mesh.position.z += gameSpeed;
             
-            // Rotate aerial stars (simple Y-axis rotation only)
-            if (collectable.type === 'aerialStar' && collectable.mesh.userData.rotationSpeed) {
-                collectable.mesh.rotation.y += collectable.mesh.userData.rotationSpeed;
-                // Removed X-axis rotation to prevent distracting swirling
+            // Apply bouncing animation to power-ups (no rotation to preserve front face)
+            if (collectable.mesh.userData.isPowerUp && collectable.mesh.userData.bounceSpeed) {
+                const bounceOffset = Math.sin(time * collectable.mesh.userData.bounceSpeed + collectable.mesh.userData.bounceOffset);
+                const newY = collectable.mesh.userData.baseY + (bounceOffset * collectable.mesh.userData.bounceHeight);
+                collectable.mesh.position.y = newY;
             }
             
-            // Animate solar orbs
-            if (collectable.type === 'solarOrb' && collectable.mesh.userData.rotationSpeed) {
+            // Apply subtle spinning to regular collectibles
+            if (collectable.mesh.userData.rotationSpeed) {
                 collectable.mesh.rotation.y += collectable.mesh.userData.rotationSpeed;
-                collectable.mesh.rotation.z += collectable.mesh.userData.rotationSpeed * 0.3;
+            }
+            
+            // Special handling for specific types
+            if (collectable.type === 'solarOrb') {
+                // Solar orbs get multi-axis rotation and pulsing
+                if (collectable.mesh.userData.rotationSpeed) {
+                    collectable.mesh.rotation.z += collectable.mesh.userData.rotationSpeed * 0.3;
+                }
                 
                 // Pulsing glow effect
                 if (collectable.mesh.userData.pulseSpeed) {
-                    const time = Date.now() * 0.001;
                     const pulse = Math.sin(time * collectable.mesh.userData.pulseSpeed * 10) * 0.5 + 0.5;
                     collectable.mesh.material.emissiveIntensity = 0.3 + (pulse * 0.3);
+                }
+            } else if (collectable.type === 'aerialStar') {
+                // Aerial stars get simple Y-axis rotation only (as it was before)
+                if (collectable.mesh.userData.rotationSpeed) {
+                    collectable.mesh.rotation.y += collectable.mesh.userData.rotationSpeed;
                 }
             }
             
@@ -616,6 +665,9 @@ export class CollectableManager {
                 this.collectables.splice(i, 1);
             }
         }
+        
+        // Update collection effects
+        this.updateCollectionEffects();
     }
 
     checkCollisions(playerBox) {
@@ -665,6 +717,9 @@ export class CollectableManager {
             }
             
             if (collisionDetected) {
+                // Create collection effect before removing the collectable
+                this.createCollectionEffect(collectable.mesh.position, collectable.type);
+                
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
                 collectedItems.push(collectable.type);
@@ -684,6 +739,129 @@ export class CollectableManager {
         }
         
         return collectedItems;
+    }
+
+    createCollectionEffect(position, type) {
+        const powerUps = ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'];
+        const isPowerUp = powerUps.includes(type);
+        
+        // Create particle burst effect
+        const particleCount = isPowerUp ? 12 : 6;
+        const particleSize = isPowerUp ? 0.08 : 0.04;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new THREE.Mesh(
+                new THREE.SphereGeometry(particleSize, 8, 8),
+                new THREE.MeshStandardMaterial({
+                    color: this.getCollectableColor(type),
+                    emissive: this.getCollectableColor(type),
+                    emissiveIntensity: 0.3,
+                    transparent: true,
+                    opacity: 0.8
+                })
+            );
+            
+            particle.position.copy(position);
+            
+            // Random burst direction
+            const angle = (i / particleCount) * Math.PI * 2;
+            const radius = 0.3 + Math.random() * 0.2;
+            const height = (Math.random() - 0.5) * 0.3;
+            
+            particle.userData = {
+                velocity: new THREE.Vector3(
+                    Math.cos(angle) * radius,
+                    height + 0.1,
+                    Math.sin(angle) * radius
+                ),
+                life: 1.0,
+                decay: 0.02 + Math.random() * 0.01
+            };
+            
+            this.scene.add(particle);
+            this.collectionEffects = this.collectionEffects || [];
+            this.collectionEffects.push(particle);
+        }
+        
+        // Create extra effects for power-ups
+        if (isPowerUp) {
+            // Create a expanding ring effect
+            const ringGeometry = new THREE.RingGeometry(0.1, 0.2, 16);
+            const ringMaterial = new THREE.MeshStandardMaterial({
+                color: this.getCollectableColor(type),
+                emissive: this.getCollectableColor(type),
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+            
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.copy(position);
+            ring.rotation.x = -Math.PI / 2;
+            
+            ring.userData = {
+                scale: 1.0,
+                expansion: 0.1,
+                life: 1.0,
+                decay: 0.03
+            };
+            
+            this.scene.add(ring);
+            this.collectionEffects = this.collectionEffects || [];
+            this.collectionEffects.push(ring);
+        }
+    }
+    
+    getCollectableColor(type) {
+        const colors = {
+            'blueprint': 0x4A90E2,
+            'waterDrop': 0x00CED1,
+            'energyCell': 0xFFD700,
+            'hardHat': 0xFF8C00,
+            'helicopter': 0x808080,
+            'solarPower': 0xFFD700,
+            'windPower': 0x32CD32,
+            'waterPipeline': 0x1E90FF,
+            'aerialStar': 0xFFD700,
+            'solarOrb': 0xFFD700
+        };
+        return colors[type] || 0xFFFFFF;
+    }
+    
+    updateCollectionEffects() {
+        if (!this.collectionEffects) return;
+        
+        for (let i = this.collectionEffects.length - 1; i >= 0; i--) {
+            const effect = this.collectionEffects[i];
+            
+            if (effect.userData.velocity) {
+                // Particle effect
+                effect.position.add(effect.userData.velocity);
+                effect.userData.velocity.y -= 0.01; // Gravity
+                effect.userData.velocity.multiplyScalar(0.95); // Air resistance
+                
+                effect.userData.life -= effect.userData.decay;
+                effect.material.opacity = effect.userData.life;
+                
+                if (effect.userData.life <= 0) {
+                    this.scene.remove(effect);
+                    this.collectionEffects.splice(i, 1);
+                }
+            } else if (effect.userData.expansion) {
+                // Ring effect
+                effect.userData.scale += effect.userData.expansion;
+                effect.scale.setScalar(effect.userData.scale);
+                
+                effect.userData.life -= effect.userData.decay;
+                effect.material.opacity = effect.userData.life * 0.6;
+                
+                if (effect.userData.life <= 0) {
+                    this.scene.remove(effect);
+                    this.collectionEffects.splice(i, 1);
+                }
+            }
+        }
     }
 
     applyMagnetEffect(playerPosition, magnetRadius, magnetSpeed) {
@@ -727,6 +905,12 @@ export class CollectableManager {
     reset() {
         this.collectables.forEach(collectable => this.scene.remove(collectable.mesh));
         this.collectables = [];
+        
+        // Clean up collection effects
+        if (this.collectionEffects) {
+            this.collectionEffects.forEach(effect => this.scene.remove(effect));
+            this.collectionEffects = [];
+        }
         
         // Reset and reshuffle the power-up deck
         this.shufflePowerUpDeck();
