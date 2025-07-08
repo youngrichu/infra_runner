@@ -1,0 +1,281 @@
+export class PlayerRegistration {
+    constructor(onComplete) {
+        this.onComplete = onComplete;
+        this.registrationElement = null;
+        this.isVisible = false;
+        this.createRegistrationForm();
+    }
+
+    createRegistrationForm() {
+        this.registrationElement = document.createElement('div');
+        this.registrationElement.id = 'player-registration';
+        this.registrationElement.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            z-index: 10000;
+            font-family: 'Arial', sans-serif;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        `;
+
+        this.registrationElement.innerHTML = `
+            <div style="
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                padding: 30px;
+                border-radius: 20px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                max-width: 400px;
+                width: 90%;
+                text-align: center;
+            ">
+                <h2 style="
+                    color: white;
+                    margin-bottom: 20px;
+                    font-size: 24px;
+                    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+                ">🏃‍♂️ Infrastructure Runner</h2>
+                
+                <p style="
+                    color: #e0e0e0;
+                    margin-bottom: 25px;
+                    font-size: 14px;
+                    line-height: 1.4;
+                ">Enter your details to join the leaderboard!</p>
+
+                <form id="registration-form">
+                    <div style="margin-bottom: 15px;">
+                        <input 
+                            type="text" 
+                            id="player-name" 
+                            placeholder="Your Name" 
+                            required
+                            style="
+                                width: 100%;
+                                padding: 12px;
+                                border: none;
+                                border-radius: 8px;
+                                font-size: 16px;
+                                background: rgba(255,255,255,0.9);
+                                box-sizing: border-box;
+                            "
+                        />
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <input 
+                            type="email" 
+                            id="player-email" 
+                            placeholder="Your Email" 
+                            required
+                            style="
+                                width: 100%;
+                                padding: 12px;
+                                border: none;
+                                border-radius: 8px;
+                                font-size: 16px;
+                                background: rgba(255,255,255,0.9);
+                                box-sizing: border-box;
+                            "
+                        />
+                    </div>
+
+                    <div style="margin-bottom: 25px;">
+                        <input 
+                            type="text" 
+                            id="organization-name" 
+                            placeholder="Organization Name" 
+                            required
+                            style="
+                                width: 100%;
+                                padding: 12px;
+                                border: none;
+                                border-radius: 8px;
+                                font-size: 16px;
+                                background: rgba(255,255,255,0.9);
+                                box-sizing: border-box;
+                            "
+                        />
+                    </div>
+
+                    <button 
+                        type="submit"
+                        style="
+                            width: 100%;
+                            padding: 14px;
+                            background: linear-gradient(45deg, #FF6B35, #FFD700);
+                            border: none;
+                            border-radius: 8px;
+                            color: white;
+                            font-size: 18px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+                        "
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255, 107, 53, 0.4)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 107, 53, 0.3)'"
+                    >
+                        🚀 Start Playing
+                    </button>
+                </form>
+
+                <div style="
+                    margin-top: 15px;
+                    font-size: 12px;
+                    color: #b0b0b0;
+                    line-height: 1.3;
+                ">
+                    Your information will be used for the leaderboard only
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(this.registrationElement);
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        const form = document.getElementById('registration-form');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleSubmit();
+        });
+
+        // Auto-focus first input when shown
+        this.registrationElement.addEventListener('transitionend', () => {
+            if (this.isVisible) {
+                document.getElementById('player-name').focus();
+            }
+        });
+    }
+
+    handleSubmit() {
+        const playerName = document.getElementById('player-name').value.trim();
+        const email = document.getElementById('player-email').value.trim();
+        const organizationName = document.getElementById('organization-name').value.trim();
+
+        if (!playerName || !email || !organizationName) {
+            this.showError('Please fill in all fields');
+            return;
+        }
+
+        if (!this.isValidEmail(email)) {
+            this.showError('Please enter a valid email address');
+            return;
+        }
+
+        // Store in localStorage for future sessions
+        localStorage.setItem('playerData', JSON.stringify({
+            playerName,
+            email,
+            organizationName
+        }));
+
+        this.hide();
+        
+        if (this.onComplete) {
+            this.onComplete(playerName, email, organizationName);
+        }
+    }
+
+    isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    showError(message) {
+        // Remove existing error message
+        const existingError = document.querySelector('.registration-error');
+        if (existingError) {
+            existingError.remove();
+        }
+
+        // Create new error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'registration-error';
+        errorDiv.style.cssText = `
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 14px;
+            border: 1px solid rgba(255, 68, 68, 0.3);
+        `;
+        errorDiv.textContent = message;
+
+        const form = document.getElementById('registration-form');
+        form.appendChild(errorDiv);
+
+        // Remove error after 5 seconds
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 5000);
+    }
+
+    show() {
+        // Check if player data is already stored
+        const storedData = localStorage.getItem('playerData');
+        if (storedData) {
+            const { playerName, email, organizationName } = JSON.parse(storedData);
+            
+            // Auto-fill the form
+            document.getElementById('player-name').value = playerName;
+            document.getElementById('player-email').value = email;
+            document.getElementById('organization-name').value = organizationName;
+        }
+
+        this.registrationElement.style.display = 'block';
+        // Trigger transition
+        setTimeout(() => {
+            this.registrationElement.style.opacity = '1';
+            this.registrationElement.style.visibility = 'visible';
+        }, 10);
+        this.isVisible = true;
+        
+        // Focus on first input
+        setTimeout(() => {
+            document.getElementById('player-name').focus();
+        }, 100);
+    }
+
+    hide() {
+        this.registrationElement.style.opacity = '0';
+        this.registrationElement.style.visibility = 'hidden';
+        setTimeout(() => {
+            this.registrationElement.style.display = 'none';
+        }, 300);
+        this.isVisible = false;
+    }
+
+    destroy() {
+        if (this.registrationElement && this.registrationElement.parentNode) {
+            this.registrationElement.parentNode.removeChild(this.registrationElement);
+        }
+    }
+
+    // Static method to get stored player data
+    static getStoredPlayerData() {
+        const stored = localStorage.getItem('playerData');
+        return stored ? JSON.parse(stored) : null;
+    }
+
+    // Static method to clear stored player data
+    static clearStoredPlayerData() {
+        localStorage.removeItem('playerData');
+    }
+}

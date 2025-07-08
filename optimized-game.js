@@ -10,6 +10,7 @@ import { InputManager } from './input.js';
 import { GAME_CONFIG, SCORING, SPAWN_CONFIG, PHYSICS } from './constants.js';
 import { GameStateManager, STATES } from './game-state.js';
 import { LeaderboardManager } from './leaderboard.js';
+import { PlayerRegistration } from './player-registration.js';
 import { 
     PerformanceMonitor, 
     AdaptiveQualityManager, 
@@ -43,6 +44,7 @@ export class OptimizedGame {
         // State management
         this.stateManager = new GameStateManager();
         this.leaderboardManager = new LeaderboardManager();
+        this.playerRegistration = null;
         
         // Performance optimization flags
         this.isCurrentlyPlaying = false;
@@ -73,8 +75,8 @@ export class OptimizedGame {
         this.startSpawning();
         this.animate();
 
-        // Start game flow
-        this.stateManager.startSplashScreen();
+        // Start game flow with player registration
+        this.checkPlayerRegistration();
         
         console.log('✅ Optimized game initialization complete');
     }
@@ -587,8 +589,18 @@ export class OptimizedGame {
         this.gameActive = false;
         const finalScore = this.uiManager.getScore();
         const stats = this.uiManager.getCollectableStats();
-        this.stateManager.endGame(finalScore, stats);
-        this.stateManager.showUserInfoScreen();
+        
+        // Update game state manager with final game stats
+        this.stateManager.setState(STATES.GAME_OVER);
+        this.stateManager.updateGameStats({
+            score: finalScore,
+            blueprints: stats.blueprints,
+            waterDrops: stats.waterDrops,
+            energyCells: stats.energyCells
+        });
+        
+        // Show game over UI
+        this.uiManager.showGameOver();
     }
 
     restartGame() {
@@ -597,6 +609,8 @@ export class OptimizedGame {
         // Reset game state
         this.gameActive = true;
         this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
+        this.stateManager.setState(STATES.PLAYING);
+        this.stateManager.resetGame();
         
         // Reset camera
         this.camera.position.set(0, 2, 5);
@@ -646,6 +660,55 @@ export class OptimizedGame {
         this.stateManager.saveUserInfo(name);
         this.leaderboardManager.addScore(this.stateManager.getPlayerData());
         this.stateManager.showLeaderboard();
+    }
+
+    // Player registration methods
+    checkPlayerRegistration() {
+        console.log('🔍 Checking player registration...');
+        
+        // Check if player data exists
+        const storedData = PlayerRegistration.getStoredPlayerData();
+        console.log('📊 Stored player data:', storedData);
+        
+        if (storedData) {
+            // Player already registered, set up the game
+            console.log('✅ Player already registered, setting up game...');
+            this.registerPlayer(storedData.playerName, storedData.email, storedData.organizationName);
+            this.stateManager.setState(STATES.MENU);
+        } else {
+            // Show registration form
+            console.log('📝 No player data found, showing registration form...');
+            this.stateManager.setState(STATES.PLAYER_REGISTRATION);
+            this.showPlayerRegistration();
+        }
+    }
+
+    showPlayerRegistration() {
+        console.log('🎮 Showing player registration form...');
+        try {
+            if (!this.playerRegistration) {
+                console.log('🏗️ Creating new PlayerRegistration instance...');
+                this.playerRegistration = new PlayerRegistration((name, email, organization) => {
+                    console.log('📋 Player registration completed:', { name, email, organization });
+                    this.registerPlayer(name, email, organization);
+                    this.stateManager.setState(STATES.MENU);
+                });
+            }
+            console.log('👀 Showing registration form...');
+            this.playerRegistration.show();
+        } catch (error) {
+            console.error('❌ Error showing player registration:', error);
+        }
+    }
+
+    registerPlayer(name, email, organization) {
+        // Set player data in state manager
+        this.stateManager.setPlayerData(name, email, organization);
+        
+        // Set player data in leaderboard manager
+        this.leaderboardManager.setPlayerData(name, email, organization);
+        
+        console.log(`Player registered: ${name} (${email}) from ${organization}`);
     }
 
     // Public interface methods

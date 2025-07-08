@@ -7,6 +7,7 @@ export class InputManager {
             right: false,
             jump: false
         };
+        this.enabled = true;
         
         this.setupEventListeners();
     }
@@ -21,6 +22,9 @@ export class InputManager {
     }
 
     onKeyDown(event) {
+        // Don't process any input if disabled
+        if (!this.enabled) return;
+        
         // Prevent default behavior for game keys
         if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyR'].includes(event.code)) {
             event.preventDefault();
@@ -62,6 +66,9 @@ export class InputManager {
     }
 
     onKeyUp(event) {
+        // Don't process any input if disabled
+        if (!this.enabled) return;
+        
         switch (event.code) {
             case 'ArrowLeft':
             case 'KeyA':
@@ -242,5 +249,16 @@ export class InputManager {
             right: false,
             jump: false
         };
+    }
+    
+    // Enable/disable input processing
+    enable() {
+        this.enabled = true;
+    }
+    
+    disable() {
+        this.enabled = false;
+        // Reset any active keys when disabling
+        this.reset();
     }
 }

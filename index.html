@@ -565,14 +565,11 @@
                                 // Check if we should show onboarding
                                 const completed = localStorage.getItem('infrastructureRunner_onboardingCompleted');
                                 if (!completed) {
-                                    // Show onboarding - game will start when user completes it
+                                    // Show onboarding first - registration comes after
                                     showOnboarding();
                                 } else {
-                                    // Start game directly for returning users
-                                    if (!window.gameInitialized && window.initializeGame) {
-                                        window.gameInitialized = true;
-                                        window.initializeGame();
-                                    }
+                                    // Check if player is registered before starting game
+                                    checkPlayerRegistrationAndStart();
                                 }
                             }, 500);
                         }
@@ -656,18 +653,36 @@
         };
         
         function completeOnboarding() {
-            // Prevent multiple game initializations
-            if (window.gameInitialized) {
-                console.log('Game already initialized, skipping');
-                return;
-            }
-            
             // Store preference to not show onboarding again
             localStorage.setItem('infrastructureRunner_onboardingCompleted', 'true');
             
             // Hide onboarding overlay
             const overlay = document.getElementById('onboarding-overlay');
             overlay.classList.remove('active');
+            
+            // Now check player registration instead of starting game
+            checkPlayerRegistrationAndStart();
+        }
+        
+        function checkPlayerRegistrationAndStart() {
+            // Check if player data exists
+            const storedPlayerData = localStorage.getItem('playerData');
+            
+            if (storedPlayerData) {
+                // Player already registered, start the game
+                startGameAfterRegistration();
+            } else {
+                // Player not registered, start game and let it handle registration
+                startGameAfterRegistration();
+            }
+        }
+        
+        function startGameAfterRegistration() {
+            // Prevent multiple game initializations
+            if (window.gameInitialized) {
+                console.log('Game already initialized, skipping');
+                return;
+            }
             
             // Mark as initialized and start the game
             window.gameInitialized = true;

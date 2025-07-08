@@ -11,6 +11,11 @@ export class UIManager {
         this.waterDrops = 0;
         this.energyCells = 0;
         
+        // Leaderboard integration
+        this.leaderboardData = [];
+        this.isSubmittingScore = false;
+        this.scoreSubmitted = false;
+        
         this.createUI();
         this.setupResizeHandler();
     }
@@ -91,6 +96,18 @@ export class UIManager {
         this.scoreElement.innerHTML = `Score: ${Math.floor(this.score)} | BP: ${this.blueprints} | WD: ${this.waterDrops} | EC: ${this.energyCells}`;
     }
 
+    getScore() {
+        return this.score;
+    }
+
+    getCollectableStats() {
+        return {
+            blueprints: this.blueprints,
+            waterDrops: this.waterDrops,
+            energyCells: this.energyCells
+        };
+    }
+
     showGameOver() {
         this.gameOverElement.style.display = 'block';
         const isMobile = window.innerWidth <= 768;
@@ -123,6 +140,17 @@ export class UIManager {
                     <div style="text-align: center; min-width: 60px;">💧<br><span style="font-size: 0.9em;">Water Drops</span><br><strong>${this.waterDrops}</strong></div>
                     <div style="text-align: center; min-width: 60px;">⚡<br><span style="font-size: 0.9em;">Energy Cells</span><br><strong>${this.energyCells}</strong></div>
                 </div>
+                
+                <!-- Leaderboard submission status -->
+                <div id="leaderboard-status" style="margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 0.8em;">
+                    ${this.getLeaderboardStatusHTML()}
+                </div>
+                
+                <!-- Leaderboard display -->
+                <div id="leaderboard-display" style="margin-top: 15px; max-height: 150px; overflow-y: auto;">
+                    ${this.getLeaderboardHTML()}
+                </div>
+                
                 <div style="margin-top: 20px;">
                     <button id="restart-button" style="
                         background: linear-gradient(45deg, #FF6B35, #FFD700);
@@ -179,6 +207,10 @@ export class UIManager {
         
         console.log('Game Over! Final Score:', Math.floor(this.score));
         console.log(`Blueprints: ${this.blueprints}, Water Drops: ${this.waterDrops}, Energy Cells: ${this.energyCells}`);
+        
+        // Load leaderboard and submit score
+        this.loadLeaderboard();
+        this.submitScoreToLeaderboard();
     }
 
     hideGameOver() {
@@ -280,6 +312,98 @@ export class UIManager {
         
         this.hideGameOver();
         this.updateScoreDisplay();
+    }
+
+    // Leaderboard integration methods
+    getLeaderboardStatusHTML() {
+        if (this.isSubmittingScore) {
+            return `<div style="color: #FFD700; text-align: center;">📤 Submitting score...</div>`;
+        } else if (this.scoreSubmitted) {
+            return `<div style="color: #4CAF50; text-align: center;">✅ Score submitted successfully!</div>`;
+        } else {
+            return `<div style="color: #ff9800; text-align: center;">⚠️ Score not submitted</div>`;
+        }
+    }
+
+    getLeaderboardHTML() {
+        if (!this.leaderboardData || this.leaderboardData.length === 0) {
+            return '<div style="color: #888; text-align: center; padding: 20px;">Loading leaderboard...</div>';
+        }
+
+        const topScores = this.leaderboardData.slice(0, 5);
+        let html = '<div style="color: #FFD700; text-align: center; margin-bottom: 10px; font-weight: bold;">Top Scores</div>';
+        
+        topScores.forEach((score, index) => {
+            const rank = index + 1;
+            const emoji = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : rank + 'th';
+            const nameLimit = 12;
+            const displayName = score.player_name.length > nameLimit ? 
+                score.player_name.substring(0, nameLimit) + '...' : score.player_name;
+            
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; margin: 2px 0; background: rgba(255,255,255,0.1); border-radius: 4px; font-size: 0.9em;"><span>' + emoji + ' ' + displayName + '</span><span style="color: #FFD700; font-weight: bold;">' + Math.floor(score.score) + '</span></div>';
+        });
+
+        return html;
+    }
+
+    updateLeaderboard(leaderboardData) {
+        this.leaderboardData = leaderboardData;
+        const displayElement = document.getElementById('leaderboard-display');
+        if (displayElement) {
+            displayElement.innerHTML = this.getLeaderboardHTML();
+        }
+    }
+
+    updateLeaderboardStatus(isSubmitting, submitted) {
+        this.isSubmittingScore = isSubmitting;
+        this.scoreSubmitted = submitted;
+        const statusElement = document.getElementById('leaderboard-status');
+        if (statusElement) {
+            statusElement.innerHTML = this.getLeaderboardStatusHTML();
+        }
+    }
+
+    async submitScoreToLeaderboard() {
+        if (!this.gameController || !this.gameController.leaderboardManager) {
+            console.warn('Leaderboard manager not available');
+            return;
+        }
+
+        try {
+            this.updateLeaderboardStatus(true, false);
+            
+            const gameStats = {
+                score: Math.floor(this.score),
+                duration: this.gameController.stateManager.getGameDuration(),
+                blueprints: this.blueprints,
+                waterDrops: this.waterDrops,
+                energyCells: this.energyCells
+            };
+
+            await this.gameController.leaderboardManager.submitScore(gameStats);
+            this.updateLeaderboardStatus(false, true);
+            
+            // Refresh leaderboard display
+            const leaderboardData = await this.gameController.leaderboardManager.getTopScores(10);
+            this.updateLeaderboard(leaderboardData);
+            
+        } catch (error) {
+            console.error('Failed to submit score:', error);
+            this.updateLeaderboardStatus(false, false);
+        }
+    }
+
+    async loadLeaderboard() {
+        if (!this.gameController || !this.gameController.leaderboardManager) {
+            return;
+        }
+
+        try {
+            const leaderboardData = await this.gameController.leaderboardManager.getTopScores(10);
+            this.updateLeaderboard(leaderboardData);
+        } catch (error) {
+            console.error('Failed to load leaderboard:', error);
+        }
     }
     
     setupResizeHandler() {

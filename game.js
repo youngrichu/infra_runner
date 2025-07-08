@@ -7,6 +7,9 @@ import { PowerUpManager } from './powerups.js';
 import { UIManager } from './ui.js';
 import { InputManager } from './input.js';
 import { GAME_CONFIG, SCORING, SPAWN_CONFIG, PHYSICS } from './constants.js';
+import { GameStateManager, STATES } from './game-state.js';
+import { LeaderboardManager } from './leaderboard.js';
+import { PlayerRegistration } from './player-registration.js';
 
 export class Game {
     constructor() {
@@ -29,6 +32,11 @@ export class Game {
         this.gamePaused = false; // Add pause state
         this.gameSpeed = { value: GAME_CONFIG.INITIAL_SPEED }; // Using object for reference
         
+        // State management
+        this.stateManager = new GameStateManager();
+        this.leaderboardManager = new LeaderboardManager();
+        this.playerRegistration = null;
+        
         this.init();
     }
 
@@ -36,8 +44,9 @@ export class Game {
         this.setupThreeJS();
         await this.createManagers(); // Await manager creation
         this.setupInputManager();
-        this.startSpawning();
-        this.animate();
+        
+        // Check player registration BEFORE starting game
+        this.checkPlayerRegistration();
     }
 
     setupThreeJS() {
@@ -360,9 +369,21 @@ export class Game {
 
     gameOver() {
         this.gameActive = false;
-        this.uiManager.showGameOver();
-        console.log('Game Over! Final Score:', Math.floor(this.uiManager.getScore()));
+        const finalScore = this.uiManager.getScore();
         const stats = this.uiManager.getCollectableStats();
+        
+        // Update game state manager with final game stats
+        this.stateManager.setState(STATES.GAME_OVER);
+        this.stateManager.updateGameStats({
+            score: finalScore,
+            blueprints: stats.blueprints,
+            waterDrops: stats.waterDrops,
+            energyCells: stats.energyCells
+        });
+        
+        // Show game over UI
+        this.uiManager.showGameOver();
+        console.log('Game Over! Final Score:', Math.floor(finalScore));
         console.log(`Blueprints: ${stats.blueprints}, Water Drops: ${stats.waterDrops}, Energy Cells: ${stats.energyCells}`);
     }
 
@@ -370,6 +391,8 @@ export class Game {
         // Reset game state
         this.gameActive = true;
         this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
+        this.stateManager.setState(STATES.PLAYING);
+        this.stateManager.resetGame();
         
         // Reset camera position
         this.camera.position.z = 5;
@@ -437,6 +460,85 @@ export class Game {
 
     getObstacles() {
         return this.obstacleManager.getObstacles();
+    }
+
+    // Player registration methods
+    checkPlayerRegistration() {
+        console.log('🔍 Checking player registration...');
+        
+        try {
+            // Check if player data exists
+            const storedData = PlayerRegistration.getStoredPlayerData();
+            console.log('📊 Stored player data:', storedData);
+            
+            if (storedData) {
+                // Player already registered, start the game
+                console.log('✅ Player already registered, starting game...');
+                this.registerPlayer(storedData.playerName, storedData.email, storedData.organizationName);
+                this.startGame();
+            } else {
+                // Show registration form first
+                console.log('📝 No player data found, showing registration form...');
+                this.stateManager.setState(STATES.PLAYER_REGISTRATION);
+                this.showPlayerRegistration();
+            }
+        } catch (error) {
+            console.error('❌ Error in checkPlayerRegistration:', error);
+            // Fallback: just start the game
+            console.log('🔄 Fallback: starting game without registration');
+            this.startGame();
+        }
+    }
+    
+    startGame() {
+        console.log('🚀 Starting game...');
+        try {
+            this.stateManager.setState(STATES.PLAYING);
+            this.gameActive = true;
+            this.startSpawning();
+            this.animate();
+            console.log('✅ Game started successfully');
+        } catch (error) {
+            console.error('❌ Error starting game:', error);
+        }
+    }
+
+    showPlayerRegistration() {
+        console.log('🎮 Showing player registration form...');
+        try {
+            // Disable input manager during registration
+            if (this.inputManager) {
+                this.inputManager.disable();
+            }
+            
+            if (!this.playerRegistration) {
+                console.log('🏗️ Creating new PlayerRegistration instance...');
+                this.playerRegistration = new PlayerRegistration((name, email, organization) => {
+                    console.log('📋 Player registration completed:', { name, email, organization });
+                    this.registerPlayer(name, email, organization);
+                    // Re-enable input manager
+                    if (this.inputManager) {
+                        this.inputManager.enable();
+                    }
+                    // NOW start the game
+                    this.startGame();
+                });
+            }
+            console.log('👀 Showing registration form...');
+            this.playerRegistration.show();
+        } catch (error) {
+            console.error('❌ Error showing player registration:', error);
+        }
+    }
+
+    registerPlayer(name, email, organization) {
+        // Set player data in state manager
+        this.stateManager.setPlayerData(name, email, organization);
+        
+        // Set player data in leaderboard manager
+        this.leaderboardManager.setPlayerData(name, email, organization);
+        
+        console.log(`Player registered: ${name} (${email}) from ${organization}`);
     }
 
     animate() {
