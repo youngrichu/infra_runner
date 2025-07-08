@@ -26,14 +26,8 @@ export class InputManager {
         if (!this.enabled) return;
         
         // Prevent default behavior for game keys
-        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyR'].includes(event.code)) {
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space'].includes(event.code)) {
             event.preventDefault();
-        }
-
-        // Handle restart
-        if (event.code === 'KeyR' && !this.gameController.isGameActive()) {
-            this.gameController.restartGame();
-            return;
         }
 
         // Only process game controls if game is active
@@ -167,36 +161,72 @@ export class InputManager {
     }
 
     setupUniversalRestart() {
-        // Touch/click restart - listen for taps on game over screen
+        // Touch/click restart - but exclude interactive elements
         document.addEventListener('click', (event) => {
             if (!this.gameController.isGameActive()) {
-                // Check if clicking on game over element or canvas
+                // Check if clicking on interactive elements that should NOT restart the game
+                const isInteractiveElement = this.isInteractiveElement(event.target);
+                
+                // Only restart if clicking on non-interactive areas
                 const gameOverElement = this.gameController.uiManager?.gameOverElement;
                 const canvas = this.gameController.renderer?.domElement;
                 
-                if (gameOverElement && gameOverElement.style.display === 'block' && 
-                    (event.target === gameOverElement || gameOverElement.contains(event.target) || event.target === canvas)) {
+                if (!isInteractiveElement && canvas && event.target === canvas) {
+                    // Only allow restart when clicking directly on the canvas (background)
                     event.preventDefault();
                     this.gameController.restartGame();
                 }
             }
         });
         
-        // Touch restart for mobile
-        document.addEventListener('touchend', (event) => {
-            if (!this.gameController.isGameActive()) {
-                const gameOverElement = this.gameController.uiManager?.gameOverElement;
-                const canvas = this.gameController.renderer?.domElement;
-                
-                if (gameOverElement && gameOverElement.style.display === 'block') {
-                    event.preventDefault();
-                    this.gameController.restartGame();
-                }
-            }
-        });
+        // Remove touch restart for mobile - rely only on restart button
+        // This prevents conflicts with tab interactions on mobile
         
         // Gamepad restart support
         this.setupGamepadRestart();
+    }
+    
+    isInteractiveElement(element) {
+        if (!element) return false;
+        
+        // Check if the element or any parent is an interactive element
+        const interactiveSelectors = [
+            'button',
+            'input',
+            'select',
+            'textarea',
+            'a',
+            '[role="button"]',
+            '[role="tab"]',
+            '[tabindex]',
+            '.tab-header',
+            '.view-btn',
+            '.primary-button',
+            '.restart-button',
+            '.search-input',
+            '.filter-option',
+            '.leaderboard-entry'
+        ];
+        
+        // Check if current element matches
+        for (const selector of interactiveSelectors) {
+            if (element.matches && element.matches(selector)) {
+                return true;
+            }
+        }
+        
+        // Check if any parent element matches
+        let parent = element.parentElement;
+        while (parent && parent !== document.body) {
+            for (const selector of interactiveSelectors) {
+                if (parent.matches && parent.matches(selector)) {
+                    return true;
+                }
+            }
+            parent = parent.parentElement;
+        }
+        
+        return false;
     }
     
     setupGamepadRestart() {
