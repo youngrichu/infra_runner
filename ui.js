@@ -142,17 +142,17 @@ export class UIManager {
                     </div>
                     <div class="collectibles-grid">
                         <div class="collectible-stat">
-                            <span class="collectible-icon">🔵</span>
+                            <span class="collectible-icon"><i class="ti ti-file-text"></i></span>
                             <span class="collectible-label">Blueprints</span>
                             <span class="collectible-value">${this.blueprints}</span>
                         </div>
                         <div class="collectible-stat">
-                            <span class="collectible-icon">💧</span>
-                            <span class="collectible-label">Water Drops</span>
+                            <span class="collectible-icon"><i class="ti ti-droplet"></i></span>
+                            <span class="collectible-label">Water</span>
                             <span class="collectible-value">${this.waterDrops}</span>
                         </div>
                         <div class="collectible-stat">
-                            <span class="collectible-icon">⚡</span>
+                            <span class="collectible-icon"><i class="ti ti-bolt"></i></span>
                             <span class="collectible-label">Energy Cells</span>
                             <span class="collectible-value">${this.energyCells}</span>
                         </div>
@@ -167,9 +167,9 @@ export class UIManager {
                 <!-- Tabbed Interface -->
                 <div class="tabs-container">
                     <div class="tab-headers">
-                        <button class="tab-header active" data-tab="top-scores">🏆 Top Scores</button>
-                        <button class="tab-header" data-tab="my-rank">📊 My Rank</button>
-                        <button class="tab-header" data-tab="search">🔍 Search</button>
+                        <button class="tab-header active" data-tab="top-scores"><i class="ti ti-trophy"></i> Top Scores</button>
+                        <button class="tab-header" data-tab="my-rank"><i class="ti ti-chart-bar"></i> My Rank</button>
+                        <button class="tab-header" data-tab="search"><i class="ti ti-search"></i> Search</button>
                     </div>
                     
                     <div class="tab-content">
@@ -225,7 +225,7 @@ export class UIManager {
                 <!-- Action Buttons -->
                 <div class="action-buttons">
                     <button id="restart-button" class="primary-button">
-                        🔄 Restart Game
+                        <i class="ti ti-refresh"></i> Restart Game
                     </button>
                 </div>
             </div>
@@ -869,7 +869,7 @@ export class UIManager {
         this.initializeGameOverInteractions();
         
         console.log('Game Over! Final Score:', Math.floor(this.score));
-        console.log(`Blueprints: ${this.blueprints}, Water Drops: ${this.waterDrops}, Energy Cells: ${this.energyCells}`);
+        console.log(`Blueprints: ${this.blueprints}, Water: ${this.waterDrops}, Energy Cells: ${this.energyCells}`);
         
         // Load leaderboard and submit score
         this.loadLeaderboard();
@@ -980,11 +980,11 @@ export class UIManager {
     // Leaderboard integration methods
     getLeaderboardStatusHTML() {
         if (this.isSubmittingScore) {
-            return `<div style="color: #FFD700; text-align: center;">📤 Submitting score...</div>`;
+            return `<div style="color: #FFD700; text-align: center;"><i class="ti ti-upload"></i> Submitting score...</div>`;
         } else if (this.scoreSubmitted) {
-            return `<div style="color: #4CAF50; text-align: center;">✅ Score submitted successfully!</div>`;
+            return `<div style="color: #4CAF50; text-align: center;"><i class="ti ti-check"></i> Score submitted successfully!</div>`;
         } else {
-            return `<div style="color: #ff9800; text-align: center;">⚠️ Score not submitted</div>`;
+            return `<div style="color: #ff9800; text-align: center;"><i class="ti ti-alert-triangle"></i> Score not submitted</div>`;
         }
     }
 
@@ -1055,7 +1055,7 @@ export class UIManager {
                         <div class="rank-stat-value">${playerData?.blueprintsCollected || playerData?.blueprints || this.blueprints || 0}</div>
                     </div>
                     <div class="rank-stat">
-                        <div class="rank-stat-label">Water Drops</div>
+                        <div class="rank-stat-label">Water</div>
                         <div class="rank-stat-value">${playerData?.waterDropsCollected || playerData?.water_drops || this.waterDrops || 0}</div>
                     </div>
                     <div class="rank-stat">

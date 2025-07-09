@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Infrastructure Runner Game</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.34.0/tabler-icons.min.css">
     <style>
         body {
             margin: 0;
@@ -387,6 +388,34 @@
             }
         }
         
+        /* Tabler Icons Styling */
+        .ti {
+            margin-right: 8px;
+            font-size: 1.1em;
+            vertical-align: middle;
+        }
+        
+        .collectible-icon .ti {
+            font-size: 1.5em;
+            margin-right: 0;
+        }
+        
+        .loading-title .ti,
+        .onboarding-title .ti {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+        
+        .tab-header .ti {
+            margin-right: 6px;
+            font-size: 1em;
+        }
+        
+        /* Ensure icons align well with text */
+        .ti::before {
+            vertical-align: middle;
+        }
+        
         /* Landscape orientation on mobile */
         @media (max-height: 600px) and (orientation: landscape) {
             .onboarding-modal {
@@ -407,7 +436,7 @@
 <body>
     <div id="loading">
         <div class="loading-content">
-            <div class="loading-title">🏗️ Infrastructure Runner</div>
+            <div class="loading-title"><i class="ti ti-building-factory2"></i> Infrastructure Runner</div>
             <div class="loading-subtitle">Building the Future, One Run at a Time</div>
             <div class="progress-container">
                 <div class="progress-bar" id="progress-bar"></div>
@@ -425,7 +454,7 @@
             </div>
             
             <div class="onboarding-header">
-                <div class="onboarding-title">🏗️ Infrastructure Runner</div>
+                <div class="onboarding-title"><i class="ti ti-building-factory2"></i> Infrastructure Runner</div>
                 <div class="onboarding-subtitle">Build the Future, One Run at a Time</div>
             </div>
             
@@ -433,7 +462,7 @@
             <div class="onboarding-step active" id="step-0">
                 <div class="onboarding-content">
                     <h3>Welcome to Infrastructure Runner!</h3>
-                    <p>You're an infrastructure engineer running through a vibrant African metropolis. Your mission: collect blueprints, water drops, and energy cells to build critical infrastructure while avoiding obstacles.</p>
+                    <p>You're an infrastructure engineer running through a vibrant African metropolis. Your mission: collect blueprints, water, and energy cells to build critical infrastructure while avoiding obstacles.</p>
                     <p>Ready to learn how to play?</p>
                 </div>
             </div>
@@ -468,15 +497,15 @@
                     <p>Gather these essential materials as you run:</p>
                     <div class="collectible-demo">
                         <div class="collectible-item">
-                            <div class="collectible-icon">🔵</div>
+                            <div class="collectible-icon"><i class="ti ti-file-text"></i></div>
                             <div><strong>Blueprints</strong><br>50 points</div>
                         </div>
                         <div class="collectible-item">
-                            <div class="collectible-icon">💧</div>
-                            <div><strong>Water Drops</strong><br>20 points</div>
+                            <div class="collectible-icon"><i class="ti ti-droplet"></i></div>
+                            <div><strong>Water</strong><br>20 points</div>
                         </div>
                         <div class="collectible-item">
-                            <div class="collectible-icon">⚡</div>
+                            <div class="collectible-icon"><i class="ti ti-bolt"></i></div>
                             <div><strong>Energy Cells</strong><br>30 points</div>
                         </div>
                     </div>
@@ -489,11 +518,11 @@
                     <h3>Unlock Amazing Power-ups</h3>
                     <p>Special power-ups give you incredible abilities:</p>
                     <div style="text-align: left; max-width: 400px; margin: 0 auto;">
-                        <p><strong>🛡️ Hard Hat Shield:</strong> Temporary invincibility</p>
-                        <p><strong>🚁 Helicopter Ride:</strong> Fly above obstacles and collect aerial stars</p>
-                        <p><strong>🌟 Solar Power Boost:</strong> Speed boost with magnetic collection</p>
-                        <p><strong>💨 Wind Power:</strong> Double jump ability</p>
-                        <p><strong>🚰 Water Pipeline:</strong> Safe path that clears obstacles</p>
+                        <p><strong><i class="ti ti-shield"></i> Hard Hat Shield:</strong> Temporary invincibility</p>
+                        <p><strong><i class="ti ti-rocket"></i> Jetpack:</strong> Fly above obstacles and collect aerial stars</p>
+                        <p><strong><i class="ti ti-sun"></i> Solar Power Boost:</strong> Speed boost with magnetic collection</p>
+                        <p><strong><i class="ti ti-wind"></i> Wind Power:</strong> Double jump ability</p>
+                        <p><strong><i class="ti ti-fire-hydrant"></i> fire-hydrant:</strong> Safe path that clears obstacles</p>
                     </div>
                 </div>
             </div>

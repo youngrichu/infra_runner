@@ -51,7 +51,7 @@ export class PowerUpManager {
     }
 
     activateHelicopter(duration = POWER_UP_DURATIONS.HELICOPTER) {
-        console.log("Activating Helicopter Ride with duration:", duration);
+        console.log("Activating Jetpack with duration:", duration);
         this.isFlying = true;
         this.flyingTimer = duration;
         this.player.setPosition(
@@ -60,7 +60,7 @@ export class PowerUpManager {
             this.player.getPosition().z
         );
         this.player.setColor(COLORS.PLAYER.FLYING);
-        console.log("Helicopter Ride ACTIVE!");
+        console.log("Jetpack ACTIVE!");
     }
 
     deactivateHelicopter() {
@@ -73,7 +73,7 @@ export class PowerUpManager {
         this.player.isJumping = true;
         this.player.velocityY = 0;
         this.updatePlayerColor();
-        console.log("Helicopter Ride DEACTIVATED!");
+        console.log("Jetpack DEACTIVATED!");
     }
 
     activateSolarPower(duration = POWER_UP_DURATIONS.SOLAR_BOOST) {
@@ -115,19 +115,19 @@ export class PowerUpManager {
     }
 
     activateWaterSlide(duration = POWER_UP_DURATIONS.WATER_SLIDE) {
-        console.log("Activating Water Pipeline with duration:", duration);
+        console.log("Activating fire-hydrant with duration:", duration);
         this.hasWaterSlide = true;
         this.waterSlideTimer = duration;
         this.createWaterSlidePath();
         this.player.setColor(COLORS.PLAYER.WATER_SLIDE);
-        console.log("Water Pipeline ACTIVE!");
+        console.log("fire-hydrant ACTIVE!");
     }
 
     deactivateWaterSlide() {
         this.hasWaterSlide = false;
         this.removeWaterSlidePath();
         this.updatePlayerColor();
-        console.log("Water Pipeline DEACTIVATED!");
+        console.log("fire-hydrant DEACTIVATED!");
     }
 
     createWaterSlidePath() {

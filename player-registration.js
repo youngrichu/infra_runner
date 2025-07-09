@@ -43,7 +43,7 @@ export class PlayerRegistration {
                     margin-bottom: 20px;
                     font-size: 24px;
                     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-                ">🏃‍♂️ Infrastructure Runner</h2>
+                "><i class="ti ti-run"></i> Infrastructure Runner</h2>
                 
                 <p style="
                     color: #e0e0e0;
@@ -127,7 +127,7 @@ export class PlayerRegistration {
                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255, 107, 53, 0.4)'"
                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 107, 53, 0.3)'"
                     >
-                        🚀 Start Playing
+                        <i class="ti ti-play"></i> Start Playing
                     </button>
                 </form>
 
