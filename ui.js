@@ -1353,4 +1353,150 @@ export class UIManager {
             }
         });
     }
+
+    showCountdown(callback) {
+        console.log('🔢 UIManager: Creating countdown display...');
+        
+        // Create countdown overlay
+        const countdownOverlay = document.createElement('div');
+        countdownOverlay.id = 'countdown-overlay';
+        countdownOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            font-family: Arial, sans-serif;
+            color: white;
+            text-align: center;
+            user-select: none;
+        `;
+        
+        // Ready message
+        const readyMessage = document.createElement('div');
+        readyMessage.style.cssText = `
+            font-size: clamp(24px, 6vw, 36px);
+            margin-bottom: 30px;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            animation: pulse 1.5s infinite;
+        `;
+        readyMessage.textContent = 'Get Ready!';
+        
+        // Countdown number
+        const countdownNumber = document.createElement('div');
+        countdownNumber.style.cssText = `
+            font-size: clamp(72px, 15vw, 120px);
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #FF6B35;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.8);
+            animation: countdownBounce 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        `;
+        
+        // Skip instruction
+        const skipMessage = document.createElement('div');
+        skipMessage.style.cssText = `
+            font-size: clamp(14px, 3.5vw, 18px);
+            color: #AAA;
+            margin-top: 20px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        `;
+        skipMessage.innerHTML = 'Tap anywhere or press any key to skip';
+        
+        // Add CSS animations
+        if (!document.getElementById('countdown-styles')) {
+            const style = document.createElement('style');
+            style.id = 'countdown-styles';
+            style.textContent = `
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.7; transform: scale(1.05); }
+                }
+                @keyframes countdownBounce {
+                    0% { transform: scale(0.3); opacity: 0; }
+                    50% { transform: scale(1.2); opacity: 1; }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+                @keyframes countdownGo {
+                    0% { transform: scale(1); opacity: 1; color: #FF6B35; }
+                    50% { transform: scale(1.3); opacity: 1; color: #4CAF50; }
+                    100% { transform: scale(1.1); opacity: 0; color: #4CAF50; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Assemble overlay
+        countdownOverlay.appendChild(readyMessage);
+        countdownOverlay.appendChild(countdownNumber);
+        countdownOverlay.appendChild(skipMessage);
+        document.body.appendChild(countdownOverlay);
+        
+        // Countdown logic
+        const numbers = [3, 2, 1, 'GO!'];
+        let currentIndex = 0;
+        let skipped = false;
+        
+        const updateCountdown = () => {
+            if (skipped) return;
+            
+            const currentNumber = numbers[currentIndex];
+            countdownNumber.textContent = currentNumber;
+            
+            // Apply special styling for GO!
+            if (currentNumber === 'GO!') {
+                countdownNumber.style.color = '#4CAF50';
+                countdownNumber.style.animation = 'countdownGo 1s ease-out';
+            } else {
+                countdownNumber.style.color = '#FF6B35';
+                countdownNumber.style.animation = 'countdownBounce 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            }
+            
+            currentIndex++;
+            
+            if (currentIndex >= numbers.length) {
+                // Countdown complete
+                setTimeout(() => {
+                    if (!skipped) {
+                        document.body.removeChild(countdownOverlay);
+                        callback(false);
+                    }
+                }, 800);
+            } else {
+                // Continue countdown
+                setTimeout(updateCountdown, 900);
+            }
+        };
+        
+        // Skip functionality
+        const skipCountdown = () => {
+            if (skipped) return;
+            skipped = true;
+            document.body.removeChild(countdownOverlay);
+            callback(true);
+        };
+        
+        // Add event listeners for skip
+        const keyHandler = (e) => {
+            e.preventDefault();
+            document.removeEventListener('keydown', keyHandler);
+            countdownOverlay.removeEventListener('click', skipCountdown);
+            countdownOverlay.removeEventListener('touchstart', skipCountdown);
+            skipCountdown();
+        };
+        
+        document.addEventListener('keydown', keyHandler);
+        countdownOverlay.addEventListener('click', skipCountdown);
+        countdownOverlay.addEventListener('touchstart', skipCountdown);
+        
+        // Start countdown
+        updateCountdown();
+    }
 }

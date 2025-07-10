@@ -14,6 +14,14 @@ export const GAME_CONFIG = {
     DEBUG_COLLISIONS: false // Set to true to visualize player collision box
 };
 
+export const COUNTDOWN_CONFIG = {
+    DURATION: 3000, // 3 seconds
+    NUMBERS: [3, 2, 1, 'GO!'],
+    ANIMATION_DURATION: 800, // Duration for each number animation
+    READY_ANIMATION_DURATION: 1500, // Duration for character ready animation
+    SKIP_ENABLED: true
+};
+
 export const LANES = {
     POSITIONS: [-2, 0, 2],
     COUNT: 3,

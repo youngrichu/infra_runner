@@ -31,6 +31,10 @@ export class Player {
         this.stumbleAnimationDuration = 1500; // Default 1.5 seconds max, will be updated when animation loads
         this.stumbleSpeedMultiplier = 1.0; // Speed multiplier for animation playback
         this.gameOverCallback = null; // Callback to trigger game over after stumble
+        
+        // Ready state (for countdown)
+        this.isReady = false;
+        this.readyAnimationTime = 0;
     }
 
     async initialize() {
@@ -454,6 +458,12 @@ export class Player {
 
     updatePosition(isFlying, waterSlideObjects, gameSpeed) {
         if (!this.mesh) return;
+        
+        // Handle ready state animation during countdown
+        if (this.isReady) {
+            this.updateReadyAnimation();
+            return; // Exit early - no movement during ready state
+        }
         
         // Check if stumble should end
         if (this.isStumbling && Date.now() > this.stumbleEndTime) {
@@ -891,5 +901,66 @@ export class Player {
             // Update the offset used throughout the code
             // Note: This is a simple version - in production you'd want to store the offset as a property
         }
+    }
+    
+    // Ready state methods for countdown
+    setReadyState(isReady) {
+        console.log('Setting ready state:', isReady);
+        this.isReady = isReady;
+        this.readyAnimationTime = 0;
+        
+        if (isReady) {
+            // Enter ready pose - character looking focused and ready to run
+            this.enterReadyPose();
+        } else {
+            // Exit ready pose - return to normal running state
+            this.exitReadyPose();
+        }
+    }
+    
+    enterReadyPose() {
+        if (!this.mesh) return;
+        
+        // Set character to a focused, ready-to-run pose
+        // Slightly lean forward and look ahead
+        this.mesh.rotation.x = -0.05; // Slight forward lean
+        this.mesh.position.y = GAME_CONFIG.GROUND_HEIGHT + GAME_CONFIG.PLAYER_VISUAL_OFFSET + 0.02; // Slight crouch
+        
+        // Make sure character is visible and properly positioned
+        this.mesh.visible = true;
+        this.mesh.position.x = LANES.POSITIONS[this.lane];
+        
+        console.log('Player entered ready pose');
+    }
+    
+    exitReadyPose() {
+        if (!this.mesh) return;
+        
+        // Return to normal position and rotation
+        this.mesh.rotation.x = 0;
+        this.mesh.position.y = GAME_CONFIG.GROUND_HEIGHT + GAME_CONFIG.PLAYER_VISUAL_OFFSET;
+        
+        console.log('Player exited ready pose');
+    }
+    
+    updateReadyAnimation() {
+        if (!this.mesh) return;
+        
+        // Update animation mixers during ready state
+        const deltaTime = this.clock.getDelta();
+        
+        // Continue running the running animation but slowly
+        if (this.mixer && this.mesh.visible) {
+            this.mixer.update(deltaTime * 0.3); // Slow down the animation
+        }
+        
+        // Add a subtle breathing/ready motion
+        this.readyAnimationTime += deltaTime;
+        const breathingOffset = Math.sin(this.readyAnimationTime * 2) * 0.01;
+        this.mesh.position.y = GAME_CONFIG.GROUND_HEIGHT + GAME_CONFIG.PLAYER_VISUAL_OFFSET + 0.02 + breathingOffset;
+        
+        // Subtle head movement looking ahead
+        const headMovement = Math.sin(this.readyAnimationTime * 1.5) * 0.02;
+        this.mesh.rotation.x = -0.05 + headMovement;
     }
 }

@@ -2,6 +2,7 @@ export const STATES = {
     LOADING: 'loading',
     MENU: 'menu',
     PLAYER_REGISTRATION: 'player_registration',
+    GETTING_READY: 'getting_ready',
     PLAYING: 'playing',
     PAUSED: 'paused',
     GAME_OVER: 'game_over',
@@ -149,5 +150,9 @@ export class GameStateManager {
 
     needsPlayerRegistration() {
         return !this.playerData;
+    }
+
+    isGettingReady() {
+        return this.currentState === STATES.GETTING_READY;
     }
 }

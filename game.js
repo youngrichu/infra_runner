@@ -6,7 +6,7 @@ import { CollectableManager } from './collectables.js';
 import { PowerUpManager } from './powerups.js';
 import { UIManager } from './ui.js';
 import { InputManager } from './input.js';
-import { GAME_CONFIG, SCORING, SPAWN_CONFIG, PHYSICS } from './constants.js';
+import { GAME_CONFIG, SCORING, SPAWN_CONFIG, PHYSICS, COUNTDOWN_CONFIG } from './constants.js';
 import { GameStateManager, STATES } from './game-state.js';
 import { LeaderboardManager } from './leaderboard.js';
 import { PlayerRegistration } from './player-registration.js';
@@ -36,6 +36,10 @@ export class Game {
         this.stateManager = new GameStateManager();
         this.leaderboardManager = new LeaderboardManager();
         this.playerRegistration = null;
+        
+        // Countdown state
+        this.countdownActive = false;
+        this.countdownTimeoutId = null;
         
         this.init();
     }
@@ -303,7 +307,7 @@ export class Game {
                 case 'helicopter':
                     this.uiManager.updateScore(SCORING.POWER_UP);
                     this.powerUpManager.activateHelicopter();
-                    this.uiManager.addPowerUpToUI('🚁 Helicopter Ride', 10);
+                    this.uiManager.addPowerUpToUI('Jetpack', 10);
                     this.collectableManager.markPowerUpSpawned(); // Reset fair spawning timer
                     break;
                 case 'solarPower':
@@ -321,7 +325,7 @@ export class Game {
                 case 'waterPipeline':
                     this.uiManager.updateScore(SCORING.POWER_UP);
                     this.powerUpManager.activateWaterSlide();
-                    this.uiManager.addPowerUpToUI('🚰 Water Pipeline', 12);
+                    this.uiManager.addPowerUpToUI('fire-hydrant', 12);
                     this.collectableManager.markPowerUpSpawned(); // Reset fair spawning timer
                     break;
             }
@@ -391,7 +395,6 @@ export class Game {
         // Reset game state
         this.gameActive = true;
         this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
-        this.stateManager.setState(STATES.PLAYING);
         this.stateManager.resetGame();
         
         // Reset camera position
@@ -408,8 +411,8 @@ export class Game {
         this.uiManager.reset();
         this.inputManager.reset();
         
-        // Restart spawning
-        this.startSpawning();
+        // Show countdown before restarting
+        this.showCountdown();
     }
 
     setupResizeHandling() {
@@ -472,10 +475,10 @@ export class Game {
             console.log('📊 Stored player data:', storedData);
             
             if (storedData) {
-                // Player already registered, start the game
-                console.log('✅ Player already registered, starting game...');
+                // Player already registered, show countdown then start the game
+                console.log('✅ Player already registered, showing countdown...');
                 this.registerPlayer(storedData.playerName, storedData.email, storedData.organizationName);
-                this.startGame();
+                this.showCountdown();
             } else {
                 // Show registration form first
                 console.log('📝 No player data found, showing registration form...');
@@ -484,14 +487,14 @@ export class Game {
             }
         } catch (error) {
             console.error('❌ Error in checkPlayerRegistration:', error);
-            // Fallback: just start the game
-            console.log('🔄 Fallback: starting game without registration');
-            this.startGame();
+            // Fallback: just show countdown and start the game
+            console.log('🔄 Fallback: showing countdown without registration');
+            this.showCountdown();
         }
     }
     
     startGame() {
-        console.log('🚀 Starting game...');
+        console.log('🚀 Starting game directly (bypassing countdown)...');
         try {
             this.stateManager.setState(STATES.PLAYING);
             this.gameActive = true;
@@ -520,8 +523,8 @@ export class Game {
                     if (this.inputManager) {
                         this.inputManager.enable();
                     }
-                    // NOW start the game
-                    this.startGame();
+                    // NOW show countdown before starting the game
+                    this.showCountdown();
                 });
             }
             console.log('👀 Showing registration form...');
@@ -539,6 +542,49 @@ export class Game {
         this.leaderboardManager.setPlayerData(name, email, organization);
         
         console.log(`Player registered: ${name} (${email}) from ${organization}`);
+    }
+
+    showCountdown() {
+        console.log('🔢 Starting countdown...');
+        
+        // Set state to getting ready
+        this.stateManager.setState(STATES.GETTING_READY);
+        this.countdownActive = true;
+        
+        // Show countdown in UI
+        this.uiManager.showCountdown((skipped) => {
+            console.log(skipped ? '⏭️ Countdown skipped' : '⏰ Countdown completed');
+            this.onCountdownComplete();
+        });
+        
+        // Set up character ready animation
+        if (this.player && this.player.setReadyState) {
+            this.player.setReadyState(true);
+        }
+    }
+
+    onCountdownComplete() {
+        console.log('🎮 Countdown complete, starting game...');
+        
+        // Clear countdown state
+        this.countdownActive = false;
+        if (this.countdownTimeoutId) {
+            clearTimeout(this.countdownTimeoutId);
+            this.countdownTimeoutId = null;
+        }
+        
+        // Reset character ready state
+        if (this.player && this.player.setReadyState) {
+            this.player.setReadyState(false);
+        }
+        
+        // Now actually start the game
+        this.stateManager.setState(STATES.PLAYING);
+        this.gameActive = true;
+        this.startSpawning();
+        this.animate();
+        
+        console.log('✅ Game started after countdown');
     }
 
     animate() {
