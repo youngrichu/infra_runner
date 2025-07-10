@@ -1,5 +1,5 @@
 export class APIClient {
-    constructor(baseURL = 'http://localhost:3001') {
+    constructor(baseURL = 'https://infra-runner-leaderboard-api.onrender.com') {
         this.baseURL = baseURL;
     }
 
