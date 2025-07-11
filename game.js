@@ -423,6 +423,45 @@ export class Game {
         console.log('✅ Game restarted completely');
     }
 
+    startNewGame() {
+        console.log('🆕 Starting new game with user registration...');
+        
+        // STOP the existing animation loop to prevent multiple loops
+        this.stopAnimation();
+        
+        // Clear stored player data to force new registration
+        PlayerRegistration.clearStoredPlayerData();
+        
+        // Reset game state completely
+        this.gameActive = false;
+        this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
+        this.stateManager.resetGame();
+        
+        // Reset camera position
+        this.camera.position.z = 5;
+        this.camera.position.x = 0;
+        this.camera.position.y = 2;
+        
+        // Reset all managers completely
+        this.player.reset();
+        this.environment.reset();
+        this.obstacleManager.reset();
+        this.collectableManager.reset();
+        this.powerUpManager.reset();
+        this.uiManager.reset();
+        this.inputManager.reset();
+        
+        // Clear leaderboard data and state
+        this.leaderboardManager.clearPlayerData();
+        this.stateManager.clearPlayerData();
+        
+        // Start the registration process
+        this.stateManager.setState(STATES.PLAYER_REGISTRATION);
+        this.showPlayerRegistration();
+        
+        console.log('✅ New game started - showing registration form');
+    }
+
     setupResizeHandling() {
         // Add event listeners for resize
         window.addEventListener('resize', () => this.handleWindowResize());

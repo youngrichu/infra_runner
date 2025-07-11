@@ -77,6 +77,11 @@ export class LeaderboardManager {
         };
     }
 
+    clearPlayerData() {
+        this.playerData = null;
+        this.emit('playerDataCleared');
+    }
+
     async submitScore(gameStats) {
         if (!this.playerData) {
             throw new Error('Player data not set. Call setPlayerData() first.');

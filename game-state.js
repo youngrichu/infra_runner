@@ -74,6 +74,11 @@ export class GameStateManager {
         return this.playerData;
     }
 
+    clearPlayerData() {
+        this.playerData = null;
+        this.emit('playerDataCleared');
+    }
+
     updateGameStats(stats) {
         this.gameStats = { ...this.gameStats, ...stats };
         this.emit('gameStatsUpdated', this.gameStats);

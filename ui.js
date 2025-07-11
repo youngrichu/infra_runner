@@ -227,6 +227,9 @@ export class UIManager {
                     <button id="restart-button" class="primary-button">
                         <i class="ti ti-refresh"></i> Restart Game
                     </button>
+                    <button id="new-game-button" class="secondary-button">
+                        <i class="ti ti-user-plus"></i> New Game
+                    </button>
                 </div>
             </div>
         `;
@@ -742,8 +745,11 @@ export class UIManager {
                 }
                 
                 .action-buttons {
-                    text-align: center;
+                    display: flex;
+                    justify-content: center;
+                    gap: 15px;
                     margin-top: 20px;
+                    flex-wrap: wrap;
                 }
                 
                 .primary-button {
@@ -758,6 +764,9 @@ export class UIManager {
                     transition: all 0.3s ease;
                     text-transform: uppercase;
                     box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+                    flex: 1;
+                    min-width: 140px;
+                    max-width: 200px;
                 }
                 
                 .primary-button:hover {
@@ -766,6 +775,33 @@ export class UIManager {
                 }
                 
                 .primary-button:active {
+                    transform: translateY(0) scale(0.98);
+                }
+                
+                .secondary-button {
+                    background: linear-gradient(45deg, #4A90E2, #357ABD);
+                    border: none;
+                    color: white;
+                    padding: 15px 30px;
+                    font-size: clamp(14px, 3.5vw, 18px);
+                    font-weight: bold;
+                    border-radius: 25px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    text-transform: uppercase;
+                    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+                    flex: 1;
+                    min-width: 140px;
+                    max-width: 200px;
+                }
+                
+                .secondary-button:hover {
+                    transform: translateY(-2px) scale(1.05);
+                    box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+                    background: linear-gradient(45deg, #5A9FE5, #4A8ACD);
+                }
+                
+                .secondary-button:active {
                     transform: translateY(0) scale(0.98);
                 }
                 
@@ -859,6 +895,16 @@ export class UIManager {
                     
                     .leaderboard-container {
                         max-height: 200px;
+                    }
+                    
+                    .action-buttons {
+                        flex-direction: column;
+                        gap: 10px;
+                    }
+                    
+                    .primary-button, .secondary-button {
+                        max-width: 100%;
+                        min-width: 200px;
                     }
                 }
             `;
@@ -1188,6 +1234,19 @@ export class UIManager {
                 e.stopPropagation();
                 e.preventDefault();
                 this.gameController.restartGame();
+            });
+        }
+        
+        const newGameButton = document.getElementById('new-game-button');
+        if (newGameButton && this.gameController) {
+            newGameButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.gameController.startNewGame();
+            });
+            newGameButton.addEventListener('touchend', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.gameController.startNewGame();
             });
         }
     }
