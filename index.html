@@ -621,6 +621,39 @@
         </div>
     </div>
 
+    <!-- Three.js Import Map for Production -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    
+    <!-- Global Three.js and Model Configurations -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+        import { MODEL_CONFIGURATIONS } from './model-configurations.js';
+        
+        // Make available globally for production build compatibility
+        // Use separate variables to avoid extending frozen objects
+        window.THREE = THREE;
+        window.GLTFLoader = GLTFLoader;
+        window.DRACOLoader = DRACOLoader;
+        window.MODEL_CONFIGURATIONS = MODEL_CONFIGURATIONS;
+        
+        // Ensure all globals are available before proceeding
+        window.threeJsReady = true;
+        
+        // Debug logging for verification
+        if (typeof window !== 'undefined' && window.location?.search?.includes('debug')) {
+            window.onboardingDebug = true;
+        }
+    </script>
+    
     <!-- Game Modules -->
     <script type="module" src="./game.js"></script>
     
@@ -811,8 +844,28 @@
             }
         }
         
+        function waitForThreeJs() {
+            return new Promise((resolve) => {
+                if (window.threeJsReady && window.THREE && window.GLTFLoader && window.DRACOLoader && window.MODEL_CONFIGURATIONS) {
+                    resolve();
+                } else {
+                    const checkReady = () => {
+                        if (window.threeJsReady && window.THREE && window.GLTFLoader && window.DRACOLoader && window.MODEL_CONFIGURATIONS) {
+                            resolve();
+                        } else {
+                            setTimeout(checkReady, 100);
+                        }
+                    };
+                    checkReady();
+                }
+            });
+        }
+        
         async function initializeModelViewers() {
             try {
+                // Wait for Three.js to be ready
+                await waitForThreeJs();
+                
                 // Import the onboarding model viewer
                 const { OnboardingModelViewer } = await import('./onboarding-viewer.js');
                 
