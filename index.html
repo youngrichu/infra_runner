@@ -192,6 +192,36 @@
         .collectible-icon {
             font-size: 24px;
             margin-bottom: 5px;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .power-up-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .power-up-item {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 107, 53, 0.3);
+        }
+        
+        .power-up-icon {
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
         }
         
         .onboarding-navigation {
@@ -342,6 +372,25 @@
             .collectible-item {
                 margin: 5px;
                 font-size: clamp(11px, 2.8vw, 13px);
+            }
+            
+            .collectible-icon {
+                min-height: 80px;
+            }
+            
+            .power-up-demo {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 10px;
+                max-width: 100%;
+            }
+            
+            .power-up-item {
+                padding: 8px;
+                font-size: clamp(10px, 2.5vw, 12px);
+            }
+            
+            .power-up-icon {
+                min-height: 70px;
             }
             
             .onboarding-btn {
@@ -497,16 +546,16 @@
                     <p>Gather these essential materials as you run:</p>
                     <div class="collectible-demo">
                         <div class="collectible-item">
-                            <div class="collectible-icon"><i class="ti ti-file-text"></i></div>
-                            <div><strong>Blueprints</strong><br>50 points</div>
+                            <div class="collectible-icon" id="blueprint-viewer"></div>
+                            <div><strong>Blueprints</strong><br>Essential construction plans<br>50 points</div>
                         </div>
                         <div class="collectible-item">
-                            <div class="collectible-icon"><i class="ti ti-droplet"></i></div>
-                            <div><strong>Water</strong><br>20 points</div>
+                            <div class="collectible-icon" id="water-viewer"></div>
+                            <div><strong>Water</strong><br>Clean water supply<br>20 points</div>
                         </div>
                         <div class="collectible-item">
-                            <div class="collectible-icon"><i class="ti ti-bolt"></i></div>
-                            <div><strong>Energy Cells</strong><br>30 points</div>
+                            <div class="collectible-icon" id="energy-viewer"></div>
+                            <div><strong>Energy Cells</strong><br>Power infrastructure<br>30 points</div>
                         </div>
                     </div>
                 </div>
@@ -517,12 +566,27 @@
                 <div class="onboarding-content">
                     <h3>Unlock Amazing Power-ups</h3>
                     <p>Special power-ups give you incredible abilities:</p>
-                    <div style="text-align: left; max-width: 400px; margin: 0 auto;">
-                        <p><strong><i class="ti ti-shield"></i> Hard Hat Shield:</strong> Temporary invincibility</p>
-                        <p><strong><i class="ti ti-rocket"></i> Jetpack:</strong> Fly above obstacles and collect aerial stars</p>
-                        <p><strong><i class="ti ti-sun"></i> Solar Power Boost:</strong> Speed boost with magnetic collection</p>
-                        <p><strong><i class="ti ti-wind"></i> Wind Power:</strong> Double jump ability</p>
-                        <p><strong><i class="ti ti-fire-hydrant"></i> fire-hydrant:</strong> Safe path that clears obstacles</p>
+                    <div class="power-up-demo">
+                        <div class="power-up-item">
+                            <div class="power-up-icon" id="hardhat-viewer"></div>
+                            <div><strong>Hard Hat Shield</strong><br>Temporary invincibility</div>
+                        </div>
+                        <div class="power-up-item">
+                            <div class="power-up-icon" id="jetpack-viewer"></div>
+                            <div><strong>Jetpack</strong><br>Fly above obstacles</div>
+                        </div>
+                        <div class="power-up-item">
+                            <div class="power-up-icon" id="solar-viewer"></div>
+                            <div><strong>Solar Power Boost</strong><br>Speed boost with magnetic collection</div>
+                        </div>
+                        <div class="power-up-item">
+                            <div class="power-up-icon" id="wind-viewer"></div>
+                            <div><strong>Wind Power</strong><br>Double jump ability</div>
+                        </div>
+                        <div class="power-up-item">
+                            <div class="power-up-icon" id="water-pipeline-viewer"></div>
+                            <div><strong>Water Pipeline</strong><br>Safe path that clears obstacles</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -559,6 +623,7 @@
 
     <!-- Game Modules -->
     <script type="module" src="./game.js"></script>
+    <script type="module" src="./onboarding-model-viewer.js"></script>
     
     <script>
         // Global loading progress manager
@@ -685,12 +750,24 @@
             // Store preference to not show onboarding again
             localStorage.setItem('infrastructureRunner_onboardingCompleted', 'true');
             
+            // Cleanup 3D model viewers
+            cleanupModelViewers();
+            
             // Hide onboarding overlay
             const overlay = document.getElementById('onboarding-overlay');
             overlay.classList.remove('active');
             
             // Now check player registration instead of starting game
             checkPlayerRegistrationAndStart();
+        }
+        
+        async function cleanupModelViewers() {
+            try {
+                const { onboardingModelViewer } = await import('./onboarding-model-viewer.js');
+                onboardingModelViewer.cleanup();
+            } catch (error) {
+                console.error('Error cleaning up 3D model viewers:', error);
+            }
         }
         
         function checkPlayerRegistrationAndStart() {
@@ -732,10 +809,59 @@
                 console.log('Overlay element:', overlay);
                 overlay.classList.add('active');
                 
+                // Initialize 3D model viewers
+                initializeModelViewers();
+                
                 // No need to pause game - it hasn't started yet!
             } else {
                 console.log('Onboarding already completed, skipping');
             }
+        }
+        
+        async function initializeModelViewers() {
+            try {
+                // Import the model viewer module
+                const { onboardingModelViewer } = await import('./onboarding-model-viewer.js');
+                
+                // Initialize collectible viewers
+                await onboardingModelViewer.createModelViewer('blueprint-viewer', 'blueprint', 'Construction Plans');
+                await onboardingModelViewer.createModelViewer('water-viewer', 'waterDrop', 'Clean Water Supply');
+                await onboardingModelViewer.createModelViewer('energy-viewer', 'energyCell', 'Power Infrastructure');
+                
+                // Initialize power-up viewers
+                await onboardingModelViewer.createModelViewer('hardhat-viewer', 'hardHat', 'Safety Protection');
+                await onboardingModelViewer.createModelViewer('jetpack-viewer', 'helicopter', 'Flight Capability');
+                await onboardingModelViewer.createModelViewer('solar-viewer', 'solarPower', 'Solar Energy');
+                await onboardingModelViewer.createModelViewer('wind-viewer', 'windPower', 'Wind Power');
+                await onboardingModelViewer.createModelViewer('water-pipeline-viewer', 'waterPipeline', 'Water Infrastructure');
+                
+                console.log('3D model viewers initialized successfully');
+            } catch (error) {
+                console.error('Error initializing 3D model viewers:', error);
+                // Fallback to icons if 3D models fail
+                showFallbackIcons();
+            }
+        }
+        
+        function showFallbackIcons() {
+            // Fallback icons in case 3D models fail to load
+            const fallbacks = {
+                'blueprint-viewer': '<i class="ti ti-file-text" style="font-size: 48px; color: #4a90e2;"></i>',
+                'water-viewer': '<i class="ti ti-droplet" style="font-size: 48px; color: #00bcd4;"></i>',
+                'energy-viewer': '<i class="ti ti-bolt" style="font-size: 48px; color: #ffc107;"></i>',
+                'hardhat-viewer': '<i class="ti ti-shield" style="font-size: 40px; color: #ff9800;"></i>',
+                'jetpack-viewer': '<i class="ti ti-rocket" style="font-size: 40px; color: #666;"></i>',
+                'solar-viewer': '<i class="ti ti-sun" style="font-size: 40px; color: #ffc107;"></i>',
+                'wind-viewer': '<i class="ti ti-wind" style="font-size: 40px; color: #4caf50;"></i>',
+                'water-pipeline-viewer': '<i class="ti ti-pipe" style="font-size: 40px; color: #2196f3;"></i>'
+            };
+            
+            Object.entries(fallbacks).forEach(([id, icon]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.innerHTML = icon;
+                }
+            });
         }
         
         // Clear localStorage for testing (remove this line in production)
