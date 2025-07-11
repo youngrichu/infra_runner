@@ -3,8 +3,6 @@ export class JSPerformanceManager {
         this.taskQueue = [];
         this.frameScheduler = new FrameScheduler();
         this.executionProfiler = new ExecutionProfiler();
-        
-        console.log('JS Performance Manager initialized');
     }
 
     // Break large tasks into smaller chunks
@@ -129,7 +127,7 @@ class ExecutionProfiler {
         
         // Warn about slow functions
         if (duration > 5) {
-            console.warn(`Slow function detected: ${name} took ${duration.toFixed(2)}ms`);
+            // Slow function detected - consider optimization
         }
         
         return result;

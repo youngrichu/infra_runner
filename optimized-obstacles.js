@@ -48,7 +48,7 @@ export class OptimizedObstacleManager {
     }
     
     async initializeOptimizedSystem() {
-        console.log('🚀 Initializing optimized obstacle system...');
+        // Initializing optimized obstacle system
         
         // Initialize object pools for each obstacle type
         this.initializeObjectPools();
@@ -60,7 +60,7 @@ export class OptimizedObstacleManager {
         await this.loadPriorityAssets();
         this.loadBackgroundAssets(); // Load in background
         
-        console.log('✅ Optimized obstacle system ready');
+        // Optimized obstacle system ready
     }
     
     initializeObjectPools() {
@@ -75,7 +75,7 @@ export class OptimizedObstacleManager {
             this.objectPools.set(type, pool);
         }
         
-        console.log(`🏊‍♂️ Object pools initialized for ${this.objectPools.size} obstacle types`);
+        // Object pools initialized for obstacle types
     }
     
     initializeInstancedRendering() {
@@ -94,28 +94,28 @@ export class OptimizedObstacleManager {
             this.instancedRenderer.createInstancedMesh(geometry, material, type, 50);
         }
         
-        console.log('🎭 Instanced rendering initialized for common obstacles');
+        // Instanced rendering initialized for common obstacles
     }
     
     async loadPriorityAssets() {
-        console.log('⚡ Loading priority obstacle models...');
+        // Loading priority obstacle models
         
         const loadPromises = this.priorityModels.map(type => this.loadModel(type));
         await Promise.allSettled(loadPromises);
         
         this.priorityModelsLoaded = true;
-        console.log('✅ Priority models loaded - enhanced visual quality activated');
+        // Priority models loaded - enhanced visual quality activated
     }
     
     async loadBackgroundAssets() {
-        console.log('🔄 Loading background obstacle models...');
+        // Loading background obstacle models
         
         const loadPromises = this.backgroundModels.map(type => this.loadModel(type));
         await Promise.allSettled(loadPromises);
         
         this.allModelsLoaded = true;
         this.upgradeExistingObstacles();
-        console.log('🏆 All obstacle models loaded - maximum visual quality achieved');
+        // All obstacle models loaded - maximum visual quality achieved
     }
     
     async loadModel(type) {
@@ -129,11 +129,11 @@ export class OptimizedObstacleManager {
         const loadPromise = this.loader.loadAsync(config.path)
             .then(gltf => {
                 this.loadedModels.set(type, gltf);
-                console.log(`✅ GLB loaded: ${type}`);
+                // GLB model loaded successfully
                 return gltf;
             })
             .catch(error => {
-                console.warn(`⚠️ Failed to load ${type}:`, error);
+                // Failed to load GLB model, using fallback
                 return null;
             });
         
@@ -258,7 +258,7 @@ export class OptimizedObstacleManager {
             
             return true;
         } catch (error) {
-            console.warn(`Failed to upgrade ${type} to GLB:`, error);
+            // Failed to upgrade to GLB model
             return false;
         }
     }
@@ -501,9 +501,7 @@ export class OptimizedObstacleManager {
             }
         }
         
-        if (upgradedCount > 0) {
-            console.log(`🔄 Upgraded ${upgradedCount} existing obstacles to GLB models`);
-        }
+        // Upgraded existing obstacles to GLB models if available
     }
     
     // Performance and stats methods
@@ -547,7 +545,7 @@ export class OptimizedObstacleManager {
     }
     
     startSpawning() {
-        console.log('🏁 Optimized obstacle spawning started');
+        // Optimized obstacle spawning started
     }
     
     reset() {
@@ -565,6 +563,6 @@ export class OptimizedObstacleManager {
         this.spawnCounter = 0;
         this.lastObstacleType = '';
         
-        console.log('🔄 Optimized obstacle system reset');
+        // Optimized obstacle system reset
     }
 }

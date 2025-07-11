@@ -179,7 +179,6 @@
         });
 
         window.loadOriginal = async function() {
-            console.log('🔄 Loading original version...');
             
             if (currentGame && currentGame.destroy) {
                 currentGame.destroy();
@@ -192,15 +191,12 @@
                 currentGame = new Game();
                 
                 updateVersionIndicator('original');
-                console.log('✅ Original version loaded');
             } catch (error) {
-                console.error('❌ Failed to load original version:', error);
                 alert('Failed to load original version. Check console for details.');
             }
         };
 
         window.loadOptimized = async function() {
-            console.log('🚀 Loading optimized version...');
             
             if (currentGame && currentGame.destroy) {
                 currentGame.destroy();
@@ -214,9 +210,7 @@
                 
                 updateVersionIndicator('optimized');
                 setupPerformanceMonitoring();
-                console.log('✅ Optimized version loaded');
             } catch (error) {
-                console.error('❌ Failed to load optimized version:', error);
                 alert('Failed to load optimized version. Check console for details.');
             }
         };

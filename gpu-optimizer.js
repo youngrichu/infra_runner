@@ -16,8 +16,6 @@ export class GPUOptimizer {
             materials: 0,
             total: 0
         };
-        
-        console.log('GPU Optimizer initialized');
     }
 
     // Reduce GPU blocking by managing texture memory
@@ -92,7 +90,6 @@ export class GPUOptimizer {
         }
         
         this.lastCleanup = now;
-        console.log(`GPU cleanup: ${this.textureCache.size} textures, ${this.geometryCache.size} geometries`);
     }
 
     // Reduce draw calls by batching
@@ -134,8 +131,6 @@ export class GPUOptimizer {
         // Optimize rendering
         this.renderer.sortObjects = false; // Skip sorting for performance
         this.renderer.autoClear = false; // Manual clearing for control
-        
-        console.log('Renderer optimized for performance');
     }
 
     // Monitor GPU performance

@@ -167,7 +167,6 @@ export class ObstacleManager {
             }
             
             if (!isProtectedByWaterSlide && collisionDetected) {
-                console.log(`Collision detected with obstacle: ${this.obstacles[i].type} at speed: ${gameSpeed.toFixed(3)}`);
                 return true;
             }
         }

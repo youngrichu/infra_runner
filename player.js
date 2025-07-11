@@ -38,9 +38,7 @@ export class Player {
     }
 
     async initialize() {
-        console.log('Loading player model...');
         await this.createSimplePlayer();
-        console.log('Player ready!');
     }
 
     async createSimplePlayer() {
@@ -64,7 +62,6 @@ export class Player {
             loader.load(
                 'assets/models/Running.glb',
                 (gltf) => {
-                    console.log('Loaded running model');
                     
                     this.mesh = gltf.scene;
                     this.mesh.scale.set(0.8, 0.8, 0.8);
@@ -91,15 +88,12 @@ export class Player {
                         this.currentAction = this.mixer.clipAction(gltf.animations[0]);
                         this.currentAction.setLoop(THREE.LoopRepeat);
                         this.currentAction.play();
-                        console.log('Playing running animation');
                     }
                     
-                    console.log('Running model loaded and visible:', this.mesh.visible);
                     resolve();
                 },
                 undefined,
                 (error) => {
-                    console.error('Failed to load running model:', error);
                     this.createFallbackPlayer();
                     resolve();
                 }
@@ -116,11 +110,9 @@ export class Player {
             dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
             loader.setDRACOLoader(dracoLoader);
             
-            console.log('Attempting to load flying animation...');
             loader.load(
                 'assets/models/Flying.glb',
                 (gltf) => {
-                    console.log('Loaded flying animation successfully');
                     
                     // Create flying mesh
                     this.flyingMesh = gltf.scene;
@@ -141,7 +133,6 @@ export class Player {
                     });
                     
                     this.scene.add(this.flyingMesh);
-                    console.log('Flying mesh added to scene');
                     
                     // Create flying mixer and action for static pose
                     if (gltf.animations && gltf.animations.length > 0) {
@@ -149,14 +140,12 @@ export class Player {
                         this.flyingAction = this.flyingMixer.clipAction(gltf.animations[0]);
                         this.flyingAction.setLoop(THREE.LoopOnce); // Only play once
                         this.flyingAction.clampWhenFinished = true; // Stay at end frame
-                        console.log('Flying animation ready for static pose');
                     }
                     
                     resolve();
                 },
                 undefined,
                 (error) => {
-                    console.error('Failed to load flying animation:', error);
                     resolve(); // Continue without flying animation
                 }
             );
@@ -172,14 +161,9 @@ export class Player {
             dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
             loader.setDRACOLoader(dracoLoader);
             
-            console.log('Attempting to load stumble animation...');
             loader.load(
                 'assets/models/Stumble Backwards.glb',
                 (gltf) => {
-                    console.log('Loaded stumble animation successfully');
-                    console.log('GLTF scene:', gltf.scene);
-                    console.log('GLTF animations:', gltf.animations);
-                    console.log('Main mixer available:', !!this.mixer);
                     
                     // Create stumble animation action if we have a mixer
                     if (this.mixer && gltf.animations && gltf.animations.length > 0) {
@@ -194,8 +178,6 @@ export class Player {
                         this.stumbleMesh.position.copy(this.mesh.position);
                         this.stumbleMesh.position.y -= 0.015; // Smaller offset for smaller 0.008 scale model
                         
-                        console.log('Stumble mesh created, position:', this.stumbleMesh.position);
-                        console.log('Stumble mesh scale:', this.stumbleMesh.scale);
                         
                         // Store reference to running character materials for copying
                         this.runningMaterials = [];
@@ -222,14 +204,12 @@ export class Player {
                                     child.material = runningMaterial.clone();
                                     child.material.needsUpdate = true;
                                     
-                                    console.log('Copied material from running character to stumble character');
                                 }
                                 materialIndex++;
                             }
                         });
                         
                         this.scene.add(this.stumbleMesh);
-                        console.log('Stumble mesh added to scene');
                         
                         // Create stumble mixer and action
                         this.stumbleMixer = new THREE.AnimationMixer(this.stumbleMesh);
@@ -244,21 +224,13 @@ export class Player {
                         // Calculate speed multiplier to fit animation in shorter time if needed
                         this.stumbleSpeedMultiplier = actualDuration / this.stumbleAnimationDuration;
                         
-                        console.log('Stumble animation ready - Action created:', !!this.stumbleAction);
-                        console.log('Animation name:', gltf.animations[0].name);
-                        console.log('Animation duration:', gltf.animations[0].duration);
-                        console.log('Stumble duration will be:', this.stumbleAnimationDuration, 'ms');
                     } else {
-                        console.log('Could not setup stumble animation - missing requirements:');
-                        console.log('- Mixer available:', !!this.mixer);
-                        console.log('- Animations available:', gltf.animations ? gltf.animations.length : 0);
                     }
                     
                     resolve();
                 },
                 undefined,
                 (error) => {
-                    console.error('Failed to load stumble animation:', error);
                     // Continue without stumble animation
                     resolve();
                 }
@@ -267,7 +239,6 @@ export class Player {
     }
 
     createFallbackPlayer() {
-        console.log('Creating fallback player');
         const geometry = new THREE.BoxGeometry(0.5, 1, 0.5);
         const material = new THREE.MeshStandardMaterial({ color: COLORS.PLAYER.DEFAULT });
         this.mesh = new THREE.Mesh(geometry, material);
@@ -279,26 +250,20 @@ export class Player {
         this.mesh.visible = true;
         
         this.scene.add(this.mesh);
-        console.log('Fallback player created and visible:', this.mesh.visible);
     }
 
     // Method to trigger stumble animation when hitting obstacles
     triggerStumble(gameOverCallback = null) {
-        console.log('triggerStumble called - stumbleAction available:', !!this.stumbleAction);
-        console.log('stumbleMesh available:', !!this.stumbleMesh);
         
         if (!this.stumbleAction || !this.stumbleMesh) {
-            console.log('No stumble animation or mesh available');
             return false; // Return false to indicate we should do game over instead
         }
         
         // Store the game over callback for when stumble ends
         this.gameOverCallback = gameOverCallback;
         
-        console.log('Player stumbled!');
         this.isStumbling = true;
         this.stumbleEndTime = Date.now() + this.stumbleAnimationDuration; // Use actual animation duration
-        console.log(`Stumble will last for ${this.stumbleAnimationDuration}ms`);
         
         // Sync positions before switching (with tiny stumble offset)
         this.stumbleMesh.position.copy(this.mesh.position);
@@ -308,9 +273,6 @@ export class Player {
         this.mesh.visible = false;
         this.stumbleMesh.visible = true;
         
-        console.log('Switched to stumble mesh - visible:', this.stumbleMesh.visible);
-        console.log('Running mesh visible:', this.mesh.visible);
-        console.log('Stumble mesh position:', this.stumbleMesh.position);
         
         // Start stumble animation with explicit configuration
         this.stumbleAction.reset();
@@ -322,25 +284,18 @@ export class Player {
         this.stumbleAction.setEffectiveTimeScale(timeScale);
         this.stumbleAction.play();
         
-        console.log('Animation speed multiplier:', timeScale);
         
         // Force the mixer to update immediately
         this.stumbleMixer.update(0);
         
         // Debug animation state
-        console.log('Stumble action playing:', this.stumbleAction.isRunning());
-        console.log('Stumble action enabled:', this.stumbleAction.enabled);
-        console.log('Stumble action weight:', this.stumbleAction.getEffectiveWeight());
-        console.log('Stumble action time:', this.stumbleAction.time);
         
         // Pause/stop running animation completely
         if (this.currentAction) {
             this.currentAction.stop();
-            console.log('Stopped running animation');
         }
         if (this.mixer) {
             this.mixer.stopAllAction();
-            console.log('Stopped all actions on main mixer');
         }
         
         return true; // Return true to indicate stumble was triggered
@@ -348,13 +303,11 @@ export class Player {
     
     // Method to end stumble and trigger game over
     endStumble() {
-        console.log('Stumble animation completed - triggering game over');
         this.isStumbling = false;
         
         // Stop stumble animation
         if (this.stumbleAction) {
             this.stumbleAction.stop();
-            console.log('Stopped stumble animation');
         }
         
         // Hide stumble mesh
@@ -364,14 +317,11 @@ export class Player {
         
         // Trigger game over through callback
         if (this.gameOverCallback) {
-            console.log('Calling game over callback');
             this.gameOverCallback();
             this.gameOverCallback = null; // Clear the callback
         } else {
-            console.log('No game over callback available');
         }
         
-        console.log('Game over should be triggered');
     }
 
     moveLeft() {
@@ -387,20 +337,17 @@ export class Player {
     }
 
     jump() {
-        console.log('Jump called, isJumping:', this.isJumping);
         // Regular jump if not jumping
         if (!this.isJumping) {
             this.isJumping = true;
             this.velocityY = GAME_CONFIG.INITIAL_JUMP_VELOCITY;
             this.hasDoubleJumped = false;
-            console.log('Started jumping with velocity:', this.velocityY);
         } 
         // Double jump if Wind Power is active and we haven't used double jump yet
         else if (this.canDoubleJump && !this.hasDoubleJumped) {
             this.velocityY = GAME_CONFIG.DOUBLE_JUMP_VELOCITY;
             this.hasDoubleJumped = true;
             this.createJumpEffect();
-            console.log('Double jump activated');
         }
     }
 
@@ -483,8 +430,6 @@ export class Player {
                 
                 // Debug stumble animation during playback (commented out for cleaner logs)
                 // if (this.stumbleAction) {
-                //     console.log('Stumble animation time:', this.stumbleAction.time.toFixed(2), '/', this.stumbleAnimationDuration/1000);
-                //     console.log('Stumble action still running:', this.stumbleAction.isRunning());
                 // }
             }
             return; // Exit early - no other movement during stumble
@@ -550,7 +495,6 @@ export class Player {
                 this.flyingMesh.position.y = this.mesh.position.y;
                 // Log every 60 frames (about once per second)
                 if (Math.floor(this.flyingTime * 60) % 60 === 0) {
-                    console.log('Flying mesh floating at Y:', this.mesh.position.y.toFixed(2), 'hover offset:', this.flyingHoverOffset.toFixed(2));
                 }
             }
             if (this.stumbleMesh) {
@@ -573,7 +517,6 @@ export class Player {
             this.velocityY += GAME_CONFIG.GRAVITY;
             
             const visualGroundHeight = GAME_CONFIG.GROUND_HEIGHT + GAME_CONFIG.PLAYER_VISUAL_OFFSET;
-            console.log('Jump - Y position:', this.mesh.position.y.toFixed(2), 'Ground height:', visualGroundHeight.toFixed(2), 'Velocity:', this.velocityY.toFixed(3));
             
             if (this.mesh.position.y <= visualGroundHeight) {
                 this.mesh.position.y = visualGroundHeight;
@@ -586,7 +529,6 @@ export class Player {
                 this.isJumping = false;
                 this.velocityY = 0;
                 this.hasDoubleJumped = false;
-                console.log('Landing complete');
             }
         }
         
@@ -641,7 +583,6 @@ export class Player {
         
         // Switch to flying animation
         if (isFlying && this.flyingMesh && this.flyingAction && !this.flyingMesh.visible) {
-            console.log('Switching to flying animation');
             
             // --- FIX: Sync position and rotation BEFORE making the mesh visible ---
             this.flyingMesh.position.copy(this.mesh.position);
@@ -673,11 +614,9 @@ export class Player {
                 this.flyingMixer.update(0);
             }
             
-            console.log('Flying animation locked to static pose at time:', goodPoseTime, '- mesh visible:', this.flyingMesh.visible);
         }
         // Switch back to running animation
         else if (!isFlying && this.flyingMesh && this.flyingMesh.visible) {
-            console.log('Switching back to running animation');
             
             // --- FIX: Sync position and rotation BEFORE making the mesh visible ---
             this.mesh.position.copy(this.flyingMesh.position);
@@ -701,7 +640,6 @@ export class Player {
                 this.currentAction.play();
             }
             
-            console.log('Running animation restarted');
         }
     }
 
@@ -719,7 +657,6 @@ export class Player {
         
         // Debug logging for collision box
         if (this.isStumbling) {
-            console.log('Using stumble mesh for collision box, position:', playerPos);
         }
         
         // Dynamically adjust collision box width during lane changes
@@ -826,7 +763,6 @@ export class Player {
             this.currentAction.enabled = true;
             this.currentAction.setEffectiveWeight(1.0);
             this.currentAction.play();
-            console.log('Restarted running animation on reset');
         }
     }
 
@@ -864,31 +800,18 @@ export class Player {
     
     // DEBUG: Method to manually test stumble animation
     testStumble() {
-        console.log('=== MANUAL STUMBLE TEST ===');
         this.triggerStumble();
     }
     
     // DEBUG: Method to check animation state
     checkAnimationState() {
-        console.log('=== ANIMATION STATE CHECK ===');
-        console.log('Is stumbling:', this.isStumbling);
-        console.log('Stumble mesh visible:', this.stumbleMesh ? this.stumbleMesh.visible : 'N/A');
-        console.log('Running mesh visible:', this.mesh ? this.mesh.visible : 'N/A');
         
         if (this.stumbleAction) {
-            console.log('Stumble action exists:', true);
-            console.log('Stumble action running:', this.stumbleAction.isRunning());
-            console.log('Stumble action enabled:', this.stumbleAction.enabled);
-            console.log('Stumble action time:', this.stumbleAction.time);
-            console.log('Stumble action weight:', this.stumbleAction.getEffectiveWeight());
-        } else {
-            console.log('Stumble action exists:', false);
+                    } else {
         }
         
         if (this.stumbleMixer) {
-            console.log('Stumble mixer exists:', true);
         } else {
-            console.log('Stumble mixer exists:', false);
         }
     }
     
@@ -896,8 +819,6 @@ export class Player {
     adjustStumbleSettings(scale, yOffset) {
         if (this.stumbleMesh) {
             this.stumbleMesh.scale.set(scale, scale, scale);
-            console.log(`Updated stumble scale to: ${scale}`);
-            console.log(`Updated stumble Y offset to: ${yOffset}`);
             // Update the offset used throughout the code
             // Note: This is a simple version - in production you'd want to store the offset as a property
         }
@@ -905,7 +826,6 @@ export class Player {
     
     // Ready state methods for countdown
     setReadyState(isReady) {
-        console.log('Setting ready state:', isReady);
         this.isReady = isReady;
         this.readyAnimationTime = 0;
         
@@ -930,7 +850,6 @@ export class Player {
         this.mesh.visible = true;
         this.mesh.position.x = LANES.POSITIONS[this.lane];
         
-        console.log('Player entered ready pose');
     }
     
     exitReadyPose() {
@@ -940,7 +859,6 @@ export class Player {
         this.mesh.rotation.x = 0;
         this.mesh.position.y = GAME_CONFIG.GROUND_HEIGHT + GAME_CONFIG.PLAYER_VISUAL_OFFSET;
         
-        console.log('Player exited ready pose');
     }
     
     updateReadyAnimation() {

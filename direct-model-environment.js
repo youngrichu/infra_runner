@@ -4,7 +4,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { LANES, COLORS, SPAWN_CONFIG } from './constants.js';
 
 // Verify DRACO loader is imported
-// console.log('DRACOLoader imported:', DRACOLoader);
+// DRACOLoader imported for model compression support
 
 export class DirectModelEnvironment {
     constructor(scene) {
@@ -35,7 +35,7 @@ export class DirectModelEnvironment {
         dracoLoader.setDecoderConfig({ type: 'js' });
         this.gltfLoader.setDRACOLoader(dracoLoader);
         
-        console.log('DRACO loader configured and attached to GLTFLoader');
+        // DRACO loader configured and attached to GLTFLoader
         
         this.buildingTemplates = {}; // Store loaded building models
         this.buildingPool = new Map(); // Object pool for building instances
@@ -83,12 +83,12 @@ export class DirectModelEnvironment {
         
         this.scene.add(directionalLight);
         
-        console.log('Direct model environment setup complete');
+        // Direct model environment setup complete
     }
 
     async startProgressiveLoading() {
         // Progressive loading: Essential models first, then detailed models
-        console.log('🚀 Starting progressive loading...');
+        // Starting progressive loading
         
         // Phase 1: Load essential simple models first for immediate gameplay
         if (window.gameLoadingManager) {
@@ -105,10 +105,10 @@ export class DirectModelEnvironment {
                 // Create a basic scene so the game can start
                 this.modelsLoaded = true; // Mark as loaded so game can start
                 this.createInitialScene();
-                console.log(`✅ Game ready with ${essentialCount} essential models`);
+                // Game ready with essential models
             } else {
                 // Fall back to creating a fallback scene
-                console.warn('No essential models loaded, using fallback');
+                // No essential models loaded, using fallback
                 this.createFallbackScene();
                 this.modelsLoaded = true;
             }
@@ -121,14 +121,14 @@ export class DirectModelEnvironment {
             setTimeout(() => this.loadRemainingModels(), 100);
             
         } catch (error) {
-            console.error('Error in progressive loading:', error);
+            // Error in progressive loading, using fallback
             this.createFallbackScene();
         }
     }
 
     async loadRemainingModels() {
         // Load medium and detailed models in background
-        console.log('📦 Loading remaining models in background...');
+        // Loading remaining models in background
         
         try {
             // Load medium complexity models
@@ -142,36 +142,36 @@ export class DirectModelEnvironment {
             // Load tree model
             await this.loadTreeModel();
             
-            console.log('✅ All models loaded! Enhanced graphics available.');
+            // All models loaded - enhanced graphics available
             
             if (window.gameLoadingManager) {
                 window.gameLoadingManager.updateProgress(5, 'All models loaded!');
             }
             
         } catch (error) {
-            console.error('Error loading remaining models:', error);
+            // Error loading remaining models
         }
     }
 
     async loadModelBatch(modelFiles, batchName) {
-        console.log(`Loading ${batchName} models:`, modelFiles);
+        // Loading batch of models
         
         const promises = modelFiles.map(async (filename) => {
             try {
                 const gltf = await this.gltfLoader.loadAsync(`./assets/city/model/${filename}`);
                 this.buildingTemplates[filename] = gltf.scene.clone();
                 this.enhanceBuilding(this.buildingTemplates[filename], filename);
-                console.log(`✅ Loaded ${batchName}: ${filename}`);
+                // Model loaded successfully
                 return filename;
             } catch (error) {
-                console.error(`❌ Failed to load ${batchName}: ${filename}`, error);
+                // Failed to load model, using fallback
                 return null;
             }
         });
         
         const results = await Promise.all(promises);
         const successCount = results.filter(r => r !== null).length;
-        console.log(`${batchName} batch complete: ${successCount}/${modelFiles.length} models loaded`);
+        // Model batch loading complete
         
         return successCount;
     }
@@ -181,14 +181,14 @@ export class DirectModelEnvironment {
             const gltf = await this.gltfLoader.loadAsync('./assets/city/model/lowpolytrees.glb');
             this.treeTemplate = gltf.scene.clone();
             this.enhanceTree(this.treeTemplate);
-            console.log('✅ Loaded tree model');
+            // Tree model loaded successfully
         } catch (error) {
-            console.error('❌ Failed to load tree model', error);
+            // Failed to load tree model
         }
     }
 
     async loadSpecificModels() {
-        // console.log('Loading specific building and tree models...');
+        // Loading specific building and tree models
         
         // Update loading progress
         if (window.gameLoadingManager) {
@@ -202,7 +202,7 @@ export class DirectModelEnvironment {
                     const gltf = await this.gltfLoader.loadAsync(`./assets/city/model/${filename}`);
                     this.buildingTemplates[filename] = gltf.scene.clone();
                     this.enhanceBuilding(this.buildingTemplates[filename], filename);
-                    // console.log(`✅ Loaded building: ${filename}`);
+                    // Building loaded successfully
                     
                     // Update progress for each building loaded
                     if (window.gameLoadingManager) {
@@ -212,7 +212,7 @@ export class DirectModelEnvironment {
                     
                     return filename;
                 } catch (error) {
-                    console.error(`❌ Failed to load building: ${filename}`, error);
+                    // Failed to load building model
                     return null;
                 }
             });
@@ -226,11 +226,11 @@ export class DirectModelEnvironment {
                 .then(gltf => {
                     this.treeTemplate = gltf.scene.clone();
                     this.enhanceTree(this.treeTemplate);
-                    // console.log('✅ Loaded tree model');
+                    // Tree model loaded successfully
                     return 'tree';
                 })
                 .catch(error => {
-                    console.error('❌ Failed to load tree model', error);
+                    // Failed to load tree model
                     return null;
                 });
 
@@ -238,7 +238,7 @@ export class DirectModelEnvironment {
             const results = await Promise.all([...buildingPromises, treePromise]);
             const successfulBuildings = results.filter(r => r && r !== 'tree');
             
-            // console.log(`Loaded ${successfulBuildings.length} buildings and ${results.includes('tree') ? '1 tree model' : 'no tree'}`);
+            // Building and tree models loaded successfully
             
             if (window.gameLoadingManager) {
                 window.gameLoadingManager.updateProgress(4, 'Creating urban scene...');
@@ -255,7 +255,7 @@ export class DirectModelEnvironment {
             }
             
         } catch (error) {
-            console.error('Error loading models:', error);
+            // Error loading models
             this.createFallbackScene();
             
             // Still complete loading even if models failed
@@ -302,7 +302,7 @@ export class DirectModelEnvironment {
             }
         });
         
-        console.log(`Enhanced ${filename} with ${meshCount} meshes, color: #${color.toString(16)}`);
+        // Enhanced building with African color theme
     }
 
     selectLODModel(distanceFromCamera) {
@@ -396,7 +396,7 @@ export class DirectModelEnvironment {
         this.createSidewalks();
         this.ground = this.road;
         
-        console.log('Road created with clear 3-lane markings');
+        // Road created with clear 3-lane markings
     }
 
     createSidewalks() {
@@ -423,12 +423,12 @@ export class DirectModelEnvironment {
 
     createInitialScene() {
         if (!this.modelsLoaded) {
-            console.log('Models not loaded yet, waiting...');
+            // Models not loaded yet, waiting
             setTimeout(() => this.createInitialScene(), 1000);
             return;
         }
         
-        console.log('Creating consistent dense urban scene with loaded models...');
+        // Creating consistent dense urban scene with loaded models
         
         // Create BALANCED initial buildings for both sides with LOD
         for (let i = 0; i < 30; i++) { // Increased for better coverage
@@ -448,7 +448,7 @@ export class DirectModelEnvironment {
     spawnSpecificBuilding(zPosition, forceSide = null, cameraZ = 0) {
         const loadedBuildings = Object.keys(this.buildingTemplates);
         if (loadedBuildings.length === 0) {
-            console.log('No buildings loaded, creating fallback');
+            // No buildings loaded, creating fallback
             this.createFallbackBuilding(zPosition);
             return;
         }
@@ -471,7 +471,7 @@ export class DirectModelEnvironment {
         if (!building) {
             const template = this.buildingTemplates[buildingKey];
             if (!template) {
-                console.warn(`Template ${buildingKey} not found, creating fallback building`);
+                // Template not found, creating fallback building
                 this.createFallbackBuilding(zPosition, forceSide);
                 return;
             }
@@ -501,7 +501,7 @@ export class DirectModelEnvironment {
         building.position.set(xOffset, groundY, zPosition);
         building.rotation.y = (Math.random() - 0.5) * 0.3;
         
-        // console.log(`Building: X=${xOffset.toFixed(1)}, width=${size.x.toFixed(1)}, side=${side}`);
+        // Building positioned with calculated offset and width
         
         this.scene.add(building);
         this.activeBuildings.push({
@@ -516,7 +516,7 @@ export class DirectModelEnvironment {
 
     spawnSpecificTree(zPosition) {
         if (!this.treeTemplate) {
-            // console.log('Tree template not loaded');
+            // Tree template not loaded
             return;
         }
         
@@ -550,7 +550,7 @@ export class DirectModelEnvironment {
             zPosition: zPosition
         });
 
-        console.log(`Tree spawned: X=${xOffset.toFixed(1)} (${side} side), Y=${groundY.toFixed(1)}, Z=${zPosition}, scale=${scale.toFixed(4)}`);
+        // Tree spawned with calculated position and scale
     }
 
     createFallbackBuilding(zPosition, forceSide = null) {
@@ -598,11 +598,11 @@ export class DirectModelEnvironment {
             scale: 1.0
         });
         
-        // console.log(`Fallback building: X=${xOffset.toFixed(1)} (${side}), Z=${zPosition}, size=${width.toFixed(1)}x${depth.toFixed(1)}`);
+        // Fallback building created with calculated dimensions
     }
 
     createFallbackScene() {
-        // console.log('Creating consistent dense fallback urban scene...');
+        // Creating consistent dense fallback urban scene
         for (let i = 0; i < 30; i++) { // Same high density for fallback
             const z = -20 - (i * 12); // Same close spacing as GLB buildings
             this.createFallbackBuilding(z, 'left');
@@ -756,7 +756,7 @@ export class DirectModelEnvironment {
             if (!building) {
                 const template = this.buildingTemplates[buildingKey];
                 if (!template) {
-                    console.warn(`Template ${buildingKey} not found in batch spawn, skipping`);
+                    // Template not found in batch spawn, skipping
                     return; // Skip this building
                 }
                 building = template.clone();

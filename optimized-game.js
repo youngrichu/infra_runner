@@ -70,7 +70,6 @@ export class OptimizedGame {
     }
 
     async init() {
-        console.log('🚀 Initializing Optimized Infrastructure Runner...');
         
         await this.setupOptimizedThreeJS();
         await this.createOptimizedManagers();
@@ -83,11 +82,9 @@ export class OptimizedGame {
         // Start game flow with player registration
         this.checkPlayerRegistration();
         
-        console.log('✅ Optimized game initialization complete');
     }
 
     async setupOptimizedThreeJS() {
-        console.log('⚙️ Setting up optimized Three.js renderer...');
         
         // Scene setup
         this.scene = new THREE.Scene();
@@ -120,20 +117,16 @@ export class OptimizedGame {
             this.frustumCuller = new FrustumCullingManager(this.camera);
         }
         
-        console.log('✅ Optimized renderer initialized');
     }
 
     async createOptimalRenderer() {
         // Try WebGPU first (future-ready), fallback to WebGL2, then WebGL1
         if (navigator.gpu && window.WebGPURenderer) {
             try {
-                console.log('🔮 Attempting WebGPU renderer...');
                 const webgpuRenderer = new window.WebGPURenderer({ antialias: true });
                 await webgpuRenderer.init();
-                console.log('✅ WebGPU renderer initialized');
                 return webgpuRenderer;
             } catch (e) {
-                console.log('⚠️ WebGPU failed, falling back to WebGL');
             }
         }
 
@@ -142,7 +135,6 @@ export class OptimizedGame {
                         document.createElement('canvas').getContext('webgl');
         
         const webglVersion = context instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1';
-        console.log(`🎮 Using ${webglVersion} renderer`);
 
         return new THREE.WebGLRenderer({
             antialias: true,
@@ -155,7 +147,6 @@ export class OptimizedGame {
     }
 
     async createOptimizedManagers() {
-        console.log('🔧 Creating optimized game managers...');
         
         // Environment (keep existing for now)
         this.environment = new DirectModelEnvironment(this.scene);
@@ -181,11 +172,9 @@ export class OptimizedGame {
         // UI Manager
         this.uiManager = new UIManager();
         
-        console.log('✅ Optimized managers created');
     }
 
     setupInputSystems() {
-        console.log('🎮 Setting up input systems...');
         
         // Original input manager
         this.inputManager = new InputManager(this.player, this);
@@ -211,7 +200,6 @@ export class OptimizedGame {
             }
         };
         
-        console.log('✅ Input systems configured');
     }
 
     processInputCommand(command) {
@@ -237,7 +225,6 @@ export class OptimizedGame {
     }
 
     setupPerformanceMonitoring() {
-        console.log('📊 Setting up performance monitoring...');
         
         // Performance metrics callback
         this.performanceMonitor.onMetricsUpdate((metrics) => {
@@ -248,11 +235,9 @@ export class OptimizedGame {
             
             // Log performance warnings
             if (metrics.fps < 30) {
-                console.warn(`⚠️ Performance warning: ${metrics.fps}fps`);
             }
             
             if (metrics.memoryUsage > 150) {
-                console.warn(`⚠️ Memory warning: ${metrics.memoryUsage.toFixed(1)}MB`);
             }
         });
         
@@ -261,7 +246,6 @@ export class OptimizedGame {
             this.handleWindowResize();
         });
         
-        console.log('✅ Performance monitoring active');
     }
 
     setupStateHandlers() {
@@ -423,7 +407,6 @@ export class OptimizedGame {
             );
             
             if (collision) {
-                console.log('*** COLLISION DETECTED ***');
                 
                 // Trigger haptic feedback
                 this.gamepadIntegration.onCollision();
@@ -574,15 +557,9 @@ export class OptimizedGame {
             const obstacleStats = this.obstacleManager.getPerformanceStats();
             const gamepadStats = this.gamepadIntegration.getStats();
             
-            console.log('📊 Performance Report:');
-            console.log(`   FPS: ${metrics.fps} | Frame Time: ${metrics.frameTime.toFixed(1)}ms`);
-            console.log(`   Memory: ${metrics.memoryUsage.toFixed(1)}MB | Draw Calls: ${metrics.drawCalls}`);
-            console.log(`   Obstacles: ${obstacleStats.obstacles.total} (${obstacleStats.obstacles.instanced} instanced)`);
-            console.log(`   Gamepad: ${gamepadStats.connected} connected`);
             
             if (this.adaptiveQuality) {
                 const qualityStats = this.adaptiveQuality.getStats();
-                console.log(`   Quality: ${qualityStats.quality} | Avg FPS: ${qualityStats.avgFPS}`);
             }
             
             this.lastPerformanceReport = now;
@@ -609,7 +586,6 @@ export class OptimizedGame {
     }
 
     restartGame() {
-        console.log('🔄 Restarting optimized game...');
         
         // STOP the existing animation loop to prevent multiple loops
         this.stopAnimation();
@@ -646,7 +622,6 @@ export class OptimizedGame {
         this.startSpawning();
         this.animate();
         
-        console.log('✅ Optimized game restarted completely');
     }
 
     startSpawning() {
@@ -680,40 +655,31 @@ export class OptimizedGame {
 
     // Player registration methods
     checkPlayerRegistration() {
-        console.log('🔍 Checking player registration...');
         
         // Check if player data exists
         const storedData = PlayerRegistration.getStoredPlayerData();
-        console.log('📊 Stored player data:', storedData);
         
         if (storedData) {
             // Player already registered, set up the game
-            console.log('✅ Player already registered, setting up game...');
             this.registerPlayer(storedData.playerName, storedData.email, storedData.organizationName);
             this.stateManager.setState(STATES.MENU);
         } else {
             // Show registration form
-            console.log('📝 No player data found, showing registration form...');
             this.stateManager.setState(STATES.PLAYER_REGISTRATION);
             this.showPlayerRegistration();
         }
     }
 
     showPlayerRegistration() {
-        console.log('🎮 Showing player registration form...');
         try {
             if (!this.playerRegistration) {
-                console.log('🏗️ Creating new PlayerRegistration instance...');
                 this.playerRegistration = new PlayerRegistration((name, email, organization) => {
-                    console.log('📋 Player registration completed:', { name, email, organization });
                     this.registerPlayer(name, email, organization);
                     this.stateManager.setState(STATES.MENU);
                 });
             }
-            console.log('👀 Showing registration form...');
             this.playerRegistration.show();
         } catch (error) {
-            console.error('❌ Error showing player registration:', error);
         }
     }
 
@@ -724,7 +690,6 @@ export class OptimizedGame {
         // Set player data in leaderboard manager
         this.leaderboardManager.setPlayerData(name, email, organization);
         
-        console.log(`Player registered: ${name} (${email}) from ${organization}`);
     }
 
     // Public interface methods
@@ -745,7 +710,6 @@ export class OptimizedGame {
     }
 
     showCountdown() {
-        console.log('🔢 Starting optimized countdown...');
         
         // Clear countdown state first
         this.countdownActive = true;
@@ -761,7 +725,6 @@ export class OptimizedGame {
         
         // Show countdown in UI
         this.uiManager.showCountdown((skipped) => {
-            console.log(skipped ? '⏭️ Countdown skipped' : '⏰ Countdown completed');
             this.onCountdownComplete();
         });
         
@@ -772,7 +735,6 @@ export class OptimizedGame {
     }
 
     onCountdownComplete() {
-        console.log('🎮 Countdown complete, starting optimized game...');
         
         // Clear countdown state
         this.countdownActive = false;
@@ -802,7 +764,6 @@ export class OptimizedGame {
         this.startSpawning();
         this.uiManager.updateScoreDisplay && this.uiManager.updateScoreDisplay();
         
-        console.log('✅ Optimized game started after countdown');
     }
 
     // Main animation loop
@@ -826,7 +787,6 @@ export class OptimizedGame {
 
     // Cleanup
     destroy() {
-        console.log('🧹 Cleaning up optimized game...');
         
         if (this.gamepadIntegration) {
             this.gamepadIntegration.gamepadManager.destroy();
@@ -836,12 +796,10 @@ export class OptimizedGame {
             this.renderer.dispose();
         }
         
-        console.log('✅ Optimized game cleanup complete');
     }
 }
 
 // Initialize the optimized game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Starting Optimized Infrastructure Runner...');
     window.optimizedGame = new OptimizedGame();
 });

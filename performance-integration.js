@@ -24,7 +24,7 @@ export class PerformanceIntegration {
         };
         
         this.setupOptimizations();
-        console.log('🚀 Performance Integration System Activated');
+        // Performance Integration System activated
     }
 
     setupOptimizations() {
@@ -149,16 +149,8 @@ export class PerformanceIntegration {
     reportPerformanceStats() {
         const stats = this.getComprehensiveStats();
         
-        // Only log if performance is concerning
-        if (stats.performance.averageFrameTime > 20 || stats.gpu.drawCalls > 1000) {
-            console.warn('🔥 Performance Alert:', stats);
-        } else if (Math.random() < 0.2) { // Log occasionally when things are good
-            console.log('✅ Performance OK:', {
-                frameTime: stats.performance.averageFrameTime + 'ms',
-                quality: stats.performance.currentQuality + '%',
-                gpuCalls: stats.gpu.drawCalls
-            });
-        }
+        // Monitor performance metrics silently
+        // Performance stats are tracked internally for optimization decisions
     }
 
     getComprehensiveStats() {
@@ -183,7 +175,7 @@ export class PerformanceIntegration {
 
     // Emergency performance mode
     enableEmergencyMode() {
-        console.warn('🚨 Enabling Emergency Performance Mode');
+        // Emergency Performance Mode enabled
         
         // Drastically reduce quality
         this.frameOptimizer.currentQualityLevel = 0.3;
@@ -202,7 +194,7 @@ export class PerformanceIntegration {
 
     // Restore normal performance mode
     restoreNormalMode() {
-        console.log('✅ Restoring Normal Performance Mode');
+        // Normal Performance Mode restored
         
         this.frameOptimizer.currentQualityLevel = 1.0;
         this.frameOptimizer.frameTime = 16.67; // 60fps

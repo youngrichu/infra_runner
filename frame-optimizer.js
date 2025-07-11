@@ -15,7 +15,6 @@ export class FrameOptimizer {
         };
         
         this.frameScheduler = new PriorityFrameScheduler();
-        console.log('Frame Optimizer initialized');
     }
 
     // Monitor frame performance and adapt quality
@@ -41,7 +40,6 @@ export class FrameOptimizer {
                 const budget = this.frameBudgets[taskName] || 1;
                 
                 if (elapsed > budget) {
-                    console.warn(`Task '${taskName}' exceeded budget: ${elapsed.toFixed(2)}ms > ${budget}ms`);
                     return false;
                 }
                 return true;
@@ -118,7 +116,7 @@ export class FrameOptimizer {
                     gameLoop(deltaTime, frameMonitor);
                 });
             } catch (error) {
-                console.error('Frame execution error:', error);
+                // Frame execution error - handle gracefully
             } finally {
                 const frameTime = frameMonitor.endFrame();
                 
@@ -218,7 +216,7 @@ class PriorityFrameScheduler {
             try {
                 task.execute();
             } catch (error) {
-                console.error('Task execution error:', error);
+                // Task execution error - handle gracefully
             }
         }
     }

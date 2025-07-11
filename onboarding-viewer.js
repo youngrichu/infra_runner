@@ -29,11 +29,11 @@ export class OnboardingModelViewer {
         
         if (!isDevelopment || hasGlobals) {
             // Production mode or globals already available
-            console.log('Using global Three.js (production mode)');
+            // Using global Three.js (production mode)
             
             // Wait for global Three.js and MODEL_CONFIGURATIONS if not available
             if (!window.THREE || !window.MODEL_CONFIGURATIONS) {
-                console.log('Waiting for Three.js and MODEL_CONFIGURATIONS to load...');
+                // Waiting for Three.js and MODEL_CONFIGURATIONS to load
                 await new Promise(resolve => {
                     const checkGlobals = () => {
                         if (window.THREE && window.THREE.GLTFLoader && window.MODEL_CONFIGURATIONS) {
@@ -53,7 +53,7 @@ export class OnboardingModelViewer {
         } else {
             // Development mode - try dynamic imports
             try {
-                console.log('Development mode: Loading modules dynamically');
+                // Development mode: Loading modules dynamically
                 const [threeModule, gltfModule, dracoModule, configModule] = await Promise.all([
                     import('three'),
                     import('three/examples/jsm/loaders/GLTFLoader.js'),
@@ -66,10 +66,10 @@ export class OnboardingModelViewer {
                 this.DRACOLoader = dracoModule.DRACOLoader;
                 this.MODEL_CONFIGURATIONS = configModule.MODEL_CONFIGURATIONS;
                 
-                console.log('Loaded Three.js modules (development mode)');
+                // Loaded Three.js modules (development mode)
             } catch (error) {
                 // Fallback to global variables even in development
-                console.log('Dynamic imports failed, falling back to globals:', error.message);
+                // Dynamic imports failed, falling back to globals
                 
                 await new Promise(resolve => {
                     const checkGlobals = () => {
@@ -93,7 +93,7 @@ export class OnboardingModelViewer {
             throw new Error('Three.js or MODEL_CONFIGURATIONS not available');
         }
         
-        console.log('Onboarding viewer initialized with', Object.keys(this.MODEL_CONFIGURATIONS).length, 'model configurations');
+        // Onboarding viewer initialized with model configurations
         this.initializeLoaders();
         return this;
     }
@@ -154,7 +154,7 @@ export class OnboardingModelViewer {
         try {
             model = await this.loadModel(modelKey);
         } catch (error) {
-            console.warn(`Failed to load model ${modelKey}, using fallback`);
+            // Failed to load model, using fallback
             model = this.createFallbackModel(modelKey);
         }
 
@@ -256,7 +256,7 @@ export class OnboardingModelViewer {
                 },
                 undefined,
                 (error) => {
-                    console.error(`Error loading model ${modelKey}:`, error);
+                    // Error loading model, using fallback
                     reject(error);
                 }
             );

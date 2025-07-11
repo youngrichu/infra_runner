@@ -57,7 +57,6 @@ export class EnhancedGame {
     }
 
     async init() {
-        console.log('🚀 Initializing Enhanced Infrastructure Runner...');
         
         await this.setupEnhancedThreeJS();
         await this.createManagers();
@@ -66,7 +65,6 @@ export class EnhancedGame {
         this.startSpawning();
         this.animate();
         
-        console.log('✅ Enhanced game initialization complete');
     }
 
     async setupEnhancedThreeJS() {
@@ -113,7 +111,6 @@ export class EnhancedGame {
         this.adaptiveQuality = new AdaptiveQualityManager(this.renderer);
         this.frustumCuller = new FrustumCullingManager(this.camera);
         
-        console.log('✅ Enhanced renderer initialized');
     }
 
     async createManagers() {
@@ -141,7 +138,6 @@ export class EnhancedGame {
 
         this.uiManager = new UIManager(this);
         
-        console.log('✅ Enhanced managers created');
     }
 
     enhanceObstacleManager() {
@@ -222,7 +218,6 @@ export class EnhancedGame {
             this.obstacleManager.frameCounter = 0;
         };
 
-        console.log('✅ Obstacle manager enhanced with object pooling');
     }
 
     setupEnhancedInputManager() {
@@ -244,7 +239,6 @@ export class EnhancedGame {
             }
         };
         
-        console.log('✅ Enhanced input system configured');
     }
 
     processInputCommand(command) {
@@ -279,7 +273,6 @@ export class EnhancedGame {
             
             // Performance warnings
             if (metrics.fps < 30) {
-                console.warn(`⚠️ Performance warning: ${metrics.fps}fps`);
             }
         });
         
@@ -297,7 +290,6 @@ export class EnhancedGame {
             this.renderer.domElement.style.width = '100%';
             this.renderer.domElement.style.height = '100%';
             
-            console.log(`Enhanced screen resized: ${window.innerWidth}x${window.innerHeight}, pixelRatio: ${pixelRatio}`);
         };
         
         window.addEventListener('resize', handleResize);
@@ -306,7 +298,6 @@ export class EnhancedGame {
             setTimeout(handleResize, 100);
         });
         
-        console.log('✅ Performance monitoring active');
     }
 
     getGameSpeed() {
@@ -416,7 +407,6 @@ export class EnhancedGame {
             );
             
             if (collision) {
-                console.log('*** COLLISION DETECTED ***');
                 
                 // Trigger haptic feedback
                 this.gamepadIntegration.onCollision();
@@ -530,17 +520,12 @@ export class EnhancedGame {
         if (now - this.lastPerformanceReport > 5000) { // Every 5 seconds
             const metrics = this.performanceMonitor.getMetrics();
             
-            console.log('📊 Enhanced Performance Report:');
-            console.log(`   FPS: ${metrics.fps} | Frame Time: ${metrics.frameTime.toFixed(1)}ms`);
-            console.log(`   Memory: ${metrics.memoryUsage.toFixed(1)}MB | Draw Calls: ${metrics.drawCalls}`);
             
             if (this.obstacleManager.objectPools) {
-                console.log(`   Object Pools: ${this.obstacleManager.objectPools.size} types active`);
             }
             
             if (this.adaptiveQuality) {
                 const qualityStats = this.adaptiveQuality.getStats();
-                console.log(`   Quality: ${qualityStats.quality} | Avg FPS: ${qualityStats.avgFPS}`);
             }
             
             this.lastPerformanceReport = now;
@@ -550,13 +535,10 @@ export class EnhancedGame {
     gameOver() {
         this.gameActive = false;
         this.uiManager.showGameOver();
-        console.log('Game Over! Final Score:', Math.floor(this.uiManager.getScore()));
         const stats = this.uiManager.getCollectableStats();
-        console.log(`Blueprints: ${stats.blueprints}, Water Drops: ${stats.waterDrops}, Energy Cells: ${stats.energyCells}`);
     }
 
     restartGame() {
-        console.log('🔄 Restarting enhanced game...');
         
         // STOP the existing animation loop to prevent multiple loops
         this.stopAnimation();
@@ -593,7 +575,6 @@ export class EnhancedGame {
         this.startSpawning();
         this.animate();
         
-        console.log('✅ Enhanced game restarted completely');
     }
 
     // Public interface methods
@@ -610,7 +591,6 @@ export class EnhancedGame {
     }
 
     showCountdown() {
-        console.log('🔢 Starting countdown...');
         
         // Clear countdown state first
         this.countdownActive = true;
@@ -626,7 +606,6 @@ export class EnhancedGame {
         
         // Show countdown in UI
         this.uiManager.showCountdown((skipped) => {
-            console.log(skipped ? '⏭️ Countdown skipped' : '⏰ Countdown completed');
             this.onCountdownComplete();
         });
         
@@ -637,7 +616,6 @@ export class EnhancedGame {
     }
 
     onCountdownComplete() {
-        console.log('🎮 Countdown complete, starting enhanced game...');
         
         // Clear countdown state
         this.countdownActive = false;
@@ -665,7 +643,6 @@ export class EnhancedGame {
         this.gameActive = true;
         this.startSpawning();
         
-        console.log('✅ Enhanced game started after countdown');
     }
 
     animate() {
@@ -688,7 +665,6 @@ export class EnhancedGame {
 
     // Cleanup
     destroy() {
-        console.log('🧹 Cleaning up enhanced game...');
         
         if (this.gamepadIntegration) {
             this.gamepadIntegration.gamepadManager.destroy();
@@ -698,12 +674,10 @@ export class EnhancedGame {
             this.renderer.dispose();
         }
         
-        console.log('✅ Enhanced game cleanup complete');
     }
 }
 
 // Initialize the enhanced game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Starting Enhanced Infrastructure Runner...');
     window.enhancedGame = new EnhancedGame();
 });

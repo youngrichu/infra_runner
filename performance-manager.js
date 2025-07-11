@@ -22,7 +22,7 @@ export class ObjectPool {
             this.totalCreated++;
         }
         
-        console.log(`🏊‍♂️ Object pool initialized: ${initialSize}/${maxSize} objects`);
+        // Object pool initialized with initial and max size
     }
     
     acquire() {
@@ -113,7 +113,7 @@ export class InstancedRenderingManager {
         });
         
         this.scene.add(instancedMesh);
-        console.log(`🎭 Instanced mesh created for ${type}: max ${maxCount} instances`);
+        // Instanced mesh created with max instances
         
         return instancedMesh;
     }
@@ -123,7 +123,7 @@ export class InstancedRenderingManager {
         const mesh = this.instancedMeshes.get(type);
         
         if (!data || !mesh || data.activeCount >= data.maxCount) {
-            console.warn(`Cannot add instance of type ${type}: limit reached or not found`);
+            // Cannot add instance: limit reached or type not found
             return null;
         }
         
@@ -322,7 +322,7 @@ export class AdaptiveQualityManager {
         this.currentQuality = this.detectInitialQuality();
         this.applyQuality(this.currentQuality);
         
-        console.log(`🎚️ Adaptive quality initialized: ${this.currentQuality}`);
+        // Adaptive quality initialized with initial settings
     }
     
     detectInitialQuality() {
@@ -382,7 +382,7 @@ export class AdaptiveQualityManager {
         if (currentIndex < levels.length - 1) {
             this.currentQuality = levels[currentIndex + 1];
             this.applyQuality(this.currentQuality);
-            console.log(`📉 Quality downgraded to: ${this.currentQuality}`);
+            // Quality downgraded for better performance
         }
     }
     
@@ -392,7 +392,7 @@ export class AdaptiveQualityManager {
         if (currentIndex > 0) {
             this.currentQuality = levels[currentIndex - 1];
             this.applyQuality(this.currentQuality);
-            console.log(`📈 Quality upgraded to: ${this.currentQuality}`);
+            // Quality upgraded with improved performance
         }
     }
     
@@ -489,7 +489,7 @@ export class PerformanceMonitor {
     }
     
     reportMetrics() {
-        console.log(`📊 Performance: ${this.metrics.fps}fps | ${this.metrics.frameTime.toFixed(1)}ms | ${this.metrics.memoryUsage.toFixed(1)}MB | ${this.metrics.drawCalls} draws | ${this.metrics.triangles} tris`);
+        // Performance metrics tracked internally
         
         // Call registered callbacks
         for (const callback of this.callbacks) {

@@ -134,7 +134,7 @@ export class GameStateManager {
                 try {
                     callback(data);
                 } catch (error) {
-                    console.error('Error in game state event listener:', error);
+                    // Error in game state event listener
                 }
             });
         }

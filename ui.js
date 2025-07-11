@@ -914,8 +914,7 @@ export class UIManager {
         // Initialize interactive features
         this.initializeGameOverInteractions();
         
-        console.log('Game Over! Final Score:', Math.floor(this.score));
-        console.log(`Blueprints: ${this.blueprints}, Water: ${this.waterDrops}, Energy Cells: ${this.energyCells}`);
+        // Game over screen displayed with final score and stats
         
         // Load leaderboard and submit score
         this.loadLeaderboard();
@@ -1346,7 +1345,7 @@ export class UIManager {
 
     async submitScoreToLeaderboard() {
         if (!this.gameController || !this.gameController.leaderboardManager) {
-            console.warn('Leaderboard manager not available');
+            // Leaderboard manager not available
             return;
         }
 
@@ -1369,7 +1368,7 @@ export class UIManager {
             this.updateLeaderboard(leaderboardData);
             
         } catch (error) {
-            console.error('Failed to submit score:', error);
+            // Failed to submit score to leaderboard
             this.updateLeaderboardStatus(false, false);
         }
     }
@@ -1384,7 +1383,7 @@ export class UIManager {
             const leaderboardData = await this.gameController.leaderboardManager.getTopScores(100);
             this.updateLeaderboard(leaderboardData);
         } catch (error) {
-            console.error('Failed to load leaderboard:', error);
+            // Failed to load leaderboard data
         }
     }
     
@@ -1414,7 +1413,7 @@ export class UIManager {
     }
 
     showCountdown(callback) {
-        console.log('🔢 UIManager: Creating countdown display...');
+        // Creating countdown display
         
         // Create countdown overlay
         const countdownOverlay = document.createElement('div');

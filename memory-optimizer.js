@@ -11,7 +11,7 @@ export class MemoryOptimizer {
         this.memoryPressureThreshold = 50 * 1024 * 1024; // 50MB
         this.setupMemoryMonitoring();
         
-        console.log('Memory Optimizer initialized');
+        // Memory Optimizer initialized
     }
 
     // Create object pools to reduce GC pressure
@@ -91,7 +91,7 @@ export class MemoryOptimizer {
             (m) => m.identity()
         );
 
-        console.log('Three.js object pools created');
+        // Three.js object pools created
     }
 
     // Reduce string allocations
@@ -151,13 +151,13 @@ export class MemoryOptimizer {
             
             // Log memory stats
             if (Math.random() < 0.1) { // Log 10% of the time
-                console.log(`Memory: ${(usage / 1024 / 1024).toFixed(1)}MB used`);
+                // Memory usage monitoring
             }
         }, 5000);
     }
 
     triggerMemoryCleanup() {
-        console.log('Triggering memory cleanup due to pressure');
+        // Triggering memory cleanup due to pressure
         
         // Clean object pools
         for (const [type, pool] of this.objectPools) {

@@ -644,7 +644,6 @@
                     progressText.textContent = message;
                 }
                 
-                console.log(`Loading Progress: ${percentage.toFixed(0)}% - ${message}`);
                 
                 // Hide loading screen when complete and trigger onboarding
                 if (step >= this.totalSteps) {
@@ -766,7 +765,6 @@
                     window.onboardingModelViewer.cleanup();
                 }
             } catch (error) {
-                console.error('Error cleaning up 3D model viewers:', error);
             }
         }
         
@@ -787,7 +785,6 @@
         function startGameAfterRegistration() {
             // Prevent multiple game initializations
             if (window.gameInitialized) {
-                console.log('Game already initialized, skipping');
                 return;
             }
             
@@ -799,15 +796,11 @@
         }
         
         function showOnboarding() {
-            console.log('showOnboarding called');
             // Check if user has already completed onboarding
             const completed = localStorage.getItem('infrastructureRunner_onboardingCompleted');
-            console.log('Onboarding completed before:', completed);
             
             if (!completed) {
-                console.log('Showing onboarding overlay');
                 const overlay = document.getElementById('onboarding-overlay');
-                console.log('Overlay element:', overlay);
                 overlay.classList.add('active');
                 
                 // Initialize 3D model viewers
@@ -815,7 +808,6 @@
                 
                 // No need to pause game - it hasn't started yet!
             } else {
-                console.log('Onboarding already completed, skipping');
             }
         }
         
@@ -841,9 +833,7 @@
                 await window.onboardingModelViewer.createModelViewer('wind-viewer', 'windPower', 'Wind Power');
                 await window.onboardingModelViewer.createModelViewer('water-pipeline-viewer', 'waterPipeline', 'Water Infrastructure');
                 
-                console.log('3D model viewers initialized successfully');
             } catch (error) {
-                console.error('Error initializing 3D model viewers:', error);
                 // Fallback to icons if 3D models fail
                 showFallbackIcons();
             }

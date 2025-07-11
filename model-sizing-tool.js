@@ -58,12 +58,10 @@ export class ModelSizingTool {
     async verifyAndResizeModel(placeholderType) {
         const modelPath = this.modelMappings[placeholderType];
         if (!modelPath) {
-            console.error(`No model mapping found for: ${placeholderType}`);
             return null;
         }
         
         try {
-            console.log(`🔍 Loading and analyzing: ${placeholderType} -> ${modelPath}`);
             
             // Load the model
             const gltf = await this.loader.loadAsync(modelPath);
@@ -108,17 +106,14 @@ export class ModelSizingTool {
                 }
             };
             
-            console.log(`✅ Analysis complete for ${placeholderType}:`, analysis);
             return analysis;
             
         } catch (error) {
-            console.error(`❌ Failed to analyze ${placeholderType}:`, error);
             return null;
         }
     }
     
     async verifyAllModels() {
-        console.log('🚀 Starting comprehensive model analysis...');
         const results = [];
         
         for (const placeholderType of Object.keys(this.modelMappings)) {
@@ -137,8 +132,6 @@ export class ModelSizingTool {
     }
     
     generateSummaryReport(results) {
-        console.log('\n📊 MODEL SIZING ANALYSIS REPORT');
-        console.log('=====================================');
         
         const categories = {
             'Collectables': ['waterDrop', 'blueprint', 'energyCell', 'aerialStar'],
@@ -147,24 +140,15 @@ export class ModelSizingTool {
         };
         
         for (const [category, types] of Object.entries(categories)) {
-            console.log(`\n🎯 ${category.toUpperCase()}:`);
             
             types.forEach(type => {
                 const result = results.find(r => r.placeholderType === type);
                 if (result) {
-                    console.log(`  ${type}:`);
-                    console.log(`    Current: ${result.currentSize.x} x ${result.currentSize.y} x ${result.currentSize.z}`);
-                    console.log(`    Target:  ${result.targetSize.x} x ${result.targetSize.y} x ${result.targetSize.z}`);
-                    console.log(`    Scale:   [${result.recommendedScale.join(', ')}]`);
-                    console.log(`    Final:   ${result.finalSize.x} x ${result.finalSize.y} x ${result.finalSize.z}`);
                 } else {
-                    console.log(`  ${type}: ❌ Analysis failed`);
                 }
             });
         }
         
-        console.log('\n📝 CONFIGURATION READY FOR IMPLEMENTATION');
-        console.log('Copy the scale values above into your model integration code.');
     }
     
     // Test a single model in a minimal scene (for debugging)
@@ -204,7 +188,6 @@ export class ModelSizingTool {
         renderer.setSize(400, 400);
         renderer.render(scene, camera);
         
-        console.log(`🎨 Test render complete for ${placeholderType}`);
         return { scene, model, analysis };
     }
     
@@ -223,11 +206,6 @@ export class ModelSizingTool {
             }
         });
         
-        console.log('\n💻 GENERATED CONFIGURATION OBJECT:');
-        console.log('=====================================');
-        console.log('export const MODEL_CONFIGURATIONS = ');
-        console.log(JSON.stringify(config, null, 2));
-        console.log(';');
         
         return config;
     }

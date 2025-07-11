@@ -46,14 +46,14 @@ export class CollectableManager {
     }
     
     async initializeModelLoading() {
-        console.log('🎨 Loading models (collectables, power-ups, obstacles)...');
+        // Loading models (collectables, power-ups, obstacles)
         
         // Load priority models first (collectables, power-ups, and obstacles)
         const priorityTypes = PRIORITY_LOADING_ORDER;
         
         await this.loadPriorityModels(priorityTypes);
         this.priorityModelsLoaded = true;
-        console.log('✅ Models ready (collectables, power-ups, obstacles)');
+        // Models ready (collectables, power-ups, obstacles)
     }
     
     async loadPriorityModels(modelTypes) {
@@ -67,9 +67,9 @@ export class CollectableManager {
         results.forEach((result, index) => {
             const type = modelTypes.filter(t => shouldLoadModel(t))[index];
             if (result.status === 'fulfilled' && result.value) {
-                console.log(`✅ ${type}: Ready`);
+                // Model loaded successfully
             } else {
-                console.log(`❌ ${type}: Failed`);
+                // Model failed to load
             }
         });
     }
@@ -87,11 +87,11 @@ export class CollectableManager {
         const loadPromise = this.loader.loadAsync(config.path)
             .then(gltf => {
                 this.loadedModels.set(type, gltf);
-                console.log(`✅ ${type} model loaded`);
+                // Model loaded successfully
                 return gltf;
             })
             .catch(error => {
-                console.warn(`❌ ${type} failed:`, error.message);
+                // Model failed to load, using fallback
                 return null;
             });
         
@@ -154,7 +154,7 @@ export class CollectableManager {
         }
 
         const type = this.powerUpDeck.pop();
-        // console.log(`Spawning power-up from deck: ${type}. Deck size: ${this.powerUpDeck.length}`);
+        // Spawning power-up from deck
 
         // Find clear position - ALWAYS use exact lane positions
         let spawnPosition;
@@ -194,7 +194,7 @@ export class CollectableManager {
         const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
         if (collectableMesh) {
             this.collectables.push({ mesh: collectableMesh, type: type });
-            // console.log(`Guaranteed power-up spawned: ${type}`);
+            // Guaranteed power-up spawned
         }
     }
 
@@ -260,14 +260,14 @@ export class CollectableManager {
     tryCreateGLBMesh(type, spawnPosition) {
         const config = getModelConfig(type);
         if (!config || !shouldLoadModel(type)) {
-            console.log(`⚠️ ${type}: No config or skipped`);
+            // No config available or model skipped
             return null;
         }
         
         const gltf = this.loadedModels.get(type);
         if (!gltf) {
             // Model not loaded yet, trigger loading for next time
-            console.log(`⏳ ${type}: Model not loaded yet, using fallback`);
+            // Model not loaded yet, using fallback
             this.loadModel(type);
             return null;
         }
@@ -315,7 +315,7 @@ export class CollectableManager {
                             if (isDarkModel) {
                                 // Force brighten problematic models regardless of current brightness
                                 child.material.color.multiplyScalar(3.0);
-                                console.log(`🔆 Force brightened ${type} material (brightness was: ${brightness.toFixed(3)})`);
+                                // Force brightened material for better visibility
                             } else {
                                 if (brightness < 0.5) {
                                     child.material.color.multiplyScalar(2.0);
@@ -363,11 +363,11 @@ export class CollectableManager {
             // Add to scene
             this.scene.add(modelScene);
             
-            console.log(`🎨 USING ${type} GLB model (scale: ${scale[0].toFixed(3)})`);
+            // Using GLB model for collectable
             return modelScene;
             
         } catch (error) {
-            console.warn(`❌ ${type} GLB creation failed:`, error.message);
+            // GLB creation failed, using fallback
             return null;
         }
     }
@@ -727,16 +727,13 @@ export class CollectableManager {
                 this.collectables.splice(i, 1);
                 collectedItems.push(collectable.type);
                 
-                // Debug logging for high-speed collections
-                if (gameSpeed > 0.2) {
-                    console.log(`High-speed collection: ${collectable.type} at speed: ${gameSpeed.toFixed(3)}`);
-                }
+                // High-speed collection detected
                 
                 // Track regular collections for fair power-up spawning
                 const regularTypes = ['blueprint', 'waterDrop', 'energyCell'];
                 if (regularTypes.includes(collectable.type)) {
                     this.regularCollectionsCount++;
-                    console.log(`Regular collections count: ${this.regularCollectionsCount}`);
+                    // Regular collection counted for power-up spawning
                 }
             }
         }
@@ -902,7 +899,7 @@ export class CollectableManager {
     markPowerUpSpawned() {
         this.lastPowerUpTime = Date.now();
         this.regularCollectionsCount = 0; // Reset collection counter
-        console.log('Power-up spawned - timers reset');
+        // Power-up spawned - timers reset
     }
     
     reset() {
@@ -930,7 +927,7 @@ export class CollectableManager {
             if (collectable.type === 'aerialStar') {
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
-                console.log('Removed aerial star after helicopter ended');
+                // Aerial star removed after helicopter ended
             }
         }
     }
@@ -942,7 +939,7 @@ export class CollectableManager {
             if (collectable.type === 'solarOrb') {
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
-                console.log('Removed solar orb after solar boost ended');
+                // Solar orb removed after solar boost ended
             }
         }
     }
@@ -951,14 +948,14 @@ export class CollectableManager {
     createObstacleGLBMesh(type, spawnPosition) {
         const config = getModelConfig(type);
         if (!config || !shouldLoadModel(type)) {
-            console.log(`⚠️ Obstacle ${type}: No config or skipped`);
+            // No obstacle config available or skipped
             return null;
         }
         
         const gltf = this.loadedModels.get(type);
         if (!gltf) {
             // Model not loaded yet, trigger loading for next time
-            console.log(`⏳ Obstacle ${type}: Model not loaded yet, using fallback`);
+            // Obstacle model not loaded yet, using fallback
             this.loadModel(type);
             return null;
         }
@@ -1020,7 +1017,7 @@ export class CollectableManager {
                             if (isDarkModel) {
                                 // Force brighten problematic models regardless of current brightness
                                 child.material.color.multiplyScalar(3.0);
-                                console.log(`🔆 Force brightened obstacle ${type} material (brightness was: ${brightness.toFixed(3)})`);
+                                // Force brightened obstacle material for better visibility
                             } else {
                                 if (brightness < 0.5) {
                                     child.material.color.multiplyScalar(2.0);
@@ -1065,11 +1062,11 @@ export class CollectableManager {
             // Add to scene
             this.scene.add(modelScene);
             
-            console.log(`🎨 USING ${type} GLB obstacle model (scale: ${scale[0].toFixed(3)})`);
+            // Using GLB obstacle model
             return modelScene;
             
         } catch (error) {
-            console.warn(`❌ ${type} GLB obstacle creation failed:`, error.message);
+            // GLB obstacle creation failed, using fallback
             return null;
         }
     }

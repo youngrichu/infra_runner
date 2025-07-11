@@ -248,23 +248,23 @@ export class Game {
             );
             
             if (collision) {
-                console.log('*** COLLISION DETECTED ***');
-                console.log('Player isStumbling:', this.player.isStumbling);
+                // Collision detected with obstacle
+                // Player stumbling state checked
                 
                 // Try to trigger stumble animation with game over callback
-                console.log('Attempting to trigger stumble...');
+                // Attempting to trigger stumble animation
                 const stumbleTriggered = this.player.triggerStumble(() => this.gameOver());
-                console.log('Stumble triggered result:', stumbleTriggered);
+                // Stumble trigger result processed
                 
                 if (!stumbleTriggered) {
                     // If stumble animation not available, immediate game over
-                    console.log('Stumble animation not available - Game Over!');
+                    // Stumble animation not available - Game Over
                     this.gameOver();
                     return;
                 }
                 
                 // Stumble was successfully triggered, continue playing
-                console.log('Player stumbled but continues playing!');
+                // Player stumbled but continues playing
                 return;
             }
         }
@@ -276,7 +276,7 @@ export class Game {
 
     handleCollectedItems(collectedItems) {
         for (const itemType of collectedItems) {
-            console.log(`Collected item: ${itemType}`);
+            // Item collected successfully
             
             switch (itemType) {
                 // Regular collectibles
@@ -291,11 +291,11 @@ export class Game {
                     break;
                 case 'aerialStar':
                     this.uiManager.updateScore(SCORING.AERIAL_STAR);
-                    console.log('Collected aerial star! +150 points');
+                    // Collected aerial star bonus
                     break;
                 case 'solarOrb':
                     this.uiManager.updateScore(SCORING.SOLAR_ORB);
-                    console.log('Collected solar orb! +120 points');
+                    // Collected solar orb bonus
                     break;
                     
                 // Power-ups
@@ -362,7 +362,7 @@ export class Game {
     updateGameSpeed() {
         // Increase game speed gradually
         this.gameSpeed.value += GAME_CONFIG.SPEED_INCREMENT;
-        // console.log("Current Game Speed:", this.gameSpeed.value.toFixed(4)); // For debugging speed changes
+        // Game speed incremented for progressive difficulty
         
         // Update score based on solar boost status
         if (this.powerUpManager.getSolarBoostStatus()) {
@@ -388,8 +388,8 @@ export class Game {
         
         // Show game over UI
         this.uiManager.showGameOver();
-        console.log('Game Over! Final Score:', Math.floor(finalScore));
-        console.log(`Blueprints: ${stats.blueprints}, Water Drops: ${stats.waterDrops}, Energy Cells: ${stats.energyCells}`);
+        // Game Over with final score
+        // Final game statistics recorded
     }
 
     restartGame() {
@@ -420,11 +420,11 @@ export class Game {
         this.startSpawning();
         this.animate();
         
-        console.log('✅ Game restarted completely');
+        // Game restarted completely
     }
 
     startNewGame() {
-        console.log('🆕 Starting new game with user registration...');
+        // Starting new game with user registration
         
         // STOP the existing animation loop to prevent multiple loops
         this.stopAnimation();
@@ -459,7 +459,7 @@ export class Game {
         this.stateManager.setState(STATES.PLAYER_REGISTRATION);
         this.showPlayerRegistration();
         
-        console.log('✅ New game started - showing registration form');
+        // New game started - showing registration form
     }
 
     setupResizeHandling() {
@@ -485,18 +485,18 @@ export class Game {
         this.renderer.domElement.style.width = '100%';
         this.renderer.domElement.style.height = '100%';
         
-        console.log(`Screen resized: ${window.innerWidth}x${window.innerHeight}, pixelRatio: ${pixelRatio}`);
+        // Screen resized with new dimensions and pixel ratio
     }
 
     // Game pause/resume functionality
     pauseGame() {
         this.gamePaused = true;
-        console.log('Game paused for onboarding');
+        // Game paused for onboarding
     }
 
     resumeGame() {
         this.gamePaused = false;
-        console.log('Game resumed after onboarding');
+        // Game resumed after onboarding
     }
 
     // Public methods for managers to access current game state
@@ -514,47 +514,47 @@ export class Game {
 
     // Player registration methods
     checkPlayerRegistration() {
-        console.log('🔍 Checking player registration...');
+        // Checking player registration
         
         try {
             // Check if player data exists
             const storedData = PlayerRegistration.getStoredPlayerData();
-            console.log('📊 Stored player data:', storedData);
+            // Stored player data checked
             
             if (storedData) {
                 // Player already registered, show countdown then start the game
-                console.log('✅ Player already registered, showing countdown...');
+                // Player already registered, showing countdown
                 this.registerPlayer(storedData.playerName, storedData.email, storedData.organizationName);
                 this.showCountdown();
             } else {
                 // Show registration form first
-                console.log('📝 No player data found, showing registration form...');
+                // No player data found, showing registration form
                 this.stateManager.setState(STATES.PLAYER_REGISTRATION);
                 this.showPlayerRegistration();
             }
         } catch (error) {
-            console.error('❌ Error in checkPlayerRegistration:', error);
+            // Error in checkPlayerRegistration, using fallback
             // Fallback: just show countdown and start the game
-            console.log('🔄 Fallback: showing countdown without registration');
+            // Fallback: showing countdown without registration
             this.showCountdown();
         }
     }
     
     startGame() {
-        console.log('🚀 Starting game directly (bypassing countdown)...');
+        // Starting game directly (bypassing countdown)
         try {
             this.stateManager.setState(STATES.PLAYING);
             this.gameActive = true;
             this.startSpawning();
             this.animate();
-            console.log('✅ Game started successfully');
+            // Game started successfully
         } catch (error) {
-            console.error('❌ Error starting game:', error);
+            // Error starting game
         }
     }
 
     showPlayerRegistration() {
-        console.log('🎮 Showing player registration form...');
+        // Showing player registration form
         try {
             // Disable input manager during registration
             if (this.inputManager) {
@@ -562,9 +562,9 @@ export class Game {
             }
             
             if (!this.playerRegistration) {
-                console.log('🏗️ Creating new PlayerRegistration instance...');
+                // Creating new PlayerRegistration instance
                 this.playerRegistration = new PlayerRegistration((name, email, organization) => {
-                    console.log('📋 Player registration completed:', { name, email, organization });
+                    // Player registration completed
                     this.registerPlayer(name, email, organization);
                     // Re-enable input manager
                     if (this.inputManager) {
@@ -574,10 +574,10 @@ export class Game {
                     this.showCountdown();
                 });
             }
-            console.log('👀 Showing registration form...');
+            // Showing registration form
             this.playerRegistration.show();
         } catch (error) {
-            console.error('❌ Error showing player registration:', error);
+            // Error showing player registration
         }
     }
 
@@ -588,11 +588,11 @@ export class Game {
         // Set player data in leaderboard manager
         this.leaderboardManager.setPlayerData(name, email, organization);
         
-        console.log(`Player registered: ${name} (${email}) from ${organization}`);
+        // Player registered successfully
     }
 
     showCountdown() {
-        console.log('🔢 Starting countdown...');
+        // Starting countdown
         
         // Set state to getting ready
         this.stateManager.setState(STATES.GETTING_READY);
@@ -600,7 +600,7 @@ export class Game {
         
         // Show countdown in UI
         this.uiManager.showCountdown((skipped) => {
-            console.log(skipped ? '⏭️ Countdown skipped' : '⏰ Countdown completed');
+            // Countdown completed or skipped
             this.onCountdownComplete();
         });
         
@@ -611,7 +611,7 @@ export class Game {
     }
 
     onCountdownComplete() {
-        console.log('🎮 Countdown complete, starting game...');
+        // Countdown complete, starting game
         
         // Clear countdown state
         this.countdownActive = false;
@@ -641,7 +641,7 @@ export class Game {
         this.startSpawning();
         this.animate();
         
-        console.log('✅ Game started after countdown');
+        // Game started after countdown
     }
 
     animate() {
@@ -666,12 +666,12 @@ export class Game {
 window.initializeGame = function() {
     // Prevent multiple game instances - clean up any existing instance
     if (window.gameInstance) {
-        console.log('Cleaning up existing game instance');
+        // Cleaning up existing game instance
         window.gameInstance.gameActive = false; // Stop the existing game
         window.gameInstance = null;
     }
     
-    console.log('Initializing new game instance after onboarding completion');
+    // Initializing new game instance after onboarding completion
     window.gameInstance = new Game();
     return window.gameInstance;
 };

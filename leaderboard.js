@@ -19,14 +19,12 @@ export class LeaderboardManager {
                 this.loadSocketIO().then(() => {
                     this.connectSocket();
                 }).catch(error => {
-                    console.warn('Failed to load Socket.IO:', error);
                     // Continue without real-time features
                 });
             } else {
                 this.connectSocket();
             }
         } catch (error) {
-            console.warn('Socket.IO initialization failed:', error);
             // Continue without real-time features
         }
     }
@@ -47,12 +45,10 @@ export class LeaderboardManager {
             
             this.socket.on('connect', () => {
                 this.isConnected = true;
-                console.log('Connected to leaderboard server');
             });
 
             this.socket.on('disconnect', () => {
                 this.isConnected = false;
-                console.log('Disconnected from leaderboard server');
             });
 
             this.socket.on('scoreSubmitted', (data) => {
@@ -65,7 +61,6 @@ export class LeaderboardManager {
             });
 
         } catch (error) {
-            console.warn('Failed to connect to leaderboard server:', error);
         }
     }
 
@@ -101,7 +96,6 @@ export class LeaderboardManager {
             this.emit('scoreSubmitted', result);
             return result;
         } catch (error) {
-            console.error('Failed to submit score:', error);
             throw error;
         }
     }
@@ -111,7 +105,6 @@ export class LeaderboardManager {
             const result = await this.apiClient.getTopScores(limit);
             return result.data;
         } catch (error) {
-            console.error('Failed to get top scores:', error);
             return [];
         }
     }
@@ -121,7 +114,6 @@ export class LeaderboardManager {
             const result = await this.apiClient.getPlayerBestScore(email);
             return result.data;
         } catch (error) {
-            console.error('Failed to get player best score:', error);
             return null;
         }
     }
@@ -131,7 +123,6 @@ export class LeaderboardManager {
             const result = await this.apiClient.getOrganizationLeaderboard(organizationName, limit);
             return result.data;
         } catch (error) {
-            console.error('Failed to get organization leaderboard:', error);
             return [];
         }
     }
@@ -141,7 +132,6 @@ export class LeaderboardManager {
             const result = await this.apiClient.getRecentScores(limit);
             return result.data;
         } catch (error) {
-            console.error('Failed to get recent scores:', error);
             return [];
         }
     }
@@ -151,7 +141,6 @@ export class LeaderboardManager {
             const result = await this.apiClient.getStatistics();
             return result.data;
         } catch (error) {
-            console.error('Failed to get statistics:', error);
             return null;
         }
     }
@@ -180,7 +169,6 @@ export class LeaderboardManager {
                 try {
                     callback(data);
                 } catch (error) {
-                    console.error('Error in leaderboard event listener:', error);
                 }
             });
         }
@@ -193,7 +181,6 @@ export class LeaderboardManager {
 
     // Legacy method for backward compatibility
     addScore(playerData) {
-        console.warn('addScore is deprecated. Use submitScore instead.');
         return this.submitScore(playerData);
     }
 

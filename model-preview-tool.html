@@ -400,7 +400,6 @@
 
         async function loadModel(modelType) {
             try {
-                console.log(`Loading ${modelType}...`);
                 const gltf = await loader.loadAsync(modelPaths[modelType]);
                 loadedModels.set(modelType, gltf);
                 
@@ -422,7 +421,6 @@
                 
                 return gltf;
             } catch (error) {
-                console.error(`Failed to load ${modelType}:`, error);
                 const infoDiv = document.getElementById(`${modelType}-info`);
                 if (infoDiv) {
                     infoDiv.innerHTML = `❌ Failed to load`;
@@ -567,8 +565,6 @@
         };
 
         window.exportCurrentConfigs = function() {
-            console.log('Current Model Configurations:');
-            console.log('=============================');
             
             let scaleOutput = '\n// SCALES for model-configurations.js:\n';
             let rotationOutput = '\n// ROTATIONS for collectables.js:\n';
@@ -580,8 +576,6 @@
                 }
             }
             
-            console.log(scaleOutput);
-            console.log(rotationOutput);
             
             alert(scaleOutput + rotationOutput);
         };

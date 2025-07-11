@@ -41,17 +41,17 @@ export class PowerUpManager {
         this.isInvincible = true;
         this.invincibilityTimer = duration;
         this.player.setColor(COLORS.PLAYER.INVINCIBLE);
-        console.log("Hard Hat Shield ACTIVE!");
+        // Hard Hat Shield activated
     }
 
     deactivateInvincibility() {
         this.isInvincible = false;
         this.updatePlayerColor();
-        console.log("Hard Hat Shield DEACTIVATED!");
+        // Hard Hat Shield deactivated
     }
 
     activateHelicopter(duration = POWER_UP_DURATIONS.HELICOPTER) {
-        console.log("Activating Jetpack with duration:", duration);
+        // Activating Jetpack with specified duration
         this.isFlying = true;
         this.flyingTimer = duration;
         this.player.setPosition(
@@ -60,7 +60,7 @@ export class PowerUpManager {
             this.player.getPosition().z
         );
         this.player.setColor(COLORS.PLAYER.FLYING);
-        console.log("Jetpack ACTIVE!");
+        // Jetpack activated
     }
 
     deactivateHelicopter() {
@@ -73,7 +73,7 @@ export class PowerUpManager {
         this.player.isJumping = true;
         this.player.velocityY = 0;
         this.updatePlayerColor();
-        console.log("Jetpack DEACTIVATED!");
+        // Jetpack deactivated
     }
 
     activateSolarPower(duration = POWER_UP_DURATIONS.SOLAR_BOOST) {
@@ -83,7 +83,7 @@ export class PowerUpManager {
             this.gameSpeed.value *= 1.5;
         }
         this.player.setColor(COLORS.PLAYER.SOLAR_BOOST);
-        console.log("Solar Power Boost ACTIVE!");
+        // Solar Power Boost activated
     }
 
     deactivateSolarPower() {
@@ -96,7 +96,7 @@ export class PowerUpManager {
             this.gameSpeed.value /= 1.5;
         }
         this.updatePlayerColor();
-        console.log("Solar Power Boost DEACTIVATED!");
+        // Solar Power Boost deactivated
     }
 
     activateWindPower(duration = POWER_UP_DURATIONS.WIND_POWER) {
@@ -104,37 +104,37 @@ export class PowerUpManager {
         this.windPowerTimer = duration;
         this.player.setDoubleJumpAbility(true);
         this.player.setColor(COLORS.PLAYER.WIND_POWER);
-        console.log("Wind Power ACTIVE!");
+        // Wind Power activated
     }
 
     deactivateWindPower() {
         this.hasWindPower = false;
         this.player.setDoubleJumpAbility(false);
         this.updatePlayerColor();
-        console.log("Wind Power DEACTIVATED!");
+        // Wind Power deactivated
     }
 
     activateWaterSlide(duration = POWER_UP_DURATIONS.WATER_SLIDE) {
-        console.log("Activating fire-hydrant with duration:", duration);
+        // Activating fire-hydrant with specified duration
         this.hasWaterSlide = true;
         this.waterSlideTimer = duration;
         this.createWaterSlidePath();
         this.player.setColor(COLORS.PLAYER.WATER_SLIDE);
-        console.log("fire-hydrant ACTIVE!");
+        // Fire-hydrant activated
     }
 
     deactivateWaterSlide() {
         this.hasWaterSlide = false;
         this.removeWaterSlidePath();
         this.updatePlayerColor();
-        console.log("fire-hydrant DEACTIVATED!");
+        // Fire-hydrant deactivated
     }
 
     createWaterSlidePath() {
         this.removeWaterSlidePath();
         
         if (!this.obstacleManager) {
-            console.warn("ObstacleManager not available for water pipe targeting");
+            // ObstacleManager not available for water pipe targeting
             return;
         }
         
@@ -166,7 +166,7 @@ export class PowerUpManager {
             }
         }
         
-        console.log(`Water pipe streams created for continuous obstacle clearing`);
+        // Water pipe streams created for continuous obstacle clearing
     }
 
     removeWaterSlidePath() {
@@ -285,7 +285,7 @@ export class PowerUpManager {
                 // Add to pushed obstacles list for animation
                 this.pushedObstacles.push(obstacle);
                 
-                console.log(`Obstacle being swept away by flood at lane: ${obstaclePos.x}, direction: ${obstacle.pushDirection > 0 ? 'right' : 'left'}`);
+                // Obstacle being swept away by flood
             }
         }
         
@@ -332,7 +332,7 @@ export class PowerUpManager {
                 // Remove from pushed obstacles
                 this.pushedObstacles.splice(i, 1);
                 
-                console.log(`Obstacle completely swept away by flood`);
+                // Obstacle completely swept away by flood
             }
         }
     }
