@@ -48,6 +48,11 @@ export class EnhancedGame {
         this.frameCounter = 0;
         this.lastPerformanceReport = 0;
         
+        // Countdown state
+        this.countdownActive = false;
+        this.countdownTimeoutId = null;
+        this.animationId = null;
+        
         this.init();
     }
 
@@ -553,6 +558,9 @@ export class EnhancedGame {
     restartGame() {
         console.log('🔄 Restarting enhanced game...');
         
+        // STOP the existing animation loop to prevent multiple loops
+        this.stopAnimation();
+        
         // Reset game state
         this.gameActive = true;
         this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
@@ -571,12 +579,21 @@ export class EnhancedGame {
         this.uiManager.reset();
         this.inputManager.reset && this.inputManager.reset();
         
+        // Position player at safe starting location ahead of obstacle spawn zone
+        // Obstacles spawn at playerZ - 50, so position player ahead to ensure safety
+        const safeStartZ = this.camera.position.z - 5;
+        this.player.setPosition(0, this.player.getPosition().y, safeStartZ);
+        
         // Reset performance counters
         this.frameCounter = 0;
         this.lastPerformanceReport = Date.now();
         
-        // Restart spawning
+        // Start game immediately - no countdown on restart
+        this.gameActive = true;
         this.startSpawning();
+        this.animate();
+        
+        console.log('✅ Enhanced game restarted completely');
     }
 
     // Public interface methods
@@ -592,8 +609,67 @@ export class EnhancedGame {
         return this.obstacleManager.getObstacles();
     }
 
+    showCountdown() {
+        console.log('🔢 Starting countdown...');
+        
+        // Clear countdown state first
+        this.countdownActive = true;
+        if (this.countdownTimeoutId) {
+            clearTimeout(this.countdownTimeoutId);
+            this.countdownTimeoutId = null;
+        }
+        
+        // Position player at safe starting location ahead of obstacle spawn zone
+        // Obstacles spawn at playerZ - 50, so position player ahead to ensure safety
+        const safeStartZ = this.camera.position.z - 5;
+        this.player.setPosition(0, this.player.getPosition().y, safeStartZ);
+        
+        // Show countdown in UI
+        this.uiManager.showCountdown((skipped) => {
+            console.log(skipped ? '⏭️ Countdown skipped' : '⏰ Countdown completed');
+            this.onCountdownComplete();
+        });
+        
+        // Set up character ready animation
+        if (this.player && this.player.setReadyState) {
+            this.player.setReadyState(true);
+        }
+    }
+
+    onCountdownComplete() {
+        console.log('🎮 Countdown complete, starting enhanced game...');
+        
+        // Clear countdown state
+        this.countdownActive = false;
+        if (this.countdownTimeoutId) {
+            clearTimeout(this.countdownTimeoutId);
+            this.countdownTimeoutId = null;
+        }
+        
+        // Reset character ready state
+        if (this.player && this.player.setReadyState) {
+            this.player.setReadyState(false);
+        }
+        
+        // IMPORTANT: Reset environment again to ensure clean state
+        // This ensures all buildings and decorations are cleared and regenerated
+        this.environment.reset && this.environment.reset();
+        this.obstacleManager.reset && this.obstacleManager.reset();
+        this.collectableManager.reset && this.collectableManager.reset();
+        this.powerUpManager.reset && this.powerUpManager.reset();
+        
+        // Reset game speed to initial value
+        this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
+        
+        // Now actually start the game
+        this.gameActive = true;
+        this.startSpawning();
+        
+        console.log('✅ Enhanced game started after countdown');
+    }
+
     animate() {
-        requestAnimationFrame(() => this.animate());
+        this.animationId = requestAnimationFrame(() => this.animate());
 
         this.updateGameLogic();
         
@@ -601,6 +677,13 @@ export class EnhancedGame {
         this.renderer.info.reset();
         
         this.renderer.render(this.scene, this.camera);
+    }
+
+    stopAnimation() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
     }
 
     // Cleanup

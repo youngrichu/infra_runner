@@ -40,6 +40,7 @@ export class Game {
         // Countdown state
         this.countdownActive = false;
         this.countdownTimeoutId = null;
+        this.animationId = null;
         
         this.init();
     }
@@ -392,7 +393,10 @@ export class Game {
     }
 
     restartGame() {
-        // Reset game state
+        // STOP the existing animation loop to prevent multiple loops
+        this.stopAnimation();
+        
+        // Reset game state completely
         this.gameActive = true;
         this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
         this.stateManager.resetGame();
@@ -402,7 +406,7 @@ export class Game {
         this.camera.position.x = 0;
         this.camera.position.y = 2;
         
-        // Reset all managers
+        // Reset all managers completely
         this.player.reset();
         this.environment.reset();
         this.obstacleManager.reset();
@@ -411,8 +415,12 @@ export class Game {
         this.uiManager.reset();
         this.inputManager.reset();
         
-        // Show countdown before restarting
-        this.showCountdown();
+        // Start game immediately - no countdown on restart
+        this.stateManager.setState(STATES.PLAYING);
+        this.startSpawning();
+        this.animate();
+        
+        console.log('✅ Game restarted completely');
     }
 
     setupResizeHandling() {
@@ -578,6 +586,16 @@ export class Game {
             this.player.setReadyState(false);
         }
         
+        // IMPORTANT: Reset environment again to ensure clean state
+        // This ensures all buildings and decorations are cleared and regenerated
+        this.environment.reset();
+        this.obstacleManager.reset();
+        this.collectableManager.reset();
+        this.powerUpManager.reset();
+        
+        // Reset game speed to initial value
+        this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
+        
         // Now actually start the game
         this.stateManager.setState(STATES.PLAYING);
         this.gameActive = true;
@@ -588,10 +606,17 @@ export class Game {
     }
 
     animate() {
-        requestAnimationFrame(() => this.animate());
+        this.animationId = requestAnimationFrame(() => this.animate());
 
         this.updateGameLogic();
         this.renderer.render(this.scene, this.camera);
+    }
+
+    stopAnimation() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
     }
 }
 
