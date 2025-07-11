@@ -156,6 +156,11 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
         .control-demo {
             display: flex;
             justify-content: center;
@@ -621,6 +626,11 @@
         </div>
     </div>
 
+    <!-- Preload Three.js for faster loading -->
+    <link rel="modulepreload" href="https://unpkg.com/three@0.160.0/build/three.module.js">
+    <link rel="modulepreload" href="https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js">
+    <link rel="modulepreload" href="https://unpkg.com/three@0.160.0/examples/jsm/loaders/DRACOLoader.js">
+    
     <!-- Three.js Import Map for Production -->
     <script type="importmap">
         {
@@ -631,6 +641,89 @@
         }
     </script>
     
+    <!-- Sentry Error Monitoring - 2025 Latest Setup -->
+    <script type="module">
+        import * as Sentry from '@sentry/browser';
+        
+        // Initialize Sentry with current 2025 best practices
+        Sentry.init({
+            dsn: "https://03e35eb71c4309d939f31547cf4e6d4b@o4509651198214144.ingest.us.sentry.io/4509651207454720",
+            
+            // Environment and release tracking
+            environment: window.location.hostname === 'localhost' ? 'development' : 'production',
+            release: 'infrastructure-runner@1.0.0',
+            
+            // Performance monitoring (current 2025 approach)
+            tracesSampleRate: window.location.hostname === 'localhost' ? 1.0 : 0.1,
+            tracePropagationTargets: ["localhost", window.location.origin],
+            
+            // Session Replay (2025 feature)
+            replaysSessionSampleRate: 0.1, // 10% of sessions
+            replaysOnErrorSampleRate: 1.0, // 100% when errors occur
+            
+            // Debug mode for development
+            debug: window.location.hostname === 'localhost',
+            
+            // Enhanced error filtering for production
+            beforeSend(event, hint) {
+                // Skip non-actionable errors
+                const error = hint.originalException;
+                if (error && typeof error.message === 'string') {
+                    const skipPatterns = [
+                        'favicon.ico',
+                        'Non-Error promise rejection',
+                        'Script error',
+                        'Network request failed',
+                        'ResizeObserver loop limit exceeded'
+                    ];
+                    
+                    if (skipPatterns.some(pattern => error.message.includes(pattern))) {
+                        return null;
+                    }
+                }
+                
+                // Skip errors from browser extensions
+                if (event.exception?.values?.[0]?.stacktrace?.frames?.some(frame => 
+                    frame.filename?.includes('extension://') || 
+                    frame.filename?.includes('moz-extension://'))) {
+                    return null;
+                }
+                
+                return event;
+            }
+        });
+        
+        // Set user context and additional tags
+        Sentry.setTag('component', 'infrastructure-runner');
+        Sentry.setTag('version', '1.0.0');
+        Sentry.setExtra('viewport', {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            pixelRatio: window.devicePixelRatio
+        });
+        
+        // Set user ID if available
+        const userId = localStorage.getItem('infrastructureRunner_userId');
+        if (userId) {
+            Sentry.setUser({ id: userId });
+        }
+        
+        // Make Sentry available globally
+        window.Sentry = Sentry;
+        
+        // Add initial breadcrumb
+        Sentry.addBreadcrumb({
+            message: 'Infrastructure Runner app started',
+            level: 'info',
+            category: 'navigation',
+            data: {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform
+            }
+        });
+    </script>
+    
     <!-- Global Three.js and Model Configurations -->
     <script type="module">
         import * as THREE from 'three';
@@ -638,19 +731,38 @@
         import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
         import { MODEL_CONFIGURATIONS } from './model-configurations.js';
         
-        // Make available globally for production build compatibility
-        // Use separate variables to avoid extending frozen objects
-        window.THREE = THREE;
-        window.GLTFLoader = GLTFLoader;
-        window.DRACOLoader = DRACOLoader;
-        window.MODEL_CONFIGURATIONS = MODEL_CONFIGURATIONS;
-        
-        // Ensure all globals are available before proceeding
-        window.threeJsReady = true;
-        
-        // Debug logging for verification
-        if (typeof window !== 'undefined' && window.location?.search?.includes('debug')) {
-            window.onboardingDebug = true;
+        try {
+            // Make available globally for production build compatibility
+            // Use separate variables to avoid extending frozen objects
+            window.THREE = THREE;
+            window.GLTFLoader = GLTFLoader;
+            window.DRACOLoader = DRACOLoader;
+            window.MODEL_CONFIGURATIONS = MODEL_CONFIGURATIONS;
+            
+            // Ensure all globals are available before proceeding
+            window.threeJsReady = true;
+            
+            // Debug logging for verification
+            if (typeof window !== 'undefined' && window.location?.search?.includes('debug')) {
+                window.onboardingDebug = true;
+            }
+            
+            // Log successful Three.js initialization
+            if (window.Sentry) {
+                window.Sentry.addBreadcrumb({
+                    message: 'Three.js modules loaded successfully',
+                    level: 'info',
+                    category: 'initialization'
+                });
+            }
+        } catch (error) {
+            // Report Three.js loading errors to Sentry
+            if (window.Sentry) {
+                window.Sentry.captureException(error, {
+                    tags: { component: 'threejs-initialization' }
+                });
+            }
+            throw error;
         }
     </script>
     
@@ -698,7 +810,7 @@
                                 }
                             }, 500);
                         }
-                    }, 1000); // Show complete state for 1 second
+                    }, 300); // Show complete state for 300ms
                 }
             }
         };
@@ -706,26 +818,26 @@
         // Initialize loading and start the loading process
         window.gameLoadingManager.updateProgress(0, 'Initializing...');
         
-        // Start loading progress simulation
+        // Faster loading progress simulation
         setTimeout(() => {
             window.gameLoadingManager.updateProgress(1, 'Loading building models...');
             
             setTimeout(() => {
                 window.gameLoadingManager.updateProgress(2, 'Loading models... (3/9)');
-            }, 500);
+            }, 200);
             
             setTimeout(() => {
                 window.gameLoadingManager.updateProgress(3, 'Loading tree models...');
-            }, 1000);
+            }, 400);
             
             setTimeout(() => {
                 window.gameLoadingManager.updateProgress(4, 'Creating urban scene...');
-            }, 1500);
+            }, 600);
             
             setTimeout(() => {
                 window.gameLoadingManager.updateProgress(5, 'Ready to play!');
-            }, 2000);
-        }, 500);
+            }, 800);
+        }, 200);
         
         // Professional Onboarding System
         let currentOnboardingStep = 0;
@@ -863,33 +975,78 @@
         
         async function initializeModelViewers() {
             try {
-                // Wait for Three.js to be ready
-                await waitForThreeJs();
+                // Show loading placeholders immediately
+                showLoadingPlaceholders();
                 
-                // Import the onboarding model viewer
-                const { OnboardingModelViewer } = await import('./onboarding-viewer.js');
+                // Load Three.js and onboarding viewer in background
+                const loadPromise = (async () => {
+                    await waitForThreeJs();
+                    const { OnboardingModelViewer } = await import('./onboarding-viewer.js');
+                    
+                    if (!window.onboardingModelViewer) {
+                        window.onboardingModelViewer = await new OnboardingModelViewer().init();
+                    }
+                    
+                    // Load all models in parallel for better performance
+                    const modelPromises = [
+                        window.onboardingModelViewer.createModelViewer('blueprint-viewer', 'blueprint', 'Construction Plans'),
+                        window.onboardingModelViewer.createModelViewer('water-viewer', 'waterDrop', 'Clean Water Supply'),
+                        window.onboardingModelViewer.createModelViewer('energy-viewer', 'energyCell', 'Power Infrastructure'),
+                        window.onboardingModelViewer.createModelViewer('hardhat-viewer', 'hardHat', 'Safety Protection'),
+                        window.onboardingModelViewer.createModelViewer('jetpack-viewer', 'helicopter', 'Flight Capability'),
+                        window.onboardingModelViewer.createModelViewer('solar-viewer', 'solarPower', 'Solar Energy'),
+                        window.onboardingModelViewer.createModelViewer('wind-viewer', 'windPower', 'Wind Power'),
+                        window.onboardingModelViewer.createModelViewer('water-pipeline-viewer', 'waterPipeline', 'Water Infrastructure')
+                    ];
+                    
+                    // Load models in parallel
+                    await Promise.allSettled(modelPromises);
+                })();
                 
-                // Initialize the onboarding model viewer
-                if (!window.onboardingModelViewer) {
-                    window.onboardingModelViewer = await new OnboardingModelViewer().init();
-                }
-                
-                // Initialize collectible viewers
-                await window.onboardingModelViewer.createModelViewer('blueprint-viewer', 'blueprint', 'Construction Plans');
-                await window.onboardingModelViewer.createModelViewer('water-viewer', 'waterDrop', 'Clean Water Supply');
-                await window.onboardingModelViewer.createModelViewer('energy-viewer', 'energyCell', 'Power Infrastructure');
-                
-                // Initialize power-up viewers
-                await window.onboardingModelViewer.createModelViewer('hardhat-viewer', 'hardHat', 'Safety Protection');
-                await window.onboardingModelViewer.createModelViewer('jetpack-viewer', 'helicopter', 'Flight Capability');
-                await window.onboardingModelViewer.createModelViewer('solar-viewer', 'solarPower', 'Solar Energy');
-                await window.onboardingModelViewer.createModelViewer('wind-viewer', 'windPower', 'Wind Power');
-                await window.onboardingModelViewer.createModelViewer('water-pipeline-viewer', 'waterPipeline', 'Water Infrastructure');
+                // Don't wait for models to load - form is already shown with placeholders
+                loadPromise.catch(() => {
+                    showFallbackIcons();
+                });
                 
             } catch (error) {
-                // Fallback to icons if 3D models fail
                 showFallbackIcons();
             }
+        }
+        
+        function showLoadingPlaceholders() {
+            // Show spinning placeholders for 3D model containers
+            const containers = [
+                'blueprint-viewer', 'water-viewer', 'energy-viewer', 
+                'hardhat-viewer', 'jetpack-viewer', 'solar-viewer', 
+                'wind-viewer', 'water-pipeline-viewer'
+            ];
+            
+            containers.forEach(id => {
+                const container = document.getElementById(id);
+                if (container) {
+                    container.innerHTML = `
+                        <div style="
+                            width: 120px; 
+                            height: 120px; 
+                            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+                            border-radius: 8px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            border: 1px solid #333;
+                        ">
+                            <div style="
+                                width: 40px;
+                                height: 40px;
+                                border: 3px solid #555;
+                                border-top: 3px solid #fff;
+                                border-radius: 50%;
+                                animation: spin 1s linear infinite;
+                            "></div>
+                        </div>
+                    `;
+                }
+            });
         }
         
         function showFallbackIcons() {

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build", 
+    "build": "vite build",
     "preview": "vite preview",
     "serve": "vite --host",
     "enhanced": "vite enhanced-launcher.html --host",
@@ -15,6 +15,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sentry/browser": "^9.38.0",
     "three": "^0.177.0"
   },
   "devDependencies": {

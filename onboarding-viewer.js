@@ -84,9 +84,38 @@ export class OnboardingModelViewer {
                     this.GLTFLoader = window.GLTFLoader;
                     this.DRACOLoader = window.DRACOLoader;
                     this.MODEL_CONFIGURATIONS = window.MODEL_CONFIGURATIONS;
+                    
+                    // Log successful initialization
+                    if (window.Sentry) {
+                        window.Sentry.addBreadcrumb({
+                            message: 'OnboardingModelViewer globals initialized successfully',
+                            level: 'info',
+                            category: 'initialization',
+                            data: { attempts, method: 'waitForGlobals' }
+                        });
+                    }
+                    
                     resolve();
                 } else if (attempts >= maxAttempts) {
-                    reject(new Error('Timeout waiting for Three.js and MODEL_CONFIGURATIONS'));
+                    const error = new Error('Timeout waiting for Three.js and MODEL_CONFIGURATIONS');
+                    
+                    // Report timeout to Sentry
+                    if (window.Sentry) {
+                        window.Sentry.captureException(error, {
+                            tags: { component: 'onboarding-model-viewer', timeout: 'true' },
+                            extra: {
+                                attempts,
+                                availableGlobals: {
+                                    THREE: !!window.THREE,
+                                    GLTFLoader: !!window.GLTFLoader,
+                                    DRACOLoader: !!window.DRACOLoader,
+                                    MODEL_CONFIGURATIONS: !!window.MODEL_CONFIGURATIONS
+                                }
+                            }
+                        });
+                    }
+                    
+                    reject(error);
                 } else {
                     setTimeout(checkGlobals, 100);
                 }
@@ -151,11 +180,46 @@ export class OnboardingModelViewer {
         let model;
         let usingFallback = false;
         try {
+            // Add breadcrumb for model loading attempt
+            if (window.Sentry) {
+                window.Sentry.addBreadcrumb({
+                    message: `Loading 3D model: ${modelKey}`,
+                    level: 'info',
+                    category: 'model-loading',
+                    data: { modelKey, containerId }
+                });
+            }
+            
             model = await this.loadModel(modelKey);
+            
+            // Add breadcrumb for successful model loading
+            if (window.Sentry) {
+                window.Sentry.addBreadcrumb({
+                    message: `Successfully loaded 3D model: ${modelKey}`,
+                    level: 'info',
+                    category: 'model-loading',
+                    data: { modelKey, containerId, success: true }
+                });
+            }
         } catch (error) {
             // Model loading failed, create fallback
             usingFallback = true;
             model = this.createFallbackModel(modelKey);
+            
+            // Report model loading failure to Sentry
+            if (window.Sentry) {
+                window.Sentry.captureException(error, {
+                    tags: { 
+                        component: 'onboarding-model-viewer',
+                        modelKey: modelKey,
+                        fallback: 'true'
+                    },
+                    extra: {
+                        modelPath: this.MODEL_CONFIGURATIONS?.[modelKey]?.path,
+                        containerDiv: containerId
+                    }
+                });
+            }
             
             // Add visual indicator for fallback models
             const indicator = document.createElement('div');
