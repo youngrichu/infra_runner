@@ -5,6 +5,9 @@ import { LANES, COLORS, SPAWN_CONFIG, SCORING, COLLECTABLE_SPAWN_WEIGHTS, PHYSIC
 import { CollisionUtils } from './collision-utils.js';
 import { MODEL_CONFIGURATIONS, getModelConfig, shouldLoadModel, PRIORITY_LOADING_ORDER } from './model-configurations.js';
 
+// Expose MODEL_CONFIGURATIONS globally for onboarding viewer
+window.MODEL_CONFIGURATIONS = MODEL_CONFIGURATIONS;
+
 export class CollectableManager {
     constructor(scene) {
         this.scene = scene;

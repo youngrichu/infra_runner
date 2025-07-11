@@ -623,7 +623,6 @@
 
     <!-- Game Modules -->
     <script type="module" src="./game.js"></script>
-    <script type="module" src="./onboarding-model-viewer.js"></script>
     
     <script>
         // Global loading progress manager
@@ -761,14 +760,16 @@
             checkPlayerRegistrationAndStart();
         }
         
-        async function cleanupModelViewers() {
+        function cleanupModelViewers() {
             try {
-                const { onboardingModelViewer } = await import('./onboarding-model-viewer.js');
-                onboardingModelViewer.cleanup();
+                if (window.onboardingModelViewer) {
+                    window.onboardingModelViewer.cleanup();
+                }
             } catch (error) {
                 console.error('Error cleaning up 3D model viewers:', error);
             }
         }
+        
         
         function checkPlayerRegistrationAndStart() {
             // Check if player data exists
@@ -820,20 +821,25 @@
         
         async function initializeModelViewers() {
             try {
-                // Import the model viewer module
-                const { onboardingModelViewer } = await import('./onboarding-model-viewer.js');
+                // Import the onboarding model viewer
+                const { OnboardingModelViewer } = await import('./onboarding-viewer.js');
+                
+                // Initialize the onboarding model viewer
+                if (!window.onboardingModelViewer) {
+                    window.onboardingModelViewer = await new OnboardingModelViewer().init();
+                }
                 
                 // Initialize collectible viewers
-                await onboardingModelViewer.createModelViewer('blueprint-viewer', 'blueprint', 'Construction Plans');
-                await onboardingModelViewer.createModelViewer('water-viewer', 'waterDrop', 'Clean Water Supply');
-                await onboardingModelViewer.createModelViewer('energy-viewer', 'energyCell', 'Power Infrastructure');
+                await window.onboardingModelViewer.createModelViewer('blueprint-viewer', 'blueprint', 'Construction Plans');
+                await window.onboardingModelViewer.createModelViewer('water-viewer', 'waterDrop', 'Clean Water Supply');
+                await window.onboardingModelViewer.createModelViewer('energy-viewer', 'energyCell', 'Power Infrastructure');
                 
                 // Initialize power-up viewers
-                await onboardingModelViewer.createModelViewer('hardhat-viewer', 'hardHat', 'Safety Protection');
-                await onboardingModelViewer.createModelViewer('jetpack-viewer', 'helicopter', 'Flight Capability');
-                await onboardingModelViewer.createModelViewer('solar-viewer', 'solarPower', 'Solar Energy');
-                await onboardingModelViewer.createModelViewer('wind-viewer', 'windPower', 'Wind Power');
-                await onboardingModelViewer.createModelViewer('water-pipeline-viewer', 'waterPipeline', 'Water Infrastructure');
+                await window.onboardingModelViewer.createModelViewer('hardhat-viewer', 'hardHat', 'Safety Protection');
+                await window.onboardingModelViewer.createModelViewer('jetpack-viewer', 'helicopter', 'Flight Capability');
+                await window.onboardingModelViewer.createModelViewer('solar-viewer', 'solarPower', 'Solar Energy');
+                await window.onboardingModelViewer.createModelViewer('wind-viewer', 'windPower', 'Wind Power');
+                await window.onboardingModelViewer.createModelViewer('water-pipeline-viewer', 'waterPipeline', 'Water Infrastructure');
                 
                 console.log('3D model viewers initialized successfully');
             } catch (error) {
