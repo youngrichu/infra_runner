@@ -158,7 +158,17 @@ export class DirectModelEnvironment {
         
         const promises = modelFiles.map(async (filename) => {
             try {
-                const gltf = await this.gltfLoader.loadAsync(`./assets/city/model/${filename}`);
+                let gltf;
+                
+                // Check if asset is preloaded first
+                if (window.assetPreloader && window.assetPreloader.getLoadedAsset(`building_${filename}`)) {
+                    gltf = window.assetPreloader.getLoadedAsset(`building_${filename}`);
+                    // Using preloaded building model
+                } else {
+                    // Fallback to loading if not preloaded
+                    gltf = await this.gltfLoader.loadAsync(`./assets/city/model/${filename}`);
+                }
+                
                 this.buildingTemplates[filename] = gltf.scene.clone();
                 this.enhanceBuilding(this.buildingTemplates[filename], filename);
                 // Model loaded successfully
@@ -178,7 +188,17 @@ export class DirectModelEnvironment {
 
     async loadTreeModel() {
         try {
-            const gltf = await this.gltfLoader.loadAsync('./assets/city/model/lowpolytrees.glb');
+            let gltf;
+            
+            // Check if asset is preloaded first
+            if (window.assetPreloader && window.assetPreloader.getLoadedAsset('tree_main')) {
+                gltf = window.assetPreloader.getLoadedAsset('tree_main');
+                // Using preloaded tree model
+            } else {
+                // Fallback to loading if not preloaded
+                gltf = await this.gltfLoader.loadAsync('./assets/city/model/lowpolytrees.glb');
+            }
+            
             this.treeTemplate = gltf.scene.clone();
             this.enhanceTree(this.treeTemplate);
             // Tree model loaded successfully

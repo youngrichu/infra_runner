@@ -84,6 +84,18 @@ export class CollectableManager {
             return null;
         }
         
+        // Check if asset is preloaded first
+        const fileName = config.path.split('/').pop(); // Extract filename from path
+        const preloadedKey = `collectable_${fileName}`;
+        
+        if (window.assetPreloader && window.assetPreloader.getLoadedAsset(preloadedKey)) {
+            const gltf = window.assetPreloader.getLoadedAsset(preloadedKey);
+            this.loadedModels.set(type, gltf);
+            // Using preloaded collectable model
+            return Promise.resolve(gltf);
+        }
+        
+        // Fallback to loading if not preloaded
         const loadPromise = this.loader.loadAsync(config.path)
             .then(gltf => {
                 this.loadedModels.set(type, gltf);

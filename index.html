@@ -815,29 +815,127 @@
             }
         };
         
+        // Global asset preloader
+        window.assetPreloader = {
+            loadedAssets: new Map(),
+            gltfLoader: null,
+            dracoLoader: null,
+            
+            async init() {
+                if (this.gltfLoader) return; // Already initialized
+                
+                // Wait for Three.js to be available
+                while (!window.THREE || !window.GLTFLoader || !window.DRACOLoader) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                this.gltfLoader = new window.GLTFLoader();
+                this.dracoLoader = new window.DRACOLoader();
+                this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+                this.gltfLoader.setDRACOLoader(this.dracoLoader);
+            },
+            
+            async loadAsset(path, key) {
+                if (this.loadedAssets.has(key)) {
+                    return this.loadedAssets.get(key);
+                }
+                
+                return new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error(`Asset loading timeout: ${path}`));
+                    }, 10000);
+                    
+                    this.gltfLoader.load(
+                        path,
+                        (gltf) => {
+                            clearTimeout(timeout);
+                            this.loadedAssets.set(key, gltf);
+                            resolve(gltf);
+                        },
+                        (progress) => {
+                            // Loading progress
+                        },
+                        (error) => {
+                            clearTimeout(timeout);
+                            reject(error);
+                        }
+                    );
+                });
+            },
+            
+            getLoadedAsset(key) {
+                return this.loadedAssets.get(key);
+            }
+        };
+        
+        async function startAssetPreloading() {
+            try {
+                // Initialize the preloader
+                await window.assetPreloader.init();
+                window.gameLoadingManager.updateProgress(1, 'Loading building models...');
+                
+                // Load building models
+                const buildingFiles = [
+                    '001.glb', '002.glb', '006.glb', '007.glb', '008.glb', 
+                    '009.glb', '0010.glb', '0011.glb', '0012.glb'
+                ];
+                
+                const buildingPromises = buildingFiles.map(async (file, index) => {
+                    try {
+                        await window.assetPreloader.loadAsset(`./assets/city/model/${file}`, `building_${file}`);
+                        window.gameLoadingManager.updateProgress(1 + (index / buildingFiles.length), `Loading building ${index + 1}/${buildingFiles.length}...`);
+                    } catch (error) {
+                        console.warn(`Failed to load building ${file}:`, error);
+                    }
+                });
+                
+                await Promise.allSettled(buildingPromises);
+                window.gameLoadingManager.updateProgress(2, 'Loading collectables...');
+                
+                // Load collectable models
+                const collectableFiles = [
+                    'Bucket.glb', 'Plastic%20Barrier.glb', 'Cinder%20block.glb', 
+                    'energy-cell.glb', 'Jet-Pack.glb', 'Boots.glb', 'FireHydrant.glb',
+                    'Solar%20Panel%20Ground.glb'
+                ];
+                
+                const collectablePromises = collectableFiles.map(async (file, index) => {
+                    try {
+                        await window.assetPreloader.loadAsset(`/assets/models/collectables/${file}`, `collectable_${file}`);
+                        window.gameLoadingManager.updateProgress(2 + (index / collectableFiles.length), `Loading collectables ${index + 1}/${collectableFiles.length}...`);
+                    } catch (error) {
+                        console.warn(`Failed to load collectable ${file}:`, error);
+                    }
+                });
+                
+                await Promise.allSettled(collectablePromises);
+                window.gameLoadingManager.updateProgress(4, 'Loading additional assets...');
+                
+                // Load tree model
+                try {
+                    await window.assetPreloader.loadAsset('./assets/city/model/lowpolytrees.glb', 'tree_main');
+                } catch (error) {
+                    console.warn('Failed to load tree model:', error);
+                }
+                
+                window.gameLoadingManager.updateProgress(5, 'Ready to play!');
+                
+                // Mark preloading as complete
+                window.assetsPreloaded = true;
+                
+            } catch (error) {
+                console.error('Asset preloading failed:', error);
+                // Continue with fake loading as fallback
+                setTimeout(() => window.gameLoadingManager.updateProgress(5, 'Ready to play!'), 1000);
+                window.assetsPreloaded = true;
+            }
+        }
+        
         // Initialize loading and start the loading process
         window.gameLoadingManager.updateProgress(0, 'Initializing...');
         
-        // Faster loading progress simulation
-        setTimeout(() => {
-            window.gameLoadingManager.updateProgress(1, 'Loading building models...');
-            
-            setTimeout(() => {
-                window.gameLoadingManager.updateProgress(2, 'Loading models... (3/9)');
-            }, 200);
-            
-            setTimeout(() => {
-                window.gameLoadingManager.updateProgress(3, 'Loading tree models...');
-            }, 400);
-            
-            setTimeout(() => {
-                window.gameLoadingManager.updateProgress(4, 'Creating urban scene...');
-            }, 600);
-            
-            setTimeout(() => {
-                window.gameLoadingManager.updateProgress(5, 'Ready to play!');
-            }, 800);
-        }, 200);
+        // Start actual asset preloading
+        startAssetPreloading();
         
         // Professional Onboarding System
         let currentOnboardingStep = 0;
@@ -935,8 +1033,8 @@
             const checkGame = () => {
                 attempts++;
                 
-                if (window.initializeGame && typeof window.initializeGame === 'function') {
-                    // Game is ready, start it to show registration
+                if (window.initializeGame && typeof window.initializeGame === 'function' && window.assetsPreloaded) {
+                    // Game and assets are ready, start it to show registration
                     startGameAfterRegistration();
                 } else if (attempts >= maxAttempts) {
                     // Timeout - fallback to showing registration directly
