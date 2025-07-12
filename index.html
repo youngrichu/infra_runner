@@ -868,10 +868,43 @@
             }
         };
         
+        async function ensureGameModuleLoaded() {
+            // Wait for game module to be loaded
+            return new Promise((resolve) => {
+                if (window.initializeGame && typeof window.initializeGame === 'function') {
+                    resolve();
+                    return;
+                }
+                
+                let attempts = 0;
+                const maxAttempts = 50; // 5 seconds max
+                
+                const checkGame = () => {
+                    attempts++;
+                    
+                    if (window.initializeGame && typeof window.initializeGame === 'function') {
+                        resolve();
+                    } else if (attempts >= maxAttempts) {
+                        console.warn('Game module loading timeout, continuing anyway');
+                        resolve(); // Don't block the loading process
+                    } else {
+                        setTimeout(checkGame, 100);
+                    }
+                };
+                
+                checkGame();
+            });
+        }
+        
         async function startAssetPreloading() {
             try {
                 // Initialize the preloader
                 await window.assetPreloader.init();
+                window.gameLoadingManager.updateProgress(1, 'Loading game modules...');
+                
+                // Ensure game module is loaded before proceeding
+                await ensureGameModuleLoaded();
+                
                 window.gameLoadingManager.updateProgress(1, 'Loading building models...');
                 
                 // Load building models
@@ -1017,35 +1050,12 @@
             const storedPlayerData = localStorage.getItem('playerData');
             
             if (storedPlayerData) {
-                // Player already registered, start the game
+                // Player already registered, start the game immediately
                 startGameAfterRegistration();
             } else {
-                // Player not registered, wait for game to be ready then let it handle registration
-                waitForGameAndShowRegistration();
+                // Player not registered, show registration form immediately
+                showRegistrationFallback();
             }
-        }
-        
-        function waitForGameAndShowRegistration() {
-            // Check if game is ready every 100ms for up to 5 seconds
-            let attempts = 0;
-            const maxAttempts = 50; // 5 seconds
-            
-            const checkGame = () => {
-                attempts++;
-                
-                if (window.initializeGame && typeof window.initializeGame === 'function' && window.assetsPreloaded) {
-                    // Game and assets are ready, start it to show registration
-                    startGameAfterRegistration();
-                } else if (attempts >= maxAttempts) {
-                    // Timeout - fallback to showing registration directly
-                    console.warn('Game initialization timeout, showing registration fallback');
-                    showRegistrationFallback();
-                } else {
-                    setTimeout(checkGame, 100);
-                }
-            };
-            
-            checkGame();
         }
         
         function showRegistrationFallback() {
@@ -1147,10 +1157,16 @@
                 return;
             }
             
-            // Mark as initialized and start the game
+            // Mark as initialized and start immediately
             window.gameInitialized = true;
-            if (window.initializeGame) {
+            
+            // Game module should already be loaded during loading screen
+            if (window.initializeGame && typeof window.initializeGame === 'function') {
                 window.initializeGame();
+            } else {
+                console.error('Game module not available - this should not happen');
+                // Show error message to user
+                alert('Game failed to load properly. Please refresh the page.');
             }
         }
         
@@ -1284,8 +1300,8 @@
             });
         }
         
-        // Clear localStorage for testing (remove this line in production)
-        localStorage.removeItem('infrastructureRunner_onboardingCompleted');
+        // Debug mode - uncomment to reset onboarding for testing
+        // localStorage.removeItem('infrastructureRunner_onboardingCompleted');
     </script>
 </body>
 </html>
