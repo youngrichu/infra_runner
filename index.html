@@ -927,21 +927,53 @@
                 
                 // Load collectable models
                 const collectableFiles = [
-                    'Bucket.glb', 'Plastic%20Barrier.glb', 'Cinder%20block.glb', 
-                    'energy-cell.glb', 'Jet-Pack.glb', 'Boots.glb', 'FireHydrant.glb',
-                    'Solar%20Panel%20Ground.glb'
+                    'Bucket.glb', 'energy-cell.glb'
+                ];
+                
+                // Load power-up models  
+                const powerUpFiles = [
+                    'Jet-Pack.glb', 'Boots.glb', 'FireHydrant.glb', 'Solar_Panel_Ground.glb'
+                ];
+                
+                // Load obstacle models
+                const obstacleFiles = [
+                    'Plastic_Barrier.glb', 'Cinder_block.glb'
                 ];
                 
                 const collectablePromises = collectableFiles.map(async (file, index) => {
                     try {
                         await window.assetPreloader.loadAsset(`/assets/models/collectables/${file}`, `collectable_${file}`);
-                        window.gameLoadingManager.updateProgress(2 + (index / collectableFiles.length), `Loading collectables ${index + 1}/${collectableFiles.length}...`);
+                        window.gameLoadingManager.updateProgress(2 + (index / collectableFiles.length * 0.4), `Loading collectables ${index + 1}/${collectableFiles.length}...`);
                     } catch (error) {
                         console.warn(`Failed to load collectable ${file}:`, error);
                     }
                 });
                 
                 await Promise.allSettled(collectablePromises);
+                
+                // Load power-up models
+                const powerUpPromises = powerUpFiles.map(async (file, index) => {
+                    try {
+                        await window.assetPreloader.loadAsset(`/assets/models/power-ups/${file}`, `powerup_${file}`);
+                        window.gameLoadingManager.updateProgress(2.4 + (index / powerUpFiles.length * 0.8), `Loading power-ups ${index + 1}/${powerUpFiles.length}...`);
+                    } catch (error) {
+                        console.warn(`Failed to load power-up ${file}:`, error);
+                    }
+                });
+                
+                await Promise.allSettled(powerUpPromises);
+                
+                // Load obstacle models
+                const obstaclePromises = obstacleFiles.map(async (file, index) => {
+                    try {
+                        await window.assetPreloader.loadAsset(`/assets/models/obstacles/${file}`, `obstacle_${file}`);
+                        window.gameLoadingManager.updateProgress(3.2 + (index / obstacleFiles.length * 0.8), `Loading obstacles ${index + 1}/${obstacleFiles.length}...`);
+                    } catch (error) {
+                        console.warn(`Failed to load obstacle ${file}:`, error);
+                    }
+                });
+                
+                await Promise.allSettled(obstaclePromises);
                 window.gameLoadingManager.updateProgress(4, 'Loading additional assets...');
                 
                 // Load tree model
