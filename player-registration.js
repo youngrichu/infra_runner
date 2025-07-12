@@ -30,7 +30,7 @@ export class PlayerRegistration {
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
                 padding: 30px;
                 border-radius: 20px;
                 box-shadow: 0 20px 40px rgba(0,0,0,0.3);

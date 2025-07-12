@@ -1091,96 +1091,9 @@
         }
         
         function showRegistrationFallback() {
-            // Direct fallback if game doesn't initialize - create basic registration form
-            if (document.getElementById('player-registration')) {
-                return; // Already showing
-            }
-            
-            const registrationHTML = `
-                <div id="player-registration" style="
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.95);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 10000;
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                ">
-                    <div style="
-                        background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-                        padding: 40px;
-                        border-radius: 15px;
-                        width: 90%;
-                        max-width: 400px;
-                        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-                        border: 1px solid #333;
-                    ">
-                        <h2 style="text-align: center; color: white; margin-bottom: 30px; font-size: 24px;">
-                            Join the Infrastructure Runner Leaderboard
-                        </h2>
-                        <form id="fallback-registration-form">
-                            <div style="margin-bottom: 20px;">
-                                <input type="text" id="fallback-player-name" placeholder="Your Name" required style="
-                                    width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 16px;
-                                    background: rgba(255,255,255,0.9); box-sizing: border-box;
-                                " />
-                            </div>
-                            <div style="margin-bottom: 20px;">
-                                <input type="email" id="fallback-player-email" placeholder="Email Address" required style="
-                                    width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 16px;
-                                    background: rgba(255,255,255,0.9); box-sizing: border-box;
-                                " />
-                            </div>
-                            <div style="margin-bottom: 25px;">
-                                <input type="text" id="fallback-organization-name" placeholder="Organization Name" required style="
-                                    width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 16px;
-                                    background: rgba(255,255,255,0.9); box-sizing: border-box;
-                                " />
-                            </div>
-                            <button type="submit" style="
-                                width: 100%; padding: 14px; background: linear-gradient(45deg, #FF6B35, #FFD700);
-                                border: none; border-radius: 8px; color: white; font-size: 18px; font-weight: bold;
-                                cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px;
-                                box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-                            ">Start Playing</button>
-                        </form>
-                        <div style="text-align: center; margin-top: 15px; color: #ccc; font-size: 12px;">
-                            Your information will be used for the leaderboard only
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.insertAdjacentHTML('beforeend', registrationHTML);
-            
-            // Handle form submission
-            document.getElementById('fallback-registration-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const name = document.getElementById('fallback-player-name').value.trim();
-                const email = document.getElementById('fallback-player-email').value.trim();
-                const org = document.getElementById('fallback-organization-name').value.trim();
-                
-                if (name && email && org) {
-                    // Store player data
-                    const playerData = { playerName: name, email: email, organizationName: org };
-                    localStorage.setItem('playerData', JSON.stringify(playerData));
-                    
-                    // Remove registration form
-                    document.getElementById('player-registration').remove();
-                    
-                    // Try to start game again
-                    startGameAfterRegistration();
-                }
-            });
-            
-            // Focus first input
-            setTimeout(() => {
-                document.getElementById('fallback-player-name').focus();
-            }, 100);
+            // Removed redundant fallback form - use PlayerRegistration class instead
+            // This ensures consistent registration experience across the application
+            console.log('Fallback form removed - PlayerRegistration class handles all registration');
         }
         
         function startGameAfterRegistration() {

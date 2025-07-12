@@ -7,6 +7,7 @@ import { CollectableManager } from './collectables.js';
 import { PowerUpManager } from './powerups.js';
 import { UIManager } from './ui.js';
 import { InputManager } from './input.js';
+import { PlayerRegistration } from './player-registration.js';
 import { GAME_CONFIG, SCORING, SPAWN_CONFIG, PHYSICS, STATES } from './constants.js';
 
 // Import our performance optimizations
@@ -674,6 +675,17 @@ export class EnhancedGame {
             this.renderer.dispose();
         }
         
+    }
+
+    // Add startNewGame method for consistent "New Game" functionality
+    startNewGame() {
+        if (!this.playerRegistration) {
+            this.playerRegistration = new PlayerRegistration(() => {
+                // After registration, restart the game
+                this.restartGame();
+            });
+        }
+        this.playerRegistration.show();
     }
 }
 
