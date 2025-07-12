@@ -628,7 +628,6 @@ export class Game {
         // IMPORTANT: Reset environment again to ensure clean state
         // This ensures all buildings and decorations are cleared and regenerated
         this.environment.reset();
-        this.obstacleManager.reset();
         this.collectableManager.reset();
         this.powerUpManager.reset();
         
