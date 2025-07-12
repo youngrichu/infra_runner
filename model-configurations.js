@@ -39,7 +39,7 @@ export const MODEL_CONFIGURATIONS = {
     
     // ✅ WORKING POWER-UPS
     "solarPower": {
-        "path": "/assets/models/power-ups/Solar Panel Ground.glb",
+        "path": "/assets/models/power-ups/Solar_Panel_Ground.glb",
         "scale": [0.350, 0.350, 0.350], // Reduced from 0.400 - still a tiny bit too big
         "originalSize": { "x": "1.289", "y": "1.096", "z": "1.667" },
         "targetSize": { "x": "0.500", "y": "0.100", "z": "0.500" },
@@ -93,7 +93,7 @@ export const MODEL_CONFIGURATIONS = {
     },
     
     "constructionBarrier": {
-        "path": "/assets/models/obstacles/Plastic Barrier.glb",
+        "path": "/assets/models/obstacles/Plastic_Barrier.glb",
         "scale": [0.898, 0.898, 0.898], // Good size
         "originalSize": { "x": "1.035", "y": "0.600", "z": "0.334" },
         "targetSize": { "x": "1.500", "y": "1.000", "z": "0.300" },
@@ -112,7 +112,7 @@ export const MODEL_CONFIGURATIONS = {
     
     // ✅ FIXED OVERSIZED MODEL (now properly scaled)
     "rubble": {
-        "path": "/assets/models/obstacles/Cinder block.glb",
+        "path": "/assets/models/obstacles/Cinder_block.glb",
         "scale": [0.000002, 0.000002, 0.000002], // Optimized scale from analysis (rounded)
         "originalSize": { "x": "367058.375", "y": "206465.234", "z": "211940.000" },
         "targetSize": { "x": "0.800", "y": "0.400", "z": "0.800" },

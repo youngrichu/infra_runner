@@ -7,7 +7,7 @@ import { CollectableManager } from './collectables.js';
 import { PowerUpManager } from './powerups.js';
 import { UIManager } from './ui.js';
 import { InputManager } from './input.js';
-import { GAME_CONFIG, SCORING, SPAWN_CONFIG, PHYSICS } from './constants.js';
+import { GAME_CONFIG, SCORING, SPAWN_CONFIG, PHYSICS, STATES } from './constants.js';
 
 // Import our performance optimizations
 import { 
@@ -554,12 +554,12 @@ export class EnhancedGame {
         
         // Reset all managers
         this.player.reset();
-        this.environment.reset && this.environment.reset();
+        this.environment.reset();
         this.obstacleManager.reset();
-        this.collectableManager.reset && this.collectableManager.reset();
+        this.collectableManager.reset();
         this.powerUpManager.reset();
         this.uiManager.reset();
-        this.inputManager.reset && this.inputManager.reset();
+        this.inputManager.reset();
         
         // Position player at safe starting location ahead of obstacle spawn zone
         // Obstacles spawn at playerZ - 50, so position player ahead to ensure safety
