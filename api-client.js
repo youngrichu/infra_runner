@@ -32,29 +32,29 @@ export class APIClient {
     }
 
     async submitScore(playerData) {
-        return this.request('/api/leaderboard/submit', {
+        return this.request('api/leaderboard/submit', {
             method: 'POST',
             body: playerData,
         });
     }
 
     async getTopScores(limit = 10) {
-        return this.request(`/api/leaderboard/top?limit=${limit}`);
+        return this.request(`api/leaderboard/top?limit=${limit}`);
     }
 
     async getPlayerBestScore(email) {
-        return this.request(`/api/leaderboard/player/${encodeURIComponent(email)}`);
+        return this.request(`api/leaderboard/player/${encodeURIComponent(email)}`);
     }
 
     async getOrganizationLeaderboard(organizationName, limit = 10) {
-        return this.request(`/api/leaderboard/organization/${encodeURIComponent(organizationName)}?limit=${limit}`);
+        return this.request(`api/leaderboard/organization/${encodeURIComponent(organizationName)}?limit=${limit}`);
     }
 
     async getRecentScores(limit = 10) {
-        return this.request(`/api/leaderboard/recent?limit=${limit}`);
+        return this.request(`api/leaderboard/recent?limit=${limit}`);
     }
 
     async getStatistics() {
-        return this.request('/api/leaderboard/statistics');
+        return this.request('api/leaderboard/statistics');
     }
 }

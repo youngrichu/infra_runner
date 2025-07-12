@@ -956,7 +956,7 @@ export class UIManager {
 
     removePowerUpFromUI(powerUp) {
         if (powerUp.element && powerUp.element.parentNode) {
-            document.body.removeChild(powerUp.element);
+            powerUp.element.remove();
         }
         this.powerUpElements = this.powerUpElements.filter(p => p !== powerUp);
         this.activePowerUps = this.activePowerUps.filter(p => p !== powerUp);
@@ -1012,7 +1012,7 @@ export class UIManager {
         // Clear power-up UI elements
         this.powerUpElements.forEach(p => {
             if (p.element && p.element.parentNode) {
-                p.element.parentNode.removeChild(p.element);
+                p.element.remove();
             }
         });
         this.powerUpElements = [];
@@ -1523,7 +1523,7 @@ export class UIManager {
                 // Countdown complete
                 setTimeout(() => {
                     if (!skipped) {
-                        document.body.removeChild(countdownOverlay);
+                        countdownOverlay.remove();
                         callback(false);
                     }
                 }, 800);
@@ -1537,7 +1537,7 @@ export class UIManager {
         const skipCountdown = () => {
             if (skipped) return;
             skipped = true;
-            document.body.removeChild(countdownOverlay);
+            countdownOverlay.remove();
             callback(true);
         };
         

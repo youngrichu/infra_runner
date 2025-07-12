@@ -264,7 +264,7 @@ export class PlayerRegistration {
 
     destroy() {
         if (this.registrationElement && this.registrationElement.parentNode) {
-            this.registrationElement.parentNode.removeChild(this.registrationElement);
+            this.registrationElement.remove();
         }
     }
 
