@@ -30,17 +30,18 @@ export class UIManager {
         this.scoreElement = document.createElement('div');
         this.scoreElement.style.position = 'absolute';
         this.scoreElement.style.top = '10px';
-        this.scoreElement.style.left = '10px';
+        this.scoreElement.style.left = '50%';
+        this.scoreElement.style.transform = 'translateX(-50%)';
         this.scoreElement.style.color = 'white';
         this.scoreElement.style.fontFamily = 'Arial, sans-serif';
         this.scoreElement.style.fontSize = 'clamp(16px, 4vw, 24px)';
         this.scoreElement.style.zIndex = '1000';
         this.scoreElement.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
-        this.scoreElement.style.padding = '5px';
-        this.scoreElement.style.borderRadius = '5px';
-        this.scoreElement.style.backgroundColor = 'rgba(0,0,0,0.3)';
-        this.scoreElement.style.maxWidth = 'calc(100vw - 20px)';
-        this.scoreElement.style.wordWrap = 'break-word';
+        this.scoreElement.style.padding = '8px 12px';
+        this.scoreElement.style.borderRadius = '8px';
+        this.scoreElement.style.backgroundColor = 'rgba(0,0,0,0.4)';
+        this.scoreElement.style.whiteSpace = 'nowrap';
+        this.scoreElement.style.textAlign = 'center';
         document.body.appendChild(this.scoreElement);
         this.updateScoreDisplay();
     }
@@ -64,8 +65,9 @@ export class UIManager {
         this.gameOverElement.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
         this.gameOverElement.style.maxWidth = '95vw';
         this.gameOverElement.style.minWidth = '280px';
-        this.gameOverElement.style.maxHeight = '85vh';
+        this.gameOverElement.style.maxHeight = '90vh';
         this.gameOverElement.style.overflow = 'auto';
+        this.gameOverElement.style.overflowX = 'hidden';
         this.gameOverElement.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
         this.gameOverElement.style.wordWrap = 'break-word';
         this.gameOverElement.innerHTML = '';
@@ -243,13 +245,18 @@ export class UIManager {
                     width: 100%;
                     max-width: min(600px, 90vw);
                     margin: 0 auto;
-                    padding: 20px;
+                    padding: 15px;
                     box-sizing: border-box;
+                    display: flex;
+                    flex-direction: column;
+                    max-height: 85vh;
+                    overflow-y: auto;
                 }
                 
                 .game-over-header {
                     text-align: center;
-                    margin-bottom: 25px;
+                    margin-bottom: 15px;
+                    flex-shrink: 0;
                 }
                 
                 .game-over-title {
@@ -275,9 +282,10 @@ export class UIManager {
                     background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
                     border: 1px solid rgba(255,255,255,0.2);
                     border-radius: 15px;
-                    padding: 20px;
-                    margin-bottom: 20px;
+                    padding: 15px;
+                    margin-bottom: 15px;
                     backdrop-filter: blur(10px);
+                    flex-shrink: 0;
                 }
                 
                 .final-score {
@@ -349,16 +357,21 @@ export class UIManager {
                     background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
                     border-radius: 15px;
                     overflow: hidden;
-                    margin-bottom: 20px;
+                    margin-bottom: 15px;
                     border: 1px solid rgba(255,255,255,0.15);
                     backdrop-filter: blur(10px);
                     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    flex: 1;
+                    min-height: 0;
+                    display: flex;
+                    flex-direction: column;
                 }
                 
                 .tab-headers {
                     display: flex;
                     background: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.3));
                     border-bottom: 1px solid rgba(255,255,255,0.2);
+                    flex-shrink: 0;
                 }
                 
                 .tab-header {
@@ -406,8 +419,9 @@ export class UIManager {
                 }
                 
                 .tab-content {
-                    height: 400px;
+                    flex: 1;
                     overflow: hidden;
+                    min-height: 0;
                 }
                 
                 .tab-panel {
@@ -480,7 +494,7 @@ export class UIManager {
                 }
                 
                 .leaderboard-container {
-                    max-height: 300px;
+                    max-height: 220px;
                     overflow-y: auto;
                     border-radius: 12px;
                     background: rgba(0,0,0,0.3);
@@ -748,8 +762,9 @@ export class UIManager {
                     display: flex;
                     justify-content: center;
                     gap: 15px;
-                    margin-top: 20px;
+                    margin-top: 15px;
                     flex-wrap: wrap;
+                    flex-shrink: 0;
                 }
                 
                 .primary-button {
