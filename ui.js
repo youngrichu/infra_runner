@@ -48,10 +48,11 @@ export class UIManager {
 
     createGameOverScreen() {
         this.gameOverElement = document.createElement('div');
-        this.gameOverElement.style.position = 'fixed';
-        this.gameOverElement.style.top = '50%';
-        this.gameOverElement.style.left = '50%';
-        this.gameOverElement.style.transform = 'translate(-50%, -50%)';
+        this.gameOverElement.style.position = 'absolute';
+        this.gameOverElement.style.top = '0';
+        this.gameOverElement.style.left = '0';
+        this.gameOverElement.style.width = '100vw';
+        this.gameOverElement.style.transform = 'none';
         this.gameOverElement.style.color = '#ff4444';
         this.gameOverElement.style.fontFamily = 'Arial, sans-serif';
         this.gameOverElement.style.fontSize = 'clamp(24px, 8vw, 48px)';
@@ -65,8 +66,11 @@ export class UIManager {
         this.gameOverElement.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
         this.gameOverElement.style.maxWidth = '95vw';
         this.gameOverElement.style.minWidth = '280px';
-        this.gameOverElement.style.maxHeight = '90vh';
-        this.gameOverElement.style.overflow = 'auto';
+        this.gameOverElement.style.maxHeight = 'none';
+        this.gameOverElement.style.height = 'auto';
+        this.gameOverElement.style.minHeight = '100svh';
+        this.gameOverElement.style.overflow = 'visible';
+        this.gameOverElement.style.WebkitOverflowScrolling = 'touch';
         this.gameOverElement.style.overflowX = 'hidden';
         this.gameOverElement.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
         this.gameOverElement.style.wordWrap = 'break-word';
@@ -111,6 +115,9 @@ export class UIManager {
     }
 
     showGameOver() {
+        // Enable body scrolling for mobile
+        document.body.style.overflow = 'auto';
+        document.body.style.height = 'auto';
         this.gameOverElement.style.display = 'block';
         const isMobile = window.innerWidth <= 768;
         const isVerySmall = window.innerWidth <= 480;
@@ -249,13 +256,17 @@ export class UIManager {
                     box-sizing: border-box;
                     display: flex;
                     flex-direction: column;
-                    max-height: 85vh;
-                    overflow-y: auto;
+                    max-height: none;
+                    height: auto;
+                    min-height: 100svh;
+                    overflow-y: visible;
                 }
                 
                 .game-over-header {
                     text-align: center;
                     margin-bottom: 15px;
+                    margin-top: 20px;
+                    padding-top: 20px;
                     flex-shrink: 0;
                 }
                 
@@ -763,6 +774,8 @@ export class UIManager {
                     justify-content: center;
                     gap: 15px;
                     margin-top: 15px;
+                    margin-bottom: 30px;
+                    padding-bottom: 20px;
                     flex-wrap: wrap;
                     flex-shrink: 0;
                 }
@@ -844,6 +857,14 @@ export class UIManager {
                     .game-over-container {
                         max-width: 95vw;
                         padding: 15px;
+                        padding-top: 30px;
+                        min-height: auto;
+                        max-height: none;
+                    }
+                    
+                    .game-over-header {
+                        margin-top: 30px;
+                        padding-top: 30px;
                     }
                     
                     .stats-card {
@@ -855,7 +876,10 @@ export class UIManager {
                     }
                     
                     .tab-content {
-                        height: 350px;
+                        height: auto;
+                        min-height: 300px;
+                        max-height: none;
+                        overflow-y: visible;
                     }
                     
                     .tab-panel {
@@ -876,7 +900,8 @@ export class UIManager {
                     }
                     
                     .leaderboard-container {
-                        max-height: 250px;
+                        max-height: none;
+                        height: auto;
                     }
                 }
                 
@@ -884,6 +909,8 @@ export class UIManager {
                     .game-over-container {
                         max-width: 98vw;
                         padding: 10px;
+                        min-height: auto;
+                        max-height: none;
                     }
                     
                     .collectibles-grid {
@@ -901,7 +928,10 @@ export class UIManager {
                     }
                     
                     .tab-content {
-                        height: 300px;
+                        height: auto;
+                        min-height: 250px;
+                        max-height: none;
+                        overflow-y: visible;
                     }
                     
                     .tab-panel {
@@ -909,12 +939,15 @@ export class UIManager {
                     }
                     
                     .leaderboard-container {
-                        max-height: 200px;
+                        max-height: none;
+                        height: auto;
                     }
                     
                     .action-buttons {
                         flex-direction: column;
                         gap: 10px;
+                        margin-bottom: 50px;
+                        padding-bottom: 40px;
                     }
                     
                     .primary-button, .secondary-button {
@@ -937,6 +970,9 @@ export class UIManager {
     }
 
     hideGameOver() {
+        // Restore body overflow settings
+        document.body.style.overflow = 'hidden';
+        document.body.style.height = '100vh';
         this.gameOverElement.style.display = 'none';
     }
 

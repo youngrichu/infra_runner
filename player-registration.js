@@ -31,29 +31,34 @@ export class PlayerRegistration {
                 left: 50%;
                 transform: translate(-50%, -50%);
                 background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-                padding: 30px;
-                border-radius: 20px;
+                padding: clamp(20px, 4vw, 30px);
+                border-radius: clamp(15px, 3vw, 20px);
                 box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-                max-width: 400px;
-                width: 90%;
+                max-width: min(400px, 95vw);
+                width: 95%;
                 text-align: center;
+                border: 2px solid rgba(255, 107, 53, 0.3);
+                backdrop-filter: blur(10px);
+                max-height: 90vh;
+                overflow-y: auto;
             ">
                 <h2 style="
                     color: white;
-                    margin-bottom: 20px;
-                    font-size: 24px;
+                    margin-bottom: clamp(15px, 3vw, 20px);
+                    font-size: clamp(20px, 5vw, 24px);
                     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+                    line-height: 1.2;
                 "><i class="ti ti-run"></i> Infrastructure Runner</h2>
                 
                 <p style="
                     color: #e0e0e0;
-                    margin-bottom: 25px;
-                    font-size: 14px;
+                    margin-bottom: clamp(20px, 4vw, 25px);
+                    font-size: clamp(12px, 3.5vw, 14px);
                     line-height: 1.4;
                 ">Enter your details to join the leaderboard!</p>
 
                 <form id="registration-form">
-                    <div style="margin-bottom: 15px;">
+                    <div style="margin-bottom: clamp(12px, 3vw, 15px);">
                         <input 
                             type="text" 
                             id="player-name" 
@@ -61,17 +66,21 @@ export class PlayerRegistration {
                             required
                             style="
                                 width: 100%;
-                                padding: 12px;
+                                padding: clamp(10px, 3vw, 12px);
                                 border: none;
-                                border-radius: 8px;
-                                font-size: 16px;
+                                border-radius: clamp(6px, 2vw, 8px);
+                                font-size: clamp(14px, 4vw, 16px);
                                 background: rgba(255,255,255,0.9);
                                 box-sizing: border-box;
+                                transition: all 0.3s ease;
+                                border: 2px solid transparent;
                             "
+                            onfocus="this.style.borderColor='#FF6B35'; this.style.background='rgba(255,255,255,0.95)'"
+                            onblur="this.style.borderColor='transparent'; this.style.background='rgba(255,255,255,0.9)'"
                         />
                     </div>
 
-                    <div style="margin-bottom: 15px;">
+                    <div style="margin-bottom: clamp(12px, 3vw, 15px);">
                         <input 
                             type="email" 
                             id="player-email" 
@@ -79,17 +88,21 @@ export class PlayerRegistration {
                             required
                             style="
                                 width: 100%;
-                                padding: 12px;
+                                padding: clamp(10px, 3vw, 12px);
                                 border: none;
-                                border-radius: 8px;
-                                font-size: 16px;
+                                border-radius: clamp(6px, 2vw, 8px);
+                                font-size: clamp(14px, 4vw, 16px);
                                 background: rgba(255,255,255,0.9);
                                 box-sizing: border-box;
+                                transition: all 0.3s ease;
+                                border: 2px solid transparent;
                             "
+                            onfocus="this.style.borderColor='#FF6B35'; this.style.background='rgba(255,255,255,0.95)'"
+                            onblur="this.style.borderColor='transparent'; this.style.background='rgba(255,255,255,0.9)'"
                         />
                     </div>
 
-                    <div style="margin-bottom: 25px;">
+                    <div style="margin-bottom: clamp(20px, 4vw, 25px);">
                         <input 
                             type="text" 
                             id="organization-name" 
@@ -97,13 +110,17 @@ export class PlayerRegistration {
                             required
                             style="
                                 width: 100%;
-                                padding: 12px;
+                                padding: clamp(10px, 3vw, 12px);
                                 border: none;
-                                border-radius: 8px;
-                                font-size: 16px;
+                                border-radius: clamp(6px, 2vw, 8px);
+                                font-size: clamp(14px, 4vw, 16px);
                                 background: rgba(255,255,255,0.9);
                                 box-sizing: border-box;
+                                transition: all 0.3s ease;
+                                border: 2px solid transparent;
                             "
+                            onfocus="this.style.borderColor='#FF6B35'; this.style.background='rgba(255,255,255,0.95)'"
+                            onblur="this.style.borderColor='transparent'; this.style.background='rgba(255,255,255,0.9)'"
                         />
                     </div>
 
@@ -111,32 +128,44 @@ export class PlayerRegistration {
                         type="submit"
                         style="
                             width: 100%;
-                            padding: 14px;
+                            padding: clamp(12px, 3.5vw, 14px);
                             background: linear-gradient(45deg, #FF6B35, #FFD700);
                             border: none;
-                            border-radius: 8px;
+                            border-radius: clamp(6px, 2vw, 8px);
                             color: white;
-                            font-size: 18px;
+                            font-size: clamp(14px, 4.5vw, 18px);
                             font-weight: bold;
                             cursor: pointer;
                             transition: all 0.3s ease;
                             text-transform: uppercase;
                             letter-spacing: 1px;
                             box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+                            min-height: 44px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 8px;
                         "
                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255, 107, 53, 0.4)'"
                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 107, 53, 0.3)'"
+                        ontouchstart="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 20px rgba(255, 107, 53, 0.4)'"
+                        ontouchend="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 107, 53, 0.3)'"
                     >
                         <i class="ti ti-play"></i> Start Playing
                     </button>
                 </form>
 
                 <div style="
-                    margin-top: 15px;
-                    font-size: 12px;
+                    margin-top: clamp(12px, 3vw, 15px);
+                    font-size: clamp(10px, 3vw, 12px);
                     color: #b0b0b0;
-                    line-height: 1.3;
+                    line-height: 1.4;
+                    padding: clamp(8px, 2vw, 10px);
+                    background: rgba(255,255,255,0.05);
+                    border-radius: clamp(4px, 1vw, 6px);
+                    border: 1px solid rgba(255,255,255,0.1);
                 ">
+                    <i class="ti ti-shield-check" style="font-size: 1em; margin-right: 4px; color: #4CAF50;"></i>
                     Your information will be used for the leaderboard only
                 </div>
             </div>
