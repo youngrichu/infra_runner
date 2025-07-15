@@ -1524,23 +1524,44 @@
             // Store preference to not show onboarding again
             localStorage.setItem('infrastructureRunner_onboardingCompleted', 'true');
             
-            // Cleanup 3D model viewers
+            // Cleanup 3D model viewers first
             cleanupModelViewers();
             
             // Hide onboarding overlay
             const overlay = document.getElementById('onboarding-overlay');
             overlay.classList.remove('active');
             
-            // Now check player registration instead of starting game
-            checkPlayerRegistrationAndStart();
+            // Add delay to allow cleanup to complete before showing registration
+            setTimeout(() => {
+                checkPlayerRegistrationAndStart();
+            }, 200);
         }
         
         function cleanupModelViewers() {
             try {
                 if (window.onboardingModelViewer) {
                     window.onboardingModelViewer.cleanup();
+                    window.onboardingModelViewer = null;
+                }
+                
+                // Additional cleanup for any remaining WebGL contexts
+                const canvases = document.querySelectorAll('canvas');
+                canvases.forEach(canvas => {
+                    const gl = canvas.getContext('webgl') || canvas.getContext('webgl2');
+                    if (gl && gl.getExtension) {
+                        const loseContext = gl.getExtension('WEBGL_lose_context');
+                        if (loseContext) {
+                            loseContext.loseContext();
+                        }
+                    }
+                });
+                
+                // Force garbage collection if available
+                if (window.gc) {
+                    window.gc();
                 }
             } catch (error) {
+                console.warn('Error during model viewer cleanup:', error);
             }
         }
         

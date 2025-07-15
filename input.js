@@ -34,13 +34,18 @@ export class InputManager {
         // Don't process any input if disabled
         if (!this.enabled) return;
         
-        // Prevent default behavior for game keys
+        // Only process game controls if game is active
+        if (!this.gameController.isGameActive()) return;
+        
+        // Don't interfere with form inputs
+        if (event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA')) {
+            return;
+        }
+        
+        // Prevent default behavior for game keys only during gameplay
         if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space'].includes(event.code)) {
             event.preventDefault();
         }
-
-        // Only process game controls if game is active
-        if (!this.gameController.isGameActive()) return;
         
 
         switch (event.code) {
@@ -72,6 +77,11 @@ export class InputManager {
     onKeyUp(event) {
         // Don't process any input if disabled
         if (!this.enabled) return;
+        
+        // Don't interfere with form inputs
+        if (event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA')) {
+            return;
+        }
         
         switch (event.code) {
             case 'ArrowLeft':

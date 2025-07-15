@@ -182,10 +182,10 @@ export class PlayerRegistration {
             this.handleSubmit();
         });
 
-        // Auto-focus first input when shown
-        this.registrationElement.addEventListener('transitionend', () => {
-            if (this.isVisible) {
-                document.getElementById('player-name').focus();
+        // Auto-focus first input when shown (with better timing)
+        this.registrationElement.addEventListener('transitionend', (e) => {
+            if (this.isVisible && e.target === this.registrationElement) {
+                this.focusFirstInput();
             }
         });
     }
@@ -276,10 +276,32 @@ export class PlayerRegistration {
         }, 10);
         this.isVisible = true;
         
-        // Focus on first input
-        setTimeout(() => {
-            document.getElementById('player-name').focus();
-        }, 100);
+        // Focus on first input with better timing
+        this.focusFirstInput();
+    }
+
+    focusFirstInput() {
+        // Use multiple fallback attempts to ensure focus works
+        const attemptFocus = (attempt = 0) => {
+            if (attempt > 5) return; // Max 5 attempts
+            
+            const input = document.getElementById('player-name');
+            if (input && this.isVisible) {
+                // Clear any selection and focus
+                input.value = input.value; // Reset cursor position
+                input.focus();
+                
+                // Verify focus was successful
+                setTimeout(() => {
+                    if (document.activeElement !== input && this.isVisible) {
+                        attemptFocus(attempt + 1);
+                    }
+                }, 50);
+            }
+        };
+        
+        // Initial attempt after a small delay
+        setTimeout(() => attemptFocus(), 150);
     }
 
     hide() {

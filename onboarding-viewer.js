@@ -440,30 +440,91 @@ export class OnboardingModelViewer {
     }
     
     cleanup() {
+        // Cancel all animation frames first
         this.animationIds.forEach((id) => {
             cancelAnimationFrame(id);
         });
         this.animationIds.clear();
 
-        this.viewers.forEach((viewer) => {
-            if (viewer.renderer) {
-                viewer.renderer.dispose();
-            }
-            if (viewer.scene) {
-                viewer.scene.traverse((child) => {
-                    if (child.geometry) {
-                        child.geometry.dispose();
+        // Properly dispose of all WebGL resources
+        this.viewers.forEach((viewer, containerId) => {
+            try {
+                // Dispose of scene resources
+                if (viewer.scene) {
+                    viewer.scene.traverse((child) => {
+                        if (child.geometry) {
+                            child.geometry.dispose();
+                        }
+                        if (child.material) {
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(material => {
+                                    if (material.map) material.map.dispose();
+                                    if (material.normalMap) material.normalMap.dispose();
+                                    if (material.roughnessMap) material.roughnessMap.dispose();
+                                    if (material.metalnessMap) material.metalnessMap.dispose();
+                                    material.dispose();
+                                });
+                            } else {
+                                if (child.material.map) child.material.map.dispose();
+                                if (child.material.normalMap) child.material.normalMap.dispose();
+                                if (child.material.roughnessMap) child.material.roughnessMap.dispose();
+                                if (child.material.metalnessMap) child.material.metalnessMap.dispose();
+                                child.material.dispose();
+                            }
+                        }
+                    });
+                    
+                    // Clear scene
+                    while (viewer.scene.children.length > 0) {
+                        viewer.scene.remove(viewer.scene.children[0]);
                     }
-                    if (child.material) {
-                        if (Array.isArray(child.material)) {
-                            child.material.forEach(material => material.dispose());
-                        } else {
-                            child.material.dispose();
+                }
+
+                // Force WebGL context cleanup
+                if (viewer.renderer) {
+                    // Get WebGL context before disposing
+                    const gl = viewer.renderer.getContext();
+                    
+                    // Dispose of renderer
+                    viewer.renderer.dispose();
+                    viewer.renderer.forceContextLoss();
+                    
+                    // Force garbage collection if available
+                    if (viewer.renderer.domElement) {
+                        viewer.renderer.domElement.remove();
+                    }
+                    
+                    // Additional WebGL context cleanup
+                    if (gl && gl.getExtension) {
+                        const loseContext = gl.getExtension('WEBGL_lose_context');
+                        if (loseContext) {
+                            loseContext.loseContext();
                         }
                     }
-                });
+                }
+
+                // Remove canvas from DOM
+                if (viewer.canvas && viewer.canvas.parentNode) {
+                    viewer.canvas.parentNode.removeChild(viewer.canvas);
+                }
+            } catch (error) {
+                console.warn(`Error cleaning up viewer ${containerId}:`, error);
             }
         });
+
+        // Clear all viewer references
         this.viewers.clear();
+        this.loadedModels.clear();
+
+        // Clear loaders
+        if (this.loader) {
+            this.loader = null;
+        }
+        if (this.dracoLoader) {
+            this.dracoLoader = null;
+        }
+
+        // Reset initialization state
+        this.isInitialized = false;
     }
 }
