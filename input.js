@@ -9,13 +9,22 @@ export class InputManager {
         };
         this.enabled = true;
         
+        
+        // Store event listener references for proper cleanup
+        this.eventListeners = {
+            keydown: (event) => this.onKeyDown(event),
+            keyup: (event) => this.onKeyUp(event),
+            resize: () => this.onWindowResize(),
+            documentClick: null
+        };
+        
         this.setupEventListeners();
     }
 
     setupEventListeners() {
-        document.addEventListener('keydown', (event) => this.onKeyDown(event));
-        document.addEventListener('keyup', (event) => this.onKeyUp(event));
-        window.addEventListener('resize', () => this.onWindowResize(), false);
+        document.addEventListener('keydown', this.eventListeners.keydown);
+        document.addEventListener('keyup', this.eventListeners.keyup);
+        window.addEventListener('resize', this.eventListeners.resize, false);
         
         // Add universal restart support
         this.setupUniversalRestart();
@@ -32,6 +41,7 @@ export class InputManager {
 
         // Only process game controls if game is active
         if (!this.gameController.isGameActive()) return;
+        
 
         switch (event.code) {
             case 'ArrowLeft':
@@ -91,78 +101,392 @@ export class InputManager {
     }
 
     createMobileUI() {
-        // Check if device is mobile
-        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // Strict mobile device detection - ensure desktop doesn't run mobile code
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && 
+                         'ontouchstart' in window;
         
-        if (!isMobile) return;
-
-        // Create control container
-        const controlContainer = document.createElement('div');
-        controlContainer.style.position = 'absolute';
-        controlContainer.style.bottom = '20px';
-        controlContainer.style.left = '50%';
-        controlContainer.style.transform = 'translateX(-50%)';
-        controlContainer.style.display = 'flex';
-        controlContainer.style.gap = '10px';
-        controlContainer.style.zIndex = '1000';
-
-        // Create left button
-        const leftButton = this.createMobileButton('◀', () => this.player.moveLeft());
+        // Additional check for desktop browsers
+        const isDesktop = window.innerWidth > 1024 || 
+                         navigator.userAgent.includes('Windows') || 
+                         navigator.userAgent.includes('Macintosh') || 
+                         navigator.userAgent.includes('Linux');
         
-        // Create jump button
-        const jumpButton = this.createMobileButton('▲', () => this.player.jump());
-        
-        // Create right button
-        const rightButton = this.createMobileButton('▶', () => this.player.moveRight());
+        if (!isMobile || isDesktop) return;
 
-        controlContainer.appendChild(leftButton);
-        controlContainer.appendChild(jumpButton);
-        controlContainer.appendChild(rightButton);
-        document.body.appendChild(controlContainer);
+        // Create main gamepad container
+        const gamepadContainer = document.createElement('div');
+        gamepadContainer.className = 'mobile-gamepad-container';
+        Object.assign(gamepadContainer.style, {
+            position: 'fixed',
+            bottom: '0',
+            left: '0',
+            right: '0',
+            height: '180px',
+            background: 'linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.1) 100%)',
+            zIndex: '1000',
+            pointerEvents: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            gap: '20px'
+        });
+
+        // Mobile-specific debouncing (separate from desktop keyboard state)
+        this.mobileButtons = {
+            left: false,
+            right: false,
+            jump: false
+        };
+
+        // Create left arrow button with mobile-only debouncing
+        const leftButton = this.createMobileButton('◀', () => {
+            if (!this.mobileButtons.left) {
+                this.mobileButtons.left = true;
+                this.player.moveLeft();
+                // Reset mobile button state after delay
+                setTimeout(() => {
+                    this.mobileButtons.left = false;
+                }, 200);
+            }
+        });
+        
+        // Create jump button (larger and centered)
+        const jumpButton = this.createMobileButton('▲', () => {
+            if (!this.mobileButtons.jump) {
+                this.mobileButtons.jump = true;
+                this.player.jump();
+                // Reset mobile button state after delay
+                setTimeout(() => {
+                    this.mobileButtons.jump = false;
+                }, 200);
+            }
+        });
+        jumpButton.className = 'mobile-gamepad-button mobile-gamepad-jump-button';
+        Object.assign(jumpButton.style, {
+            background: 'linear-gradient(145deg, #FF9800 0%, #F57C00 100%)',
+            width: '90px',
+            height: '90px',
+            fontSize: '36px',
+            boxShadow: '0 10px 20px rgba(255, 152, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)'
+        });
+        
+        // Create right arrow button with mobile-only debouncing
+        const rightButton = this.createMobileButton('▶', () => {
+            if (!this.mobileButtons.right) {
+                this.mobileButtons.right = true;
+                this.player.moveRight();
+                // Reset mobile button state after delay
+                setTimeout(() => {
+                    this.mobileButtons.right = false;
+                }, 200);
+            }
+        });
+
+        // Add buttons to container
+        gamepadContainer.appendChild(leftButton);
+        gamepadContainer.appendChild(jumpButton);
+        gamepadContainer.appendChild(rightButton);
+        
+        document.body.appendChild(gamepadContainer);
+        
+        // Add mobile-specific CSS only once
+        this.addMobileGamepadStyles();
+        
+        // Prevent scrolling and improve mobile experience
+        gamepadContainer.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+        }, { passive: false });
+        
+        gamepadContainer.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, { passive: false });
+        
+        // Add visual feedback when gamepad is active
+        gamepadContainer.addEventListener('touchstart', () => {
+            document.body.style.background = 'rgba(0, 0, 0, 0.95)';
+        });
+        
+        gamepadContainer.addEventListener('touchend', () => {
+            document.body.style.background = '';
+        });
     }
 
     createMobileButton(text, action) {
         const button = document.createElement('button');
         button.innerHTML = text;
-        button.style.width = '60px';
-        button.style.height = '60px';
-        button.style.fontSize = '24px';
-        button.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-        button.style.border = '2px solid #333';
-        button.style.borderRadius = '10px';
-        button.style.cursor = 'pointer';
-        button.style.userSelect = 'none';
         
-        // Add touch events
+        // Enhanced mobile button styling with better colors
+        Object.assign(button.style, {
+            width: '70px',
+            height: '70px',
+            fontSize: '28px',
+            fontWeight: 'bold',
+            color: '#fff',
+            background: 'linear-gradient(145deg, #4CAF50 0%, #45a049 100%)',
+            border: '3px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '50%',
+            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)',
+            cursor: 'pointer',
+            userSelect: 'none',
+            transition: 'all 0.15s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+            position: 'relative',
+            overflow: 'hidden',
+            pointerEvents: 'auto'
+        });
+        
+        // Add subtle inner glow effect
+        const innerGlow = document.createElement('div');
+        Object.assign(innerGlow.style, {
+            position: 'absolute',
+            top: '2px',
+            left: '2px',
+            right: '2px',
+            bottom: '2px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 70%)',
+            pointerEvents: 'none'
+        });
+        button.appendChild(innerGlow);
+        
+        // Add ripple effect container
+        const rippleContainer = document.createElement('div');
+        Object.assign(rippleContainer.style, {
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            right: '0',
+            bottom: '0',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            pointerEvents: 'none'
+        });
+        button.appendChild(rippleContainer);
+        
+        // Move text to front
+        const textSpan = document.createElement('span');
+        textSpan.innerHTML = text;
+        textSpan.style.position = 'relative';
+        textSpan.style.zIndex = '10';
+        button.innerHTML = '';
+        button.appendChild(textSpan);
+        button.appendChild(innerGlow);
+        button.appendChild(rippleContainer);
+        
+        // Create ripple effect
+        const createRipple = (e) => {
+            const ripple = document.createElement('div');
+            const rect = button.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            
+            Object.assign(ripple.style, {
+                position: 'absolute',
+                width: size + 'px',
+                height: size + 'px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.3)',
+                transform: 'scale(0)',
+                animation: 'ripple 0.6s ease-out',
+                left: '50%',
+                top: '50%',
+                marginLeft: -size/2 + 'px',
+                marginTop: -size/2 + 'px'
+            });
+            
+            rippleContainer.appendChild(ripple);
+            
+            // Remove ripple after animation
+            setTimeout(() => {
+                if (ripple.parentNode) {
+                    ripple.parentNode.removeChild(ripple);
+                }
+            }, 600);
+        };
+        
+        
+        button.className = 'mobile-gamepad-button';
+        
+        // Enhanced touch events with haptic feedback
         button.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            button.style.backgroundColor = 'rgba(200, 200, 200, 0.8)';
+            e.stopPropagation();
+            
+            // Enhanced pressed state
+            Object.assign(button.style, {
+                background: 'linear-gradient(145deg, #45a049 0%, #4CAF50 100%)',
+                transform: 'scale(0.95)',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.2)'
+            });
+            
+            // Create ripple effect
+            createRipple(e);
+            
+            // Haptic feedback for supported devices
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+            
+            // Execute action
             action();
         });
         
         button.addEventListener('touchend', (e) => {
             e.preventDefault();
-            button.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+            
+            // Reset to normal state
+            Object.assign(button.style, {
+                background: 'linear-gradient(145deg, #4CAF50 0%, #45a049 100%)',
+                transform: 'scale(1)',
+                boxShadow: '0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)'
+            });
         });
         
-        // Add mouse events for testing on desktop
+        // Enhanced mouse events for desktop testing
         button.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            button.style.backgroundColor = 'rgba(200, 200, 200, 0.8)';
+            
+            Object.assign(button.style, {
+                background: 'linear-gradient(145deg, #45a049 0%, #4CAF50 100%)',
+                transform: 'scale(0.95)',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.2)'
+            });
+            
+            createRipple(e);
             action();
         });
         
         button.addEventListener('mouseup', (e) => {
             e.preventDefault();
-            button.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+            
+            Object.assign(button.style, {
+                background: 'linear-gradient(145deg, #4CAF50 0%, #45a049 100%)',
+                transform: 'scale(1)',
+                boxShadow: '0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)'
+            });
+        });
+        
+        // Add hover effect for desktop
+        button.addEventListener('mouseenter', () => {
+            if (!button.matches(':active')) {
+                button.style.transform = 'scale(1.05)';
+                button.style.boxShadow = '0 12px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2)';
+            }
+        });
+        
+        button.addEventListener('mouseleave', () => {
+            if (!button.matches(':active')) {
+                button.style.transform = 'scale(1)';
+                button.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)';
+            }
         });
 
         return button;
     }
 
+    addMobileGamepadStyles() {
+        // Add CSS only for mobile gamepad (never on desktop)
+        if (!document.querySelector('#mobile-gamepad-styles')) {
+            const style = document.createElement('style');
+            style.id = 'mobile-gamepad-styles';
+            style.textContent = `
+                @keyframes ripple {
+                    to {
+                        transform: scale(4);
+                        opacity: 0;
+                    }
+                }
+                
+                @keyframes buttonPress {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(0.95); }
+                    100% { transform: scale(1); }
+                }
+                
+                .mobile-gamepad-button:active {
+                    animation: buttonPress 0.15s ease;
+                }
+                
+                /* Responsive design for different screen sizes */
+                @media (max-width: 480px) {
+                    .mobile-gamepad-container {
+                        height: 140px !important;
+                        padding: 15px !important;
+                        gap: 15px !important;
+                    }
+                    
+                    .mobile-gamepad-button {
+                        width: 60px !important;
+                        height: 60px !important;
+                        font-size: 24px !important;
+                    }
+                    
+                    .mobile-gamepad-jump-button {
+                        width: 75px !important;
+                        height: 75px !important;
+                        font-size: 28px !important;
+                    }
+                }
+                
+                @media (max-width: 320px) {
+                    .mobile-gamepad-container {
+                        height: 120px !important;
+                        padding: 10px !important;
+                        gap: 10px !important;
+                    }
+                    
+                    .mobile-gamepad-button {
+                        width: 50px !important;
+                        height: 50px !important;
+                        font-size: 20px !important;
+                    }
+                    
+                    .mobile-gamepad-jump-button {
+                        width: 65px !important;
+                        height: 65px !important;
+                        font-size: 24px !important;
+                    }
+                }
+                
+                @media (orientation: landscape) and (max-height: 600px) {
+                    .mobile-gamepad-container {
+                        height: 100px !important;
+                        padding: 10px !important;
+                        gap: 15px !important;
+                    }
+                    
+                    .mobile-gamepad-button {
+                        width: 55px !important;
+                        height: 55px !important;
+                        font-size: 22px !important;
+                    }
+                    
+                    .mobile-gamepad-jump-button {
+                        width: 70px !important;
+                        height: 70px !important;
+                        font-size: 26px !important;
+                    }
+                }
+                
+                /* Prevent scrolling on mobile when interacting with gamepad */
+                .mobile-gamepad-active {
+                    overflow: hidden !important;
+                    position: fixed !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
     setupUniversalRestart() {
-        // Touch/click restart - but exclude interactive elements
-        document.addEventListener('click', (event) => {
+        // Store the document click listener reference for cleanup
+        this.eventListeners.documentClick = (event) => {
             if (!this.gameController.isGameActive()) {
                 // Check if clicking on interactive elements that should NOT restart the game
                 const isInteractiveElement = this.isInteractiveElement(event.target);
@@ -177,7 +501,10 @@ export class InputManager {
                     this.gameController.restartGame();
                 }
             }
-        });
+        };
+        
+        // Touch/click restart - but exclude interactive elements
+        document.addEventListener('click', this.eventListeners.documentClick);
         
         // Remove touch restart for mobile - rely only on restart button
         // This prevents conflicts with tab interactions on mobile
@@ -290,5 +617,49 @@ export class InputManager {
         this.enabled = false;
         // Reset any active keys when disabling
         this.reset();
+    }
+
+    // Cleanup method to remove all event listeners and prevent accumulation
+    destroy() {
+        // Remove document and window event listeners
+        if (this.eventListeners.keydown) {
+            document.removeEventListener('keydown', this.eventListeners.keydown);
+        }
+        if (this.eventListeners.keyup) {
+            document.removeEventListener('keyup', this.eventListeners.keyup);
+        }
+        if (this.eventListeners.resize) {
+            window.removeEventListener('resize', this.eventListeners.resize, false);
+        }
+        if (this.eventListeners.documentClick) {
+            document.removeEventListener('click', this.eventListeners.documentClick);
+        }
+        
+        // Clear event listener references
+        this.eventListeners = {
+            keydown: null,
+            keyup: null,
+            resize: null,
+            documentClick: null
+        };
+        
+        // Reset key states
+        this.keys = {
+            left: false,
+            right: false,
+            jump: false
+        };
+        
+        // Reset mobile button states if they exist
+        if (this.mobileButtons) {
+            this.mobileButtons = {
+                left: false,
+                right: false,
+                jump: false
+            };
+        }
+        
+        // Disable input processing
+        this.enabled = false;
     }
 }

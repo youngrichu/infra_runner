@@ -222,6 +222,11 @@ export class EnhancedGame {
     }
 
     setupEnhancedInputManager() {
+        // Cleanup existing input manager if it exists
+        if (this.inputManager && typeof this.inputManager.destroy === 'function') {
+            this.inputManager.destroy();
+        }
+        
         // Setup original input manager
         this.inputManager = new InputManager(this.player, this);
         
@@ -506,7 +511,17 @@ export class EnhancedGame {
     }
 
     updateGameSpeed() {
-        this.gameSpeed.value += GAME_CONFIG.SPEED_INCREMENT;
+        // Time-based speed increment to prevent frame rate affecting game speed
+        const now = performance.now();
+        if (!this.lastSpeedUpdate) {
+            this.lastSpeedUpdate = now;
+        }
+        
+        const deltaTime = now - this.lastSpeedUpdate;
+        if (deltaTime >= 16.67) { // ~60fps equivalent (1000ms / 60fps = 16.67ms)
+            this.gameSpeed.value += GAME_CONFIG.SPEED_INCREMENT;
+            this.lastSpeedUpdate = now;
+        }
         
         // Update score based on solar boost status
         if (this.powerUpManager.getSolarBoostStatus()) {
@@ -547,6 +562,7 @@ export class EnhancedGame {
         // Reset game state
         this.gameActive = true;
         this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
+        this.lastSpeedUpdate = null; // Reset speed timer
         
         // Reset camera position
         this.camera.position.z = 5;
@@ -560,7 +576,9 @@ export class EnhancedGame {
         this.collectableManager.reset();
         this.powerUpManager.reset();
         this.uiManager.reset();
-        this.inputManager.reset();
+        
+        // Recreate input manager properly
+        this.setupEnhancedInputManager();
         
         // Position player at safe starting location ahead of obstacle spawn zone
         // Obstacles spawn at playerZ - 50, so position player ahead to ensure safety
@@ -574,7 +592,11 @@ export class EnhancedGame {
         // Start game immediately - no countdown on restart
         this.gameActive = true;
         this.startSpawning();
-        this.animate();
+        
+        // Only start animation if not already running
+        if (!this.animationId) {
+            this.animate();
+        }
         
     }
 
@@ -647,7 +669,16 @@ export class EnhancedGame {
     }
 
     animate() {
-        this.animationId = requestAnimationFrame(() => this.animate());
+        // Make sure we don't have multiple animation loops running
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+        }
+        
+        this.animationId = requestAnimationFrame(() => {
+            // Clear the animation ID to avoid recursive issues
+            this.animationId = null;
+            this.animate();
+        });
 
         this.updateGameLogic();
         
@@ -659,8 +690,11 @@ export class EnhancedGame {
 
     stopAnimation() {
         if (this.animationId) {
+            console.log('🛑 Stopping animation loop:', this.animationId);
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
+        } else {
+            console.log('🛑 No animation to stop');
         }
     }
 

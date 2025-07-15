@@ -176,6 +176,11 @@ export class OptimizedGame {
 
     setupInputSystems() {
         
+        // Cleanup existing input manager if it exists
+        if (this.inputManager && typeof this.inputManager.destroy === 'function') {
+            this.inputManager.destroy();
+        }
+        
         // Original input manager
         this.inputManager = new InputManager(this.player, this);
         this.inputManager.setupMobileControls();
@@ -589,6 +594,11 @@ export class OptimizedGame {
         
         // STOP the existing animation loop to prevent multiple loops
         this.stopAnimation();
+        
+        // Cleanup existing input manager to prevent event listener accumulation
+        if (this.inputManager && typeof this.inputManager.destroy === 'function') {
+            this.inputManager.destroy();
+        }
         
         // Reset game state
         this.gameActive = true;
