@@ -98,20 +98,34 @@ export class InputManager {
     setupMobileControls() {
         // Create virtual buttons for mobile
         this.createMobileUI();
+        
+        // Add fallback for production builds - retry if controls don't appear
+        setTimeout(() => {
+            if (!document.querySelector('.mobile-gamepad-container')) {
+                this.createMobileUI();
+            }
+        }, 1000);
     }
 
     createMobileUI() {
-        // Strict mobile device detection - ensure desktop doesn't run mobile code
-        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && 
-                         'ontouchstart' in window;
+        // Prevent creating duplicate mobile UI
+        if (document.querySelector('.mobile-gamepad-container')) {
+            return;
+        }
         
-        // Additional check for desktop browsers
-        const isDesktop = window.innerWidth > 1024 || 
-                         navigator.userAgent.includes('Windows') || 
-                         navigator.userAgent.includes('Macintosh') || 
-                         navigator.userAgent.includes('Linux');
+        // Enhanced mobile detection for production builds
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                         'ontouchstart' in window || 
+                         navigator.maxTouchPoints > 0 ||
+                         window.innerWidth <= 768;
         
-        if (!isMobile || isDesktop) return;
+        // More flexible desktop detection - don't block mobile UI if uncertain
+        const isDesktop = window.innerWidth > 1024 && 
+                         !('ontouchstart' in window) && 
+                         navigator.maxTouchPoints === 0;
+        
+        // Only skip mobile UI if we're certain it's desktop
+        if (!isMobile && isDesktop) return;
 
         // Create main gamepad container
         const gamepadContainer = document.createElement('div');

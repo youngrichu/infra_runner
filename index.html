@@ -1259,11 +1259,12 @@
                 
                 // Hide loading screen when complete and trigger onboarding
                 if (step >= this.totalSteps) {
+                    // Reduce delay for faster mobile experience
                     setTimeout(() => {
                         const loading = document.getElementById('loading');
                         if (loading) {
                             loading.style.opacity = '0';
-                            loading.style.transition = 'opacity 0.5s ease';
+                            loading.style.transition = 'opacity 0.3s ease';
                             setTimeout(() => {
                                 loading.style.display = 'none';
                                 // Check if we should show onboarding
@@ -1275,9 +1276,9 @@
                                     // Check if player is registered before starting game
                                     checkPlayerRegistrationAndStart();
                                 }
-                            }, 500);
+                            }, 300);
                         }
-                    }, 300); // Show complete state for 300ms
+                    }, 100); // Reduced from 300ms to 100ms
                 }
             }
         };
