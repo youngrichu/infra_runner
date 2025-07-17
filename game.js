@@ -689,6 +689,60 @@ export class Game {
             this.animationId = null;
         }
     }
+    
+    cleanup() {
+        console.log('Starting comprehensive game cleanup');
+        
+        // Stop the game
+        this.gameActive = false;
+        
+        // Stop animation loop
+        this.stopAnimation();
+        
+        // Cleanup input manager
+        if (this.inputManager && typeof this.inputManager.destroy === 'function') {
+            this.inputManager.destroy();
+            this.inputManager = null;
+        }
+        
+        // Cleanup UI manager
+        if (this.uiManager && typeof this.uiManager.cleanup === 'function') {
+            this.uiManager.cleanup();
+        }
+        
+        // Cleanup player registration
+        if (this.playerRegistration && typeof this.playerRegistration.destroy === 'function') {
+            this.playerRegistration.destroy();
+            this.playerRegistration = null;
+        }
+        
+        // Cleanup WebGL renderer
+        if (this.renderer) {
+            try {
+                this.renderer.dispose();
+                this.renderer.forceContextLoss();
+                
+                // Remove canvas if it exists
+                if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                    this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                }
+                this.renderer = null;
+            } catch (error) {
+                console.warn('Error cleaning up renderer:', error);
+            }
+        }
+        
+        // Clear scene
+        if (this.scene) {
+            this.scene.clear();
+            this.scene = null;
+        }
+        
+        // Clear camera
+        this.camera = null;
+        
+        console.log('Game cleanup completed');
+    }
 }
 
 // Game will be initialized by the loading manager or onboarding system
@@ -698,12 +752,42 @@ export class Game {
 window.initializeGame = function() {
     // Prevent multiple game instances - clean up any existing instance
     if (window.gameInstance) {
-        // Cleaning up existing game instance
-        window.gameInstance.gameActive = false; // Stop the existing game
+        console.log('Cleaning up existing game instance to prevent WebGL context leak');
+        
+        // Call comprehensive cleanup method
+        if (typeof window.gameInstance.cleanup === 'function') {
+            window.gameInstance.cleanup();
+        } else {
+            // Fallback cleanup
+            window.gameInstance.gameActive = false;
+            
+            // Clean up WebGL renderer if it exists
+            if (window.gameInstance.renderer) {
+                try {
+                    window.gameInstance.renderer.dispose();
+                    window.gameInstance.renderer.forceContextLoss();
+                    
+                    // Remove canvas if it exists
+                    if (window.gameInstance.renderer.domElement && window.gameInstance.renderer.domElement.parentNode) {
+                        window.gameInstance.renderer.domElement.parentNode.removeChild(window.gameInstance.renderer.domElement);
+                    }
+                } catch (error) {
+                    console.warn('Error cleaning up renderer:', error);
+                }
+            }
+        }
+        
+        // Clear the instance
         window.gameInstance = null;
+        
+        // Force garbage collection if available
+        if (window.gc) {
+            window.gc();
+        }
     }
     
     // Initializing new game instance after onboarding completion
+    console.log('Creating new game instance');
     window.gameInstance = new Game();
     return window.gameInstance;
 };

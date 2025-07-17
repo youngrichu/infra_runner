@@ -257,6 +257,9 @@ export class PlayerRegistration {
     }
 
     show() {
+        // Set global flag to disable all input managers
+        window.playerRegistrationActive = true;
+        
         // Check if player data is already stored
         const storedData = localStorage.getItem('playerData');
         if (storedData) {
@@ -276,6 +279,17 @@ export class PlayerRegistration {
         }, 10);
         this.isVisible = true;
         
+        // Ensure input fields are properly enabled and focusable
+        const inputs = this.registrationElement.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.disabled = false;
+            input.readOnly = false;
+            input.style.pointerEvents = 'auto';
+            input.style.userSelect = 'text';
+            input.style.webkitUserSelect = 'text';
+            input.style.cursor = 'text';
+        });
+        
         // Focus on first input with better timing
         this.focusFirstInput();
     }
@@ -283,28 +297,61 @@ export class PlayerRegistration {
     focusFirstInput() {
         // Use multiple fallback attempts to ensure focus works
         const attemptFocus = (attempt = 0) => {
-            if (attempt > 5) return; // Max 5 attempts
+            if (attempt > 8) return; // Max 8 attempts
             
             const input = document.getElementById('player-name');
             if (input && this.isVisible) {
-                // Clear any selection and focus
-                input.value = input.value; // Reset cursor position
-                input.focus();
-                
-                // Verify focus was successful
-                setTimeout(() => {
-                    if (document.activeElement !== input && this.isVisible) {
-                        attemptFocus(attempt + 1);
+                try {
+                    // Ensure input is properly enabled and visible
+                    input.disabled = false;
+                    input.readOnly = false;
+                    input.style.pointerEvents = 'auto';
+                    input.style.userSelect = 'text';
+                    input.style.webkitUserSelect = 'text';
+                    input.style.cursor = 'text';
+                    input.style.zIndex = '10001';
+                    input.tabIndex = 0;
+                    
+                    // Remove any potential event listeners that might interfere
+                    input.removeAttribute('readonly');
+                    input.removeAttribute('disabled');
+                    
+                    // Clear any selection and focus
+                    input.value = input.value; // Reset cursor position
+                    input.blur(); // Clear any existing focus
+                    
+                    // Force focus with multiple methods
+                    setTimeout(() => {
+                        input.focus();
+                        input.click();
+                        input.select();
+                        
+                        // Verify focus was successful
+                        setTimeout(() => {
+                            if (document.activeElement !== input && this.isVisible) {
+                                attemptFocus(attempt + 1);
+                            }
+                        }, 100);
+                    }, 50);
+                } catch (error) {
+                    console.warn('Error focusing input:', error);
+                    if (attempt < 8) {
+                        setTimeout(() => attemptFocus(attempt + 1), 200);
                     }
-                }, 50);
+                }
             }
         };
         
-        // Initial attempt after a small delay
-        setTimeout(() => attemptFocus(), 150);
+        // Start focus attempts after a delay
+        setTimeout(() => {
+            attemptFocus();
+        }, 100);
     }
 
     hide() {
+        // Clear global flag
+        window.playerRegistrationActive = false;
+        
         this.registrationElement.style.opacity = '0';
         this.registrationElement.style.visibility = 'hidden';
         setTimeout(() => {

@@ -34,13 +34,24 @@ export class InputManager {
         // Don't process any input if disabled
         if (!this.enabled) return;
         
-        // Only process game controls if game is active
-        if (!this.gameController.isGameActive()) return;
-        
         // Don't interfere with form inputs
         if (event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA')) {
             return;
         }
+        
+        // Check global flag for player registration
+        if (window.playerRegistrationActive) {
+            return;
+        }
+        
+        // Check if player registration form is visible
+        const registrationForm = document.getElementById('player-registration');
+        if (registrationForm && registrationForm.style.display !== 'none' && registrationForm.style.opacity !== '0') {
+            return;
+        }
+        
+        // Only process game controls if game is active
+        if (!this.gameController.isGameActive()) return;
         
         // Prevent default behavior for game keys only during gameplay
         if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space'].includes(event.code)) {
@@ -511,6 +522,11 @@ export class InputManager {
     setupUniversalRestart() {
         // Store the document click listener reference for cleanup
         this.eventListeners.documentClick = (event) => {
+            // Don't handle clicks during player registration
+            if (window.playerRegistrationActive) {
+                return;
+            }
+            
             if (!this.gameController.isGameActive()) {
                 // Check if clicking on interactive elements that should NOT restart the game
                 const isInteractiveElement = this.isInteractiveElement(event.target);

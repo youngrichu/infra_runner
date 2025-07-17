@@ -1544,15 +1544,33 @@
                     window.onboardingModelViewer = null;
                 }
                 
-                // Additional cleanup for any remaining WebGL contexts
+                // More aggressive cleanup for any remaining WebGL contexts
                 const canvases = document.querySelectorAll('canvas');
                 canvases.forEach(canvas => {
-                    const gl = canvas.getContext('webgl') || canvas.getContext('webgl2');
-                    if (gl && gl.getExtension) {
-                        const loseContext = gl.getExtension('WEBGL_lose_context');
-                        if (loseContext) {
-                            loseContext.loseContext();
+                    try {
+                        // Get both WebGL contexts
+                        const gl = canvas.getContext('webgl') || canvas.getContext('webgl2') || 
+                                  canvas.getContext('experimental-webgl') || canvas.getContext('experimental-webgl2');
+                        
+                        if (gl) {
+                            // Force context loss
+                            const loseContext = gl.getExtension('WEBGL_lose_context');
+                            if (loseContext) {
+                                loseContext.loseContext();
+                            }
+                            
+                            // Clear all WebGL resources
+                            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                            gl.flush();
+                            gl.finish();
                         }
+                        
+                        // Remove canvas from DOM if it's not the main game canvas
+                        if (canvas.parentNode && !canvas.id.includes('game')) {
+                            canvas.parentNode.removeChild(canvas);
+                        }
+                    } catch (e) {
+                        console.warn('Error cleaning up canvas:', e);
                     }
                 });
                 
@@ -1560,6 +1578,14 @@
                 if (window.gc) {
                     window.gc();
                 }
+                
+                // Additional cleanup delay to ensure contexts are released
+                setTimeout(() => {
+                    if (window.gc) {
+                        window.gc();
+                    }
+                }, 100);
+                
             } catch (error) {
                 console.warn('Error during model viewer cleanup:', error);
             }
@@ -1580,6 +1606,14 @@
         }
         
         function showRegistrationFallback() {
+            // Prevent multiple game initializations
+            if (window.gameInitialized) {
+                return;
+            }
+            
+            // Mark as initialized
+            window.gameInitialized = true;
+            
             // Initialize the game first, which will handle player registration
             if (window.initializeGame && typeof window.initializeGame === 'function') {
                 window.initializeGame();
@@ -1655,20 +1689,20 @@
                         window.onboardingModelViewer = await new OnboardingModelViewer().init();
                     }
                     
-                    // Load all models in parallel for better performance
-                    const modelPromises = [
-                        window.onboardingModelViewer.createModelViewer('blueprint-viewer', 'blueprint', 'Construction Plans'),
-                        window.onboardingModelViewer.createModelViewer('water-viewer', 'waterDrop', 'Clean Water Supply'),
-                        window.onboardingModelViewer.createModelViewer('energy-viewer', 'energyCell', 'Power Infrastructure'),
-                        window.onboardingModelViewer.createModelViewer('hardhat-viewer', 'hardHat', 'Safety Protection'),
-                        window.onboardingModelViewer.createModelViewer('jetpack-viewer', 'helicopter', 'Flight Capability'),
-                        window.onboardingModelViewer.createModelViewer('solar-viewer', 'solarPower', 'Solar Energy'),
-                        window.onboardingModelViewer.createModelViewer('wind-viewer', 'windPower', 'Wind Power'),
-                        window.onboardingModelViewer.createModelViewer('water-pipeline-viewer', 'waterPipeline', 'Water Infrastructure')
+                    // Use batch creation for better performance
+                    const viewerConfigs = [
+                        { containerId: 'blueprint-viewer', modelKey: 'blueprint', description: 'Construction Plans' },
+                        { containerId: 'water-viewer', modelKey: 'waterDrop', description: 'Clean Water Supply' },
+                        { containerId: 'energy-viewer', modelKey: 'energyCell', description: 'Power Infrastructure' },
+                        { containerId: 'hardhat-viewer', modelKey: 'hardHat', description: 'Safety Protection' },
+                        { containerId: 'jetpack-viewer', modelKey: 'helicopter', description: 'Flight Capability' },
+                        { containerId: 'solar-viewer', modelKey: 'solarPower', description: 'Solar Energy' },
+                        { containerId: 'wind-viewer', modelKey: 'windPower', description: 'Wind Power' },
+                        { containerId: 'water-pipeline-viewer', modelKey: 'waterPipeline', description: 'Water Infrastructure' }
                     ];
                     
-                    // Load models in parallel
-                    await Promise.allSettled(modelPromises);
+                    // Load models using batch creation
+                    await window.onboardingModelViewer.createViewersBatch(viewerConfigs);
                 })();
                 
                 // Don't wait for models to load - form is already shown with placeholders

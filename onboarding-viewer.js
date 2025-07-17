@@ -4,6 +4,9 @@ export class OnboardingModelViewer {
         this.viewers = new Map();
         this.loadedModels = new Map();
         this.animationIds = new Map();
+        this.maxConcurrentViewers = 8; // Increased limit for better performance
+        this.viewerQueue = [];
+        this.activeViewers = 0;
         
         // Will be initialized in init() method
         this.THREE = null;
@@ -12,6 +15,7 @@ export class OnboardingModelViewer {
         this.MODEL_CONFIGURATIONS = null;
         this.loader = null;
         this.dracoLoader = null;
+        this.sharedRenderer = null; // Shared renderer for efficiency
         this.isInitialized = false;
     }
     
@@ -133,8 +137,26 @@ export class OnboardingModelViewer {
     }
     
     async createModelViewer(containerId, modelKey, description) {
+        if (!this.isInitialized) {
+            console.warn('OnboardingModelViewer not initialized');
+            return;
+        }
+
         const container = document.getElementById(containerId);
-        if (!container) return;
+        if (!container) {
+            console.warn(`Container ${containerId} not found`);
+            return;
+        }
+
+        // Check if we've reached the maximum number of concurrent viewers
+        if (this.activeViewers >= this.maxConcurrentViewers) {
+            console.log(`Queueing viewer ${containerId} - max concurrent viewers reached`);
+            this.viewerQueue.push({ containerId, modelKey, description });
+            return;
+        }
+
+        this.activeViewers++;
+        console.log(`Creating viewer ${containerId} (${this.activeViewers}/${this.maxConcurrentViewers} active)`);
 
         // Create canvas element
         const canvas = document.createElement('canvas');
@@ -149,8 +171,18 @@ export class OnboardingModelViewer {
         // Create scene
         const scene = new this.THREE.Scene();
         const camera = new this.THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-        const renderer = new this.THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        
+        // Use shared renderer approach for better performance
+        const renderer = new this.THREE.WebGLRenderer({ 
+            canvas, 
+            antialias: false, // Reduced for performance
+            alpha: true,
+            preserveDrawingBuffer: false,
+            powerPreference: 'default', // Changed from high-performance
+            failIfMajorPerformanceCaveat: false
+        });
         renderer.setSize(120, 120);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Reduced pixel ratio
         renderer.setClearColor(0x000000, 0);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = this.THREE.PCFSoftShadowMap;
@@ -290,7 +322,55 @@ export class OnboardingModelViewer {
         `;
         container.children[0].children[0].appendChild(canvas);
 
+        // Process queue if there are pending viewers
+        this.processQueue();
+
         return canvas;
+    }
+    
+    processQueue() {
+        // Process multiple queued viewers if we have capacity
+        while (this.viewerQueue.length > 0 && this.activeViewers < this.maxConcurrentViewers) {
+            const next = this.viewerQueue.shift();
+            console.log(`Processing queued viewer: ${next.containerId}`);
+            this.createModelViewer(next.containerId, next.modelKey, next.description);
+        }
+    }
+    
+    destroyViewer(containerId) {
+        const viewer = this.viewers.get(containerId);
+        if (viewer) {
+            try {
+                // Cancel animation
+                const animationId = this.animationIds.get(containerId);
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    this.animationIds.delete(containerId);
+                }
+                
+                // Dispose of WebGL resources
+                if (viewer.renderer) {
+                    viewer.renderer.dispose();
+                    viewer.renderer.forceContextLoss();
+                }
+                
+                // Remove from DOM
+                if (viewer.canvas && viewer.canvas.parentNode) {
+                    viewer.canvas.parentNode.removeChild(viewer.canvas);
+                }
+                
+                this.viewers.delete(containerId);
+                this.activeViewers--;
+                
+                console.log(`Destroyed viewer ${containerId} (${this.activeViewers}/${this.maxConcurrentViewers} active)`);
+                
+                // Process queue
+                this.processQueue();
+                
+            } catch (error) {
+                console.warn(`Error destroying viewer ${containerId}:`, error);
+            }
+        }
     }
     
     async loadModel(modelKey) {
@@ -440,11 +520,17 @@ export class OnboardingModelViewer {
     }
     
     cleanup() {
+        console.log('Starting OnboardingModelViewer cleanup');
+        
         // Cancel all animation frames first
-        this.animationIds.forEach((id) => {
+        this.animationIds.forEach((id, containerId) => {
             cancelAnimationFrame(id);
         });
         this.animationIds.clear();
+
+        // Clear queue and reset counters
+        this.viewerQueue = [];
+        this.activeViewers = 0;
 
         // Properly dispose of all WebGL resources
         this.viewers.forEach((viewer, containerId) => {
@@ -458,18 +544,10 @@ export class OnboardingModelViewer {
                         if (child.material) {
                             if (Array.isArray(child.material)) {
                                 child.material.forEach(material => {
-                                    if (material.map) material.map.dispose();
-                                    if (material.normalMap) material.normalMap.dispose();
-                                    if (material.roughnessMap) material.roughnessMap.dispose();
-                                    if (material.metalnessMap) material.metalnessMap.dispose();
-                                    material.dispose();
+                                    this.disposeMaterial(material);
                                 });
                             } else {
-                                if (child.material.map) child.material.map.dispose();
-                                if (child.material.normalMap) child.material.normalMap.dispose();
-                                if (child.material.roughnessMap) child.material.roughnessMap.dispose();
-                                if (child.material.metalnessMap) child.material.metalnessMap.dispose();
-                                child.material.dispose();
+                                this.disposeMaterial(child.material);
                             }
                         }
                     });
@@ -526,5 +604,32 @@ export class OnboardingModelViewer {
 
         // Reset initialization state
         this.isInitialized = false;
+    }
+
+    // Helper method to dispose materials properly
+    disposeMaterial(material) {
+        if (!material) return;
+        
+        // Dispose textures
+        if (material.map) material.map.dispose();
+        if (material.normalMap) material.normalMap.dispose();
+        if (material.roughnessMap) material.roughnessMap.dispose();
+        if (material.metalnessMap) material.metalnessMap.dispose();
+        if (material.emissiveMap) material.emissiveMap.dispose();
+        if (material.bumpMap) material.bumpMap.dispose();
+        if (material.displacementMap) material.displacementMap.dispose();
+        if (material.aoMap) material.aoMap.dispose();
+        
+        // Dispose material
+        material.dispose();
+    }
+
+    // Batch create viewers for better performance
+    async createViewersBatch(viewerConfigs) {
+        const promises = viewerConfigs.map(config => 
+            this.createModelViewer(config.containerId, config.modelKey, config.description)
+        );
+        
+        return Promise.allSettled(promises);
     }
 }
