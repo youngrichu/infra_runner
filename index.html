@@ -419,14 +419,30 @@
             }
             
             .onboarding-modal {
-                padding: 15px;
-                padding-top: 45px;
+                padding: 0;
                 margin: 10px;
                 max-height: 85vh;
-                overflow-y: auto;
                 border-radius: 15px;
                 width: calc(100vw - 20px);
                 max-width: calc(100vw - 20px);
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .onboarding-content-wrapper {
+                padding: 15px;
+                padding-top: 45px;
+                overflow-y: auto;
+                flex: 1;
+                min-height: 0;
+            }
+            
+            .onboarding-footer {
+                padding: 15px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                background: rgba(0, 0, 0, 0.1);
+                border-radius: 0 0 15px 15px;
+                flex-shrink: 0;
             }
             
             .skip-option {
@@ -581,13 +597,30 @@
             }
             
             .onboarding-modal {
-                padding: 8px;
-                padding-top: 35px;
+                padding: 0;
                 margin: 5px;
                 border-radius: 12px;
                 width: calc(100vw - 10px);
                 max-width: calc(100vw - 10px);
                 max-height: 90vh;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .onboarding-content-wrapper {
+                padding: 8px;
+                padding-top: 35px;
+                overflow-y: auto;
+                flex: 1;
+                min-height: 0;
+            }
+            
+            .onboarding-footer {
+                padding: 8px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                background: rgba(0, 0, 0, 0.1);
+                border-radius: 0 0 12px 12px;
+                flex-shrink: 0;
             }
             
             .skip-option {
@@ -844,6 +877,9 @@
         @media (min-width: 1024px) and (orientation: landscape) {
             .onboarding-modal {
                 max-width: 700px;
+            }
+            
+            .onboarding-content-wrapper {
                 padding: 35px;
             }
             
@@ -970,14 +1006,15 @@
     <!-- Professional Onboarding System -->
     <div id="onboarding-overlay">
         <div class="onboarding-modal">
-            <div class="skip-option">
-                <button class="skip-btn" onclick="skipOnboarding()">Skip Tutorial</button>
-            </div>
-            
-            <div class="onboarding-header">
-                <div class="onboarding-title"><i class="ti ti-building-factory2"></i> Infrastructure Runner</div>
-                <div class="onboarding-subtitle">Build the Future, One Run at a Time</div>
-            </div>
+            <div class="onboarding-content-wrapper">
+                <div class="skip-option">
+                    <button class="skip-btn" onclick="skipOnboarding()">Skip Tutorial</button>
+                </div>
+                
+                <div class="onboarding-header">
+                    <div class="onboarding-title"><i class="ti ti-building-factory2"></i> Infrastructure Runner</div>
+                    <div class="onboarding-subtitle">Build the Future, One Run at a Time</div>
+                </div>
             
             <!-- Step 1: Welcome -->
             <div class="onboarding-step active" id="step-0">
@@ -1077,18 +1114,21 @@
                     <p><strong>Good luck building the future!</strong></p>
                 </div>
             </div>
-            
-            <div class="step-indicator">
-                <div class="step-dot active"></div>
-                <div class="step-dot"></div>
-                <div class="step-dot"></div>
-                <div class="step-dot"></div>
-                <div class="step-dot"></div>
             </div>
             
-            <div class="onboarding-navigation">
-                <button class="onboarding-btn secondary" id="prev-btn" onclick="previousStep()" disabled>Previous</button>
-                <button class="onboarding-btn" id="next-btn" onclick="nextStep()">Next</button>
+            <div class="onboarding-footer">
+                <div class="step-indicator">
+                    <div class="step-dot active"></div>
+                    <div class="step-dot"></div>
+                    <div class="step-dot"></div>
+                    <div class="step-dot"></div>
+                    <div class="step-dot"></div>
+                </div>
+                
+                <div class="onboarding-navigation">
+                    <button class="onboarding-btn secondary" id="prev-btn" onclick="previousStep()" disabled>Previous</button>
+                    <button class="onboarding-btn" id="next-btn" onclick="nextStep()">Next</button>
+                </div>
             </div>
         </div>
     </div>
