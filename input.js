@@ -79,6 +79,10 @@ export class InputManager {
             case 'ArrowUp':
             case 'KeyW':
                 if (!this.keys.jump) {
+                    // Prevent jumping while flying
+                    if (this.gameController.powerUpManager && this.gameController.powerUpManager.getFlyingStatus()) {
+                        break;
+                    }
                     this.keys.jump = true;
                     this.player.jump();
                 }
@@ -86,6 +90,10 @@ export class InputManager {
             case 'ArrowDown':
             case 'KeyS':
                 if (!this.keys.slide) {
+                    // Prevent sliding while flying
+                    if (this.gameController.powerUpManager && this.gameController.powerUpManager.getFlyingStatus()) {
+                        break;
+                    }
                     this.keys.slide = true;
                     this.player.slide();
                 }
@@ -142,7 +150,7 @@ export class InputManager {
 
     createMobileUI() {
         // Prevent creating duplicate mobile UI
-        if (document.querySelector('.mobile-gamepad-container')) {
+        if (document.querySelector('.mobile-swipe-container')) {
             return;
         }
         
@@ -160,23 +168,18 @@ export class InputManager {
         // Only skip mobile UI if we're certain it's desktop
         if (!isMobile && isDesktop) return;
 
-        // Create main gamepad container
-        const gamepadContainer = document.createElement('div');
-        gamepadContainer.className = 'mobile-gamepad-container';
-        Object.assign(gamepadContainer.style, {
+        // Create main swipe container
+        const swipeContainer = document.createElement('div');
+        swipeContainer.className = 'mobile-swipe-container';
+        Object.assign(swipeContainer.style, {
             position: 'fixed',
-            bottom: '0',
+            top: '0',
             left: '0',
             right: '0',
-            height: '180px',
-            background: 'linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.1) 100%)',
-            zIndex: '1000',
+            bottom: '0',
+            zIndex: '999',
             pointerEvents: 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            gap: '20px'
+            background: 'transparent'
         });
 
         // Mobile-specific debouncing (separate from desktop keyboard state)
@@ -187,362 +190,314 @@ export class InputManager {
             slide: false
         };
 
-        // Create left arrow button with mobile-only debouncing
-        const leftButton = this.createMobileButton('◀', () => {
-            if (!this.mobileButtons.left) {
-                this.mobileButtons.left = true;
-                this.player.moveLeft();
-                // Reset mobile button state after delay
-                setTimeout(() => {
-                    this.mobileButtons.left = false;
-                }, 200);
-            }
-        });
+        // Setup swipe gesture detection
+        this.setupSwipeGestures(swipeContainer);
         
-        // Create jump button (larger and centered)
-        const jumpButton = this.createMobileButton('▲', () => {
-            if (!this.mobileButtons.jump) {
-                this.mobileButtons.jump = true;
-                this.player.jump();
-                // Reset mobile button state after delay
-                setTimeout(() => {
-                    this.mobileButtons.jump = false;
-                }, 200);
-            }
-        });
-        jumpButton.className = 'mobile-gamepad-button mobile-gamepad-jump-button';
-        Object.assign(jumpButton.style, {
-            background: 'linear-gradient(145deg, #FF9800 0%, #F57C00 100%)',
-            width: '90px',
-            height: '90px',
-            fontSize: '36px',
-            boxShadow: '0 10px 20px rgba(255, 152, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)'
-        });
-        
-        // Create right arrow button with mobile-only debouncing
-        const rightButton = this.createMobileButton('▶', () => {
-            if (!this.mobileButtons.right) {
-                this.mobileButtons.right = true;
-                this.player.moveRight();
-                // Reset mobile button state after delay
-                setTimeout(() => {
-                    this.mobileButtons.right = false;
-                }, 200);
-            }
-        });
-        
-        // Create slide button with mobile-only debouncing
-        const slideButton = this.createMobileButton('▼', () => {
-            if (!this.mobileButtons.slide) {
-                this.mobileButtons.slide = true;
-                this.player.slide();
-                // Reset mobile button state after delay
-                setTimeout(() => {
-                    this.mobileButtons.slide = false;
-                }, 200);
-            }
-        });
-        slideButton.className = 'mobile-gamepad-button mobile-gamepad-slide-button';
-        Object.assign(slideButton.style, {
-            background: 'linear-gradient(145deg, #9C27B0 0%, #7B1FA2 100%)',
-            width: '70px',
-            height: '70px',
-            fontSize: '28px',
-            boxShadow: '0 8px 16px rgba(156, 39, 176, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)'
-        });
-
-        // Add buttons to container
-        gamepadContainer.appendChild(leftButton);
-        gamepadContainer.appendChild(jumpButton);
-        gamepadContainer.appendChild(slideButton);
-        gamepadContainer.appendChild(rightButton);
-        
-        document.body.appendChild(gamepadContainer);
+        document.body.appendChild(swipeContainer);
         
         // Add mobile-specific CSS only once
-        this.addMobileGamepadStyles();
+        this.addMobileSwipeStyles();
         
-        // Prevent scrolling and improve mobile experience
-        gamepadContainer.addEventListener('touchstart', (e) => {
-            e.stopPropagation();
-        }, { passive: false });
+        // Add body class to prevent pull-to-refresh when mobile controls are active
+        document.body.classList.add('mobile-swipe-active');
         
-        gamepadContainer.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        }, { passive: false });
-        
-        // Add visual feedback when gamepad is active
-        gamepadContainer.addEventListener('touchstart', () => {
-            document.body.style.background = 'rgba(0, 0, 0, 0.95)';
-        });
-        
-        gamepadContainer.addEventListener('touchend', () => {
-            document.body.style.background = '';
-        });
+        // Monitor game state to manage scroll prevention
+        this.setupGameStateMonitoring();
     }
 
-    createMobileButton(text, action) {
-        const button = document.createElement('button');
-        button.innerHTML = text;
+    setupGameStateMonitoring() {
+        // Flag to control monitoring loop
+        this.isMonitoringGameState = true;
         
-        // Enhanced mobile button styling with better colors
-        Object.assign(button.style, {
-            width: '70px',
-            height: '70px',
-            fontSize: '28px',
-            fontWeight: 'bold',
-            color: '#fff',
-            background: 'linear-gradient(145deg, #4CAF50 0%, #45a049 100%)',
-            border: '3px solid rgba(255, 255, 255, 0.3)',
-            borderRadius: '50%',
-            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)',
-            cursor: 'pointer',
-            userSelect: 'none',
-            transition: 'all 0.15s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
-            position: 'relative',
-            overflow: 'hidden',
-            pointerEvents: 'auto'
-        });
-        
-        // Add subtle inner glow effect
-        const innerGlow = document.createElement('div');
-        Object.assign(innerGlow.style, {
-            position: 'absolute',
-            top: '2px',
-            left: '2px',
-            right: '2px',
-            bottom: '2px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 70%)',
-            pointerEvents: 'none'
-        });
-        button.appendChild(innerGlow);
-        
-        // Add ripple effect container
-        const rippleContainer = document.createElement('div');
-        Object.assign(rippleContainer.style, {
-            position: 'absolute',
-            top: '0',
-            left: '0',
-            right: '0',
-            bottom: '0',
-            borderRadius: '50%',
-            overflow: 'hidden',
-            pointerEvents: 'none'
-        });
-        button.appendChild(rippleContainer);
-        
-        // Move text to front
-        const textSpan = document.createElement('span');
-        textSpan.innerHTML = text;
-        textSpan.style.position = 'relative';
-        textSpan.style.zIndex = '10';
-        button.innerHTML = '';
-        button.appendChild(textSpan);
-        button.appendChild(innerGlow);
-        button.appendChild(rippleContainer);
-        
-        // Create ripple effect
-        const createRipple = (e) => {
-            const ripple = document.createElement('div');
-            const rect = button.getBoundingClientRect();
-            const size = Math.max(rect.width, rect.height);
+        // Monitor game state to enable/disable scroll prevention
+        const monitorGameState = () => {
+            if (!this.isMonitoringGameState) {
+                return; // Stop monitoring if flag is false
+            }
             
-            Object.assign(ripple.style, {
-                position: 'absolute',
-                width: size + 'px',
-                height: size + 'px',
-                borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.3)',
-                transform: 'scale(0)',
-                animation: 'ripple 0.6s ease-out',
-                left: '50%',
-                top: '50%',
-                marginLeft: -size/2 + 'px',
-                marginTop: -size/2 + 'px'
-            });
-            
-            rippleContainer.appendChild(ripple);
-            
-            // Remove ripple after animation
-            setTimeout(() => {
-                if (ripple.parentNode) {
-                    ripple.parentNode.removeChild(ripple);
+            if (this.gameController && this.gameController.isGameActive) {
+                if (this.gameController.isGameActive()) {
+                    // Game is active - ensure scroll prevention is enabled
+                    document.body.classList.add('mobile-swipe-active');
+                } else {
+                    // Game is inactive - allow normal scrolling
+                    document.body.classList.remove('mobile-swipe-active');
                 }
-            }, 600);
+            }
+            
+            // Continue monitoring only if still needed
+            if (this.isMonitoringGameState) {
+                this.gameStateMonitorId = requestAnimationFrame(monitorGameState);
+            }
         };
         
-        
-        button.className = 'mobile-gamepad-button';
-        
-        // Enhanced touch events with haptic feedback
-        button.addEventListener('touchstart', (e) => {
+        // Start monitoring
+        this.gameStateMonitorId = requestAnimationFrame(monitorGameState);
+    }
+
+    setupSwipeGestures(container) {
+        // Swipe detection variables
+        let fingerDownPos = { x: 0, y: 0 };
+        let fingerUpPos = { x: 0, y: 0 };
+        const SWIPE_THRESHOLD = 50; // Minimum distance for swipe detection
+        const TOP_EDGE_THRESHOLD = 50; // Prevent swipes starting near top edge
+        const detectSwipeAfterRelease = false; // Detect during movement for responsiveness
+
+        // Helper functions for swipe detection
+        const getVerticalMoveValue = () => {
+            return Math.abs(fingerDownPos.y - fingerUpPos.y);
+        };
+
+        const getHorizontalMoveValue = () => {
+            return Math.abs(fingerDownPos.x - fingerUpPos.x);
+        };
+
+        const checkSwipe = () => {
+            const verticalMove = getVerticalMoveValue();
+            const horizontalMove = getHorizontalMoveValue();
+
+            // Check for vertical swipes (up/down)
+            if (verticalMove > SWIPE_THRESHOLD && verticalMove > horizontalMove) {
+                // Prevent swipe down if it started near the top edge (to avoid browser refresh)
+                const isSwipeDown = fingerDownPos.y - fingerUpPos.y > 0;
+                const startedNearTop = fingerUpPos.y < TOP_EDGE_THRESHOLD;
+                
+                if (isSwipeDown && startedNearTop) {
+                    // Ignore swipe down that started near top edge
+                    return;
+                }
+                
+                if (isSwipeDown) {
+                    // Swipe down - Slide
+                    this.onSwipeDown();
+                } else {
+                    // Swipe up - Jump
+                    this.onSwipeUp();
+                }
+                fingerUpPos = { ...fingerDownPos };
+            }
+            // Check for horizontal swipes (left/right)
+            else if (horizontalMove > SWIPE_THRESHOLD && horizontalMove > verticalMove) {
+                if (fingerDownPos.x - fingerUpPos.x > 0) {
+                    // Swipe right
+                    this.onSwipeRight();
+                } else {
+                    // Swipe left
+                    this.onSwipeLeft();
+                }
+                fingerUpPos = { ...fingerDownPos };
+            }
+        };
+
+        // Store touch event handlers for cleanup
+        this.eventListeners.touchstart = (e) => {
+            const touch = e.touches[0];
+            fingerUpPos = { x: touch.clientX, y: touch.clientY };
+            fingerDownPos = { x: touch.clientX, y: touch.clientY };
+            
+            // Prevent default behavior to avoid browser gestures
             e.preventDefault();
-            e.stopPropagation();
+        };
+
+        this.eventListeners.touchmove = (e) => {
+            if (!detectSwipeAfterRelease) {
+                const touch = e.touches[0];
+                fingerDownPos = { x: touch.clientX, y: touch.clientY };
+                checkSwipe();
+            }
             
-            // Enhanced pressed state
-            Object.assign(button.style, {
-                background: 'linear-gradient(145deg, #45a049 0%, #4CAF50 100%)',
-                transform: 'scale(0.95)',
-                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-            });
+            // Prevent default to stop browser pull-to-refresh and scrolling
+            e.preventDefault();
+        };
+
+        this.eventListeners.touchend = (e) => {
+            if (detectSwipeAfterRelease) {
+                checkSwipe();
+            }
             
-            // Create ripple effect
-            createRipple(e);
+            // Prevent default to avoid any delayed browser gestures
+            e.preventDefault();
+        };
+
+        // Store mouse event handlers for cleanup
+        let isMouseDown = false;
+        
+        this.eventListeners.mousedown = (e) => {
+            isMouseDown = true;
+            fingerUpPos = { x: e.clientX, y: e.clientY };
+            fingerDownPos = { x: e.clientX, y: e.clientY };
+        };
+
+        this.eventListeners.mousemove = (e) => {
+            if (isMouseDown && !detectSwipeAfterRelease) {
+                fingerDownPos = { x: e.clientX, y: e.clientY };
+                checkSwipe();
+            }
+        };
+
+        this.eventListeners.mouseup = (e) => {
+            if (isMouseDown) {
+                isMouseDown = false;
+                if (detectSwipeAfterRelease) {
+                    checkSwipe();
+                }
+            }
+        };
+
+        // Add event listeners to container
+        container.addEventListener('touchstart', this.eventListeners.touchstart, { passive: false });
+        container.addEventListener('touchmove', this.eventListeners.touchmove, { passive: false });
+        container.addEventListener('touchend', this.eventListeners.touchend, { passive: false });
+        container.addEventListener('mousedown', this.eventListeners.mousedown);
+        container.addEventListener('mousemove', this.eventListeners.mousemove);
+        container.addEventListener('mouseup', this.eventListeners.mouseup);
+        
+        // Store container reference for cleanup
+        this.swipeContainer = container;
+    }
+
+    // Swipe callback functions
+    onSwipeUp() {
+        if (this.gameController.isGameActive()) {
+            // Prevent jumping while flying
+            if (this.gameController.powerUpManager && this.gameController.powerUpManager.getFlyingStatus()) {
+                return;
+            }
             
-            // Haptic feedback for supported devices
+            // Allow jump if:
+            // 1. Not currently debounced, OR
+            // 2. Player can double jump and is already jumping (for wind power)
+            const canJump = !this.mobileButtons.jump || 
+                           (this.player.canDoubleJump && this.player.isJumping && !this.player.hasDoubleJumped);
+            
+            if (canJump) {
+                this.mobileButtons.jump = true;
+                this.player.jump();
+                
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+                
+                setTimeout(() => {
+                    this.mobileButtons.jump = false;
+                }, 300);
+            }
+        }
+    }
+
+    onSwipeDown() {
+        if (!this.mobileButtons.slide && this.gameController.isGameActive()) {
+            // Prevent sliding while flying
+            if (this.gameController.powerUpManager && this.gameController.powerUpManager.getFlyingStatus()) {
+                return;
+            }
+            
+            this.mobileButtons.slide = true;
+            this.player.slide();
+            
+            // Haptic feedback
             if (navigator.vibrate) {
                 navigator.vibrate(50);
             }
             
-            // Execute action
-            action();
-        });
-        
-        button.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            
-            // Reset to normal state
-            Object.assign(button.style, {
-                background: 'linear-gradient(145deg, #4CAF50 0%, #45a049 100%)',
-                transform: 'scale(1)',
-                boxShadow: '0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)'
-            });
-        });
-        
-        // Enhanced mouse events for desktop testing
-        button.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            
-            Object.assign(button.style, {
-                background: 'linear-gradient(145deg, #45a049 0%, #4CAF50 100%)',
-                transform: 'scale(0.95)',
-                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.2)'
-            });
-            
-            createRipple(e);
-            action();
-        });
-        
-        button.addEventListener('mouseup', (e) => {
-            e.preventDefault();
-            
-            Object.assign(button.style, {
-                background: 'linear-gradient(145deg, #4CAF50 0%, #45a049 100%)',
-                transform: 'scale(1)',
-                boxShadow: '0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)'
-            });
-        });
-        
-        // Add hover effect for desktop
-        button.addEventListener('mouseenter', () => {
-            if (!button.matches(':active')) {
-                button.style.transform = 'scale(1.05)';
-                button.style.boxShadow = '0 12px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2)';
-            }
-        });
-        
-        button.addEventListener('mouseleave', () => {
-            if (!button.matches(':active')) {
-                button.style.transform = 'scale(1)';
-                button.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)';
-            }
-        });
-
-        return button;
+            setTimeout(() => {
+                this.mobileButtons.slide = false;
+            }, 300);
+        }
     }
 
-    addMobileGamepadStyles() {
-        // Add CSS only for mobile gamepad (never on desktop)
-        if (!document.querySelector('#mobile-gamepad-styles')) {
+    onSwipeLeft() {
+        if (!this.mobileButtons.left && this.gameController.isGameActive()) {
+            this.mobileButtons.left = true;
+            this.player.moveLeft();
+            
+            // Haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+            
+            setTimeout(() => {
+                this.mobileButtons.left = false;
+            }, 200);
+        }
+    }
+
+    onSwipeRight() {
+        if (!this.mobileButtons.right && this.gameController.isGameActive()) {
+            this.mobileButtons.right = true;
+            this.player.moveRight();
+            
+            // Haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+            
+            setTimeout(() => {
+                this.mobileButtons.right = false;
+            }, 200);
+        }
+    }
+
+
+
+    addMobileSwipeStyles() {
+        // Add CSS only for mobile swipe controls (never on desktop)
+        if (!document.querySelector('#mobile-swipe-styles')) {
             const style = document.createElement('style');
-            style.id = 'mobile-gamepad-styles';
+            style.id = 'mobile-swipe-styles';
             style.textContent = `
-                @keyframes ripple {
-                    to {
-                        transform: scale(4);
+                @keyframes fadeIn {
+                    from {
                         opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
                     }
                 }
                 
-                @keyframes buttonPress {
-                    0% { transform: scale(1); }
-                    50% { transform: scale(0.95); }
-                    100% { transform: scale(1); }
+                .mobile-swipe-container {
+                    touch-action: none;
+                    overscroll-behavior: none;
+                    -webkit-overscroll-behavior: none;
+                    -webkit-touch-callout: none;
+                    -webkit-user-select: none;
+                    -khtml-user-select: none;
+                    -moz-user-select: none;
+                    -ms-user-select: none;
+                    user-select: none;
                 }
                 
-                .mobile-gamepad-button:active {
-                    animation: buttonPress 0.15s ease;
+                /* Additional body styles to prevent pull-to-refresh */
+                body.mobile-swipe-active {
+                    touch-action: none;
+                    overscroll-behavior: none;
+                    -webkit-overscroll-behavior: none;
+                    overflow: hidden;
+                    position: fixed;
+                    width: 100%;
+                    height: 100%;
                 }
                 
-                /* Responsive design for different screen sizes */
+                /* Responsive design for mobile swipe container */
                 @media (max-width: 480px) {
-                    .mobile-gamepad-container {
-                        height: 140px !important;
-                        padding: 15px !important;
-                        gap: 15px !important;
-                    }
-                    
-                    .mobile-gamepad-button {
-                        width: 60px !important;
-                        height: 60px !important;
-                        font-size: 24px !important;
-                    }
-                    
-                    .mobile-gamepad-jump-button {
-                        width: 75px !important;
-                        height: 75px !important;
-                        font-size: 28px !important;
+                    .mobile-swipe-container {
+                        touch-action: none;
+                        overscroll-behavior: none;
                     }
                 }
                 
                 @media (max-width: 320px) {
-                    .mobile-gamepad-container {
-                        height: 120px !important;
-                        padding: 10px !important;
-                        gap: 10px !important;
-                    }
-                    
-                    .mobile-gamepad-button {
-                        width: 50px !important;
-                        height: 50px !important;
-                        font-size: 20px !important;
-                    }
-                    
-                    .mobile-gamepad-jump-button {
-                        width: 65px !important;
-                        height: 65px !important;
-                        font-size: 24px !important;
+                    .mobile-swipe-container {
+                        touch-action: none;
+                        overscroll-behavior: none;
                     }
                 }
                 
-                @media (orientation: landscape) and (max-height: 600px) {
-                    .mobile-gamepad-container {
-                        height: 100px !important;
-                        padding: 10px !important;
-                        gap: 15px !important;
-                    }
-                    
-                    .mobile-gamepad-button {
-                        width: 55px !important;
-                        height: 55px !important;
-                        font-size: 22px !important;
-                    }
-                    
-                    .mobile-gamepad-jump-button {
-                        width: 70px !important;
-                        height: 70px !important;
-                        font-size: 26px !important;
-                    }
-                }
-                
-                /* Prevent scrolling on mobile when interacting with gamepad */
-                .mobile-gamepad-active {
+                /* Prevent scrolling on mobile when swiping */
+                .mobile-swipe-active {
                     overflow: hidden !important;
                     position: fixed !important;
                     width: 100% !important;
@@ -631,6 +586,11 @@ export class InputManager {
     }
     
     setupGamepadRestart() {
+        // Store original gameOver method for cleanup
+        if (this.gameController.gameOver && !this.originalGameOver) {
+            this.originalGameOver = this.gameController.gameOver.bind(this.gameController);
+        }
+        
         // Check for gamepad restart every frame when game is over
         const checkGamepadRestart = () => {
             if (!this.gameController.isGameActive()) {
@@ -654,16 +614,17 @@ export class InputManager {
             
             // Continue checking if game is still over
             if (!this.gameController.isGameActive()) {
-                requestAnimationFrame(checkGamepadRestart);
+                this.gamepadRestartId = requestAnimationFrame(checkGamepadRestart);
             }
         };
         
-        // Start checking when game becomes inactive
-        const originalGameOver = this.gameController.gameOver?.bind(this.gameController);
-        if (originalGameOver) {
+        // Override gameOver method to start gamepad checking
+        if (this.originalGameOver) {
             this.gameController.gameOver = () => {
-                originalGameOver();
-                setTimeout(() => checkGamepadRestart(), 100); // Small delay to avoid immediate restart
+                this.originalGameOver();
+                setTimeout(() => {
+                    this.gamepadRestartId = requestAnimationFrame(checkGamepadRestart);
+                }, 100); // Small delay to avoid immediate restart
             };
         }
     }
@@ -709,13 +670,56 @@ export class InputManager {
             document.removeEventListener('click', this.eventListeners.documentClick);
         }
         
+        // Remove swipe gesture event listeners from container
+        if (this.swipeContainer) {
+            if (this.eventListeners.touchstart) {
+                this.swipeContainer.removeEventListener('touchstart', this.eventListeners.touchstart);
+            }
+            if (this.eventListeners.touchmove) {
+                this.swipeContainer.removeEventListener('touchmove', this.eventListeners.touchmove);
+            }
+            if (this.eventListeners.touchend) {
+                this.swipeContainer.removeEventListener('touchend', this.eventListeners.touchend);
+            }
+            if (this.eventListeners.mousedown) {
+                this.swipeContainer.removeEventListener('mousedown', this.eventListeners.mousedown);
+            }
+            if (this.eventListeners.mousemove) {
+                this.swipeContainer.removeEventListener('mousemove', this.eventListeners.mousemove);
+            }
+            if (this.eventListeners.mouseup) {
+                this.swipeContainer.removeEventListener('mouseup', this.eventListeners.mouseup);
+            }
+        }
+        
+        // Remove mobile UI elements
+        const mobileContainer = document.querySelector('.mobile-swipe-container');
+        if (mobileContainer) {
+            mobileContainer.remove();
+        }
+        
+        // Remove mobile styles
+        const mobileStyles = document.querySelector('#mobile-swipe-styles');
+        if (mobileStyles) {
+            mobileStyles.remove();
+        }
+        
         // Clear event listener references
         this.eventListeners = {
             keydown: null,
             keyup: null,
             resize: null,
-            documentClick: null
+            documentClick: null,
+            touchstart: null,
+            touchmove: null,
+            touchend: null,
+            mousedown: null,
+            mousemove: null,
+            mouseup: null
         };
+        
+        // Clear container reference
+        this.swipeContainer = null;
         
         // Reset key states
         this.keys = {
@@ -732,6 +736,28 @@ export class InputManager {
                 jump: false
             };
         }
+        
+        // Stop game state monitoring
+        this.isMonitoringGameState = false;
+        if (this.gameStateMonitorId) {
+            cancelAnimationFrame(this.gameStateMonitorId);
+            this.gameStateMonitorId = null;
+        }
+        
+        // Stop gamepad restart monitoring
+        if (this.gamepadRestartId) {
+            cancelAnimationFrame(this.gamepadRestartId);
+            this.gamepadRestartId = null;
+        }
+        
+        // Restore original gameOver method
+        if (this.originalGameOver && this.gameController) {
+            this.gameController.gameOver = this.originalGameOver;
+            this.originalGameOver = null;
+        }
+        
+        // Remove mobile swipe body class if it exists
+        document.body.classList.remove('mobile-swipe-active');
         
         // Disable input processing
         this.enabled = false;

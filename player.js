@@ -124,10 +124,10 @@ export class Player {
             dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
             loader.setDRACOLoader(dracoLoader);
             
-            console.log('Loading sliding animation from: assets/models/Running Slide.glb');
+            console.log('Loading sliding animation from: assets/models/Running-Slide.glb');
             
             loader.load(
-                'assets/models/Running Slide.glb',
+                'assets/models/Running-Slide.glb',
                 (gltf) => {
                     console.log('Sliding animation loaded successfully:', gltf);
                     
