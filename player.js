@@ -74,7 +74,7 @@ export class Player {
             loader.setDRACOLoader(dracoLoader);
             
             loader.load(
-                'assets/models/Running.glb',
+                '/assets/models/Running.glb',
                 (gltf) => {
                     
                     this.mesh = gltf.scene;
@@ -124,10 +124,10 @@ export class Player {
             dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
             loader.setDRACOLoader(dracoLoader);
             
-            console.log('Loading sliding animation from: assets/models/Running-Slide.glb');
+            console.log('Loading sliding animation from: /assets/models/Running-Slide.glb');
             
             loader.load(
-                'assets/models/Running-Slide.glb',
+                '/assets/models/Running-Slide.glb',
                 (gltf) => {
                     console.log('Sliding animation loaded successfully:', gltf);
                     
@@ -214,7 +214,7 @@ export class Player {
             loader.setDRACOLoader(dracoLoader);
             
             loader.load(
-                'assets/models/Flying.glb',
+                '/assets/models/Flying.glb',
                 (gltf) => {
                     
                     // Create flying mesh
@@ -265,7 +265,7 @@ export class Player {
             loader.setDRACOLoader(dracoLoader);
             
             loader.load(
-                'assets/models/Stumble Backwards.glb',
+                '/assets/models/Stumble Backwards.glb',
                 (gltf) => {
                     
                     // Create stumble animation action if we have a mixer
