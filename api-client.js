@@ -1,5 +1,5 @@
 export class APIClient {
-    constructor(baseURL = 'https://fortunate-korry-zaraytech-a15c471e.koyeb.app/') {
+    constructor(baseURL = 'https://infra-runner-leaderboard-api.onrender.com/') {
         this.baseURL = baseURL;
     }
 
