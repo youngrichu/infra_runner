@@ -183,31 +183,90 @@ export const OBSTACLE_TYPES = {
             // Create a group to hold the poles and wire
             const group = new THREE.Group();
             
-            // Create left pole (positioned in the middle of the left side lane)
-            const leftPole = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.05, 0.05, 2.5, 8),
-                new THREE.MeshStandardMaterial({ color: 0x8B4513 })
-            );
-            leftPole.position.set(-4.5, 1.25, 0);
-            group.add(leftPole);
+            // Helper function to create a realistic power pole
+            const createPowerPole = (xPosition) => {
+                const poleGroup = new THREE.Group();
+                
+                // Main pole (concrete/wood texture)
+                const mainPole = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.08, 0.12, 3.0, 8),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x696969, // Dark gray for concrete
+                        roughness: 0.8
+                    })
+                );
+                mainPole.position.set(0, 1.5, 0);
+                poleGroup.add(mainPole);
+                
+                // Crossbeam (horizontal support)
+                const crossbeam = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.2, 0.08, 0.08),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x8B4513, // Brown wood
+                        roughness: 0.9
+                    })
+                );
+                crossbeam.position.set(0, 1.9, 0);
+                poleGroup.add(crossbeam);
+                
+                // Insulators (ceramic-like)
+                for (let i = -0.4; i <= 0.4; i += 0.4) {
+                    const insulator = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.03, 0.05, 0.15, 6),
+                        new THREE.MeshStandardMaterial({ 
+                            color: 0xF5F5DC, // Beige ceramic
+                            roughness: 0.3
+                        })
+                    );
+                    insulator.position.set(i, 2.0, 0);
+                    poleGroup.add(insulator);
+                }
+                
+                // Position the entire pole
+                poleGroup.position.set(xPosition, 0, 0);
+                return poleGroup;
+            };
             
-            // Create right pole (positioned in the middle of the right side lane)
-            const rightPole = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.05, 0.05, 2.5, 8),
-                new THREE.MeshStandardMaterial({ color: 0x8B4513 })
-            );
-            rightPole.position.set(4.5, 1.25, 0);
+            // Create left and right power poles
+            const leftPole = createPowerPole(-4.5);
+            const rightPole = createPowerPole(4.5);
+            group.add(leftPole);
             group.add(rightPole);
             
-            // Create the electric wire (loose/sagging)
-            const wireGeometry = new THREE.CylinderGeometry(0.02, 0.02, 9, 8);
+            // Create sagging power line using curve
+            const curve = new THREE.QuadraticBezierCurve3(
+                new THREE.Vector3(-4.5, 2.0, 0), // Start at left pole attachment
+                new THREE.Vector3(0, 1.0, 0),     // Sag point in middle (slightly below player height)
+                new THREE.Vector3(4.5, 2.0, 0)   // End at right pole attachment
+            );
+            
+            // Create wire geometry from curve
+            const wireGeometry = new THREE.TubeGeometry(curve, 20, 0.015, 8, false);
             const wire = new THREE.Mesh(
                 wireGeometry,
-                new THREE.MeshStandardMaterial({ color: COLORS.OBSTACLES.ELECTRIC_LINE })
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x2F2F2F, // Dark metallic wire
+                    metalness: 0.8,
+                    roughness: 0.2
+                })
             );
-            wire.rotation.z = Math.PI / 2; // Rotate to horizontal
-            wire.position.set(0, 1.2, 0); // Position at medium height
             group.add(wire);
+            
+            // Add warning signs on poles
+            const createWarningSign = (xPos) => {
+                const sign = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.3, 0.2, 0.02),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0xFFFF00, // Yellow warning
+                        roughness: 0.1
+                    })
+                );
+                sign.position.set(xPos, 1.0, 0.1);
+                return sign;
+            };
+            
+            group.add(createWarningSign(-4.5));
+            group.add(createWarningSign(4.5));
             
             return group;
         },
