@@ -13,11 +13,23 @@ export class Player {
         this.hasDoubleJumped = false;
         this.canDoubleJump = false;
         
-        // Animation system - running + flying + stumble
+        // Sliding state
+        this.isSliding = false;
+        this.slideStartTime = 0;
+        this.slideDuration = 800; // 0.8 seconds
+        
+        // Animation system - running + flying + stumble + sliding
         this.mixer = null;
         this.currentAction = null;
         this.stumbleAction = null;
+        this.stumbleMesh = null;
+        this.stumbleMixer = null;
         this.flyingAction = null;
+        this.flyingMesh = null;
+        this.flyingMixer = null;
+        this.slidingAction = null;
+        this.slidingMesh = null;
+        this.slidingMixer = null;
         this.clock = new THREE.Clock();
         
         // Flying state
@@ -46,8 +58,10 @@ export class Player {
         await this.loadRunningAnimation();
         // Then load flying animation
         await this.loadFlyingAnimation();
-        // Finally load stumble animation
+        // Load stumble animation
         await this.loadStumbleAnimation();
+        // Finally load sliding animation
+        await this.loadSlidingAnimation();
     }
     
     async loadRunningAnimation() {
@@ -96,6 +110,95 @@ export class Player {
                 (error) => {
                     this.createFallbackPlayer();
                     resolve();
+                }
+            );
+        });
+    }
+    
+    async loadSlidingAnimation() {
+        return new Promise((resolve, reject) => {
+            const loader = new GLTFLoader();
+            
+            // Setup DRACO loader for compressed GLB files
+            const dracoLoader = new DRACOLoader();
+            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+            loader.setDRACOLoader(dracoLoader);
+            
+            console.log('Loading sliding animation from: assets/models/Running Slide.glb');
+            
+            loader.load(
+                'assets/models/Running Slide.glb',
+                (gltf) => {
+                    console.log('Sliding animation loaded successfully:', gltf);
+                    
+                    // Create sliding mesh with appropriate scale
+                    this.slidingMesh = gltf.scene;
+                    this.slidingMesh.scale.set(0.8, 0.8, 0.8); // Match running mesh scale
+                    this.slidingMesh.rotation.y = Math.PI;
+                    this.slidingMesh.visible = false; // Hide initially
+                    
+                    // Position same as running mesh
+                    const visualOffset = GAME_CONFIG.PLAYER_VISUAL_OFFSET;
+                    this.slidingMesh.position.set(0, GAME_CONFIG.GROUND_HEIGHT + visualOffset, 0);
+                    
+                    // Store reference to running character materials for copying
+                    this.runningMaterials = [];
+                    if (this.mesh) {
+                        this.mesh.traverse((child) => {
+                            if (child.isMesh && child.material) {
+                                this.runningMaterials.push(child.material);
+                            }
+                        });
+                    }
+                    
+                    // Setup shadows and lighting to match running character
+                    let materialIndex = 0;
+                    this.slidingMesh.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            
+                            // Copy material from running character if available
+                            if (this.runningMaterials[materialIndex] && child.material) {
+                                const runningMaterial = this.runningMaterials[materialIndex];
+                                
+                                // Clone the running character's material
+                                child.material = runningMaterial.clone();
+                                child.material.needsUpdate = true;
+                            }
+                            materialIndex++;
+                        }
+                    });
+                    
+                    this.scene.add(this.slidingMesh);
+                    console.log('Sliding mesh added to scene');
+                    console.log('Sliding mesh details:', {
+                        position: this.slidingMesh.position,
+                        scale: this.slidingMesh.scale,
+                        rotation: this.slidingMesh.rotation,
+                        visible: this.slidingMesh.visible,
+                        children: this.slidingMesh.children.length
+                    });
+                    
+                    // Setup sliding animation
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        this.slidingMixer = new THREE.AnimationMixer(this.slidingMesh);
+                        this.slidingAction = this.slidingMixer.clipAction(gltf.animations[0]);
+                        this.slidingAction.setLoop(THREE.LoopRepeat);
+                        console.log('Sliding animation setup complete');
+                        // Don't play yet - will be triggered when sliding starts
+                    } else {
+                        console.warn('No animations found in sliding model');
+                    }
+                    
+                    resolve();
+                },
+                (progress) => {
+                    console.log('Loading sliding animation progress:', progress);
+                },
+                (error) => {
+                    console.error('Failed to load sliding animation:', error);
+                    resolve(); // Continue without sliding animation
                 }
             );
         });
@@ -337,6 +440,9 @@ export class Player {
     }
 
     jump() {
+        // Can't jump while sliding
+        if (this.isSliding) return;
+        
         // Regular jump if not jumping
         if (!this.isJumping) {
             this.isJumping = true;
@@ -349,6 +455,107 @@ export class Player {
             this.hasDoubleJumped = true;
             this.createJumpEffect();
         }
+    }
+    
+    slide() {
+        // Can't slide while jumping or already sliding
+        if (this.isJumping || this.isSliding) return;
+        
+        this.isSliding = true;
+        this.slideStartTime = Date.now();
+        
+        // Debug logging
+        console.log('Started sliding - slidingMesh:', !!this.slidingMesh, 'slidingAction:', !!this.slidingAction);
+        if (this.slidingMesh) {
+            console.log('Sliding mesh visible before switch:', this.slidingMesh.visible);
+            console.log('Sliding mesh position:', this.slidingMesh.position);
+            console.log('Sliding mesh scale:', this.slidingMesh.scale);
+            console.log('Running mesh position for comparison:', this.mesh.position);
+            
+            // Remove temporary test code that was interfering with animation switching
+        }
+        
+        // Immediately switch to sliding animation
+        this.updateAnimationState(false);
+        
+        console.log('Started sliding');
+    }
+    
+
+    
+    // Fallback methods for when sliding model is not available
+    startSlideAnimation() {
+        if (!this.mesh) return;
+        
+        // Create sliding pose: crouch down and lean forward
+        this.originalScale = this.mesh.scale.clone();
+        this.originalRotation = this.mesh.rotation.clone();
+        this.originalPosition = this.mesh.position.clone();
+        
+        // Animate to sliding pose
+        this.animateToSlide();
+    }
+    
+    animateToSlide() {
+        if (!this.mesh || !this.isSliding) return;
+        
+        const slideProgress = Math.min((Date.now() - this.slideStartTime) / 200, 1); // 200ms to reach full slide
+        
+        // Scale down vertically to simulate crouching
+        const targetScaleY = 0.6;
+        this.mesh.scale.y = THREE.MathUtils.lerp(this.originalScale.y, targetScaleY, slideProgress);
+        
+        // Lean forward
+        const targetRotationX = 0.3; // Lean forward
+        this.mesh.rotation.x = THREE.MathUtils.lerp(this.originalRotation.x, targetRotationX, slideProgress);
+        
+        // Lower the position slightly
+        const targetY = this.originalPosition.y - 0.15;
+        this.mesh.position.y = THREE.MathUtils.lerp(this.originalPosition.y, targetY, slideProgress);
+        
+        if (slideProgress < 1) {
+            requestAnimationFrame(() => this.animateToSlide());
+        }
+    }
+    
+    endSlideAnimation() {
+        if (!this.mesh || !this.originalScale) return;
+        
+        // Animate back to normal pose
+        this.animateFromSlide();
+    }
+    
+    animateFromSlide() {
+        if (!this.mesh || this.isSliding) return;
+        
+        const returnDuration = 200; // 200ms to return to normal
+        const startTime = Date.now();
+        
+        const animate = () => {
+            if (!this.mesh || this.isSliding) return;
+            
+            const progress = Math.min((Date.now() - startTime) / returnDuration, 1);
+            
+            // Return to original scale
+            this.mesh.scale.y = THREE.MathUtils.lerp(this.mesh.scale.y, this.originalScale.y, progress);
+            
+            // Return to original rotation
+            this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, this.originalRotation.x, progress);
+            
+            // Return to original position
+            this.mesh.position.y = THREE.MathUtils.lerp(this.mesh.position.y, this.originalPosition.y, progress);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Ensure exact original values
+                this.mesh.scale.copy(this.originalScale);
+                this.mesh.rotation.copy(this.originalRotation);
+                this.mesh.position.copy(this.originalPosition);
+            }
+        };
+        
+        animate();
     }
 
     createJumpEffect() {
@@ -417,6 +624,17 @@ export class Player {
             this.endStumble();
         }
         
+        // Handle sliding state
+        if (this.isSliding) {
+            const currentTime = Date.now();
+            if (currentTime - this.slideStartTime > this.slideDuration) {
+                this.isSliding = false;
+                // Immediately switch back to running animation
+                this.updateAnimationState(isFlying);
+                console.log('Ended sliding');
+            }
+        }
+        
         // Handle animation switching based on state
         this.updateAnimationState(isFlying);
         
@@ -465,7 +683,7 @@ export class Player {
             }
         }
         
-        // Update all mesh positions (running, flying, stumble)
+        // Update all mesh positions (running, flying, stumble, sliding)
         if (this.flyingMesh) {
             // Always keep flying mesh in sync with main position, but add floating effect when flying
             this.flyingMesh.position.x = this.mesh.position.x;
@@ -475,6 +693,11 @@ export class Player {
             this.stumbleMesh.position.x = this.mesh.position.x; // Keep X in sync
             this.stumbleMesh.position.y = this.mesh.position.y - 0.015; // Maintain smaller stumble Y offset
             this.stumbleMesh.position.z = this.mesh.position.z; // Keep Z in sync
+        }
+        if (this.slidingMesh) {
+            this.slidingMesh.position.x = this.mesh.position.x; // Keep X in sync
+            this.slidingMesh.position.z = this.mesh.position.z; // Keep Z in sync
+            // Y position is handled by the sliding animation itself
         }
 
         // Handle helicopter flying power-up with smooth hovering
@@ -574,12 +797,81 @@ export class Player {
                 this.flyingMixer.update(0);
             }
         }
+        
+        // Update sliding mixer when sliding
+        if (this.slidingMixer && this.isSliding && this.slidingMesh && this.slidingMesh.visible) {
+            this.slidingMixer.update(deltaTime);
+        }
+        
         // Note: stumbleMixer is only updated during stumble (handled above)
     }
 
     updateAnimationState(isFlying) {
         // Don't change animations while stumbling
         if (this.isStumbling) return;
+        
+        // Switch to sliding animation
+        if (this.isSliding && this.slidingMesh && this.slidingAction && !this.slidingMesh.visible) {
+            
+            console.log('Switching to sliding animation - conditions met');
+            console.log('Running mesh visible before:', this.mesh.visible);
+            
+            // Sync position and rotation BEFORE making the mesh visible
+            this.slidingMesh.position.copy(this.mesh.position);
+            this.slidingMesh.rotation.copy(this.mesh.rotation);
+            
+            // Hide running mesh, show sliding mesh
+            this.mesh.visible = false;
+            this.slidingMesh.visible = true;
+            
+            console.log('After visibility switch - running mesh:', this.mesh.visible, 'sliding mesh:', this.slidingMesh.visible);
+            
+            // Stop running animation
+            if (this.currentAction) {
+                this.currentAction.stop();
+            }
+            
+            // Start sliding animation
+            this.slidingAction.reset();
+            this.slidingAction.enabled = true;
+            this.slidingAction.setEffectiveWeight(1.0);
+            this.slidingAction.play();
+            
+            // Force update to apply the animation immediately
+            if (this.slidingMixer) {
+                this.slidingMixer.update(0);
+            }
+            
+            console.log('Switched to sliding animation');
+            
+        }
+        // Switch back from sliding to running
+        else if (!this.isSliding && this.slidingMesh && this.slidingMesh.visible) {
+            
+            // Sync position and rotation BEFORE making the mesh visible
+            this.mesh.position.copy(this.slidingMesh.position);
+            this.mesh.rotation.copy(this.slidingMesh.rotation);
+
+            // Hide sliding mesh, show running mesh
+            this.slidingMesh.visible = false;
+            this.mesh.visible = true;
+            
+            // Stop sliding animation
+            if (this.slidingAction) {
+                this.slidingAction.stop();
+            }
+            
+            // Restart running animation
+            if (this.currentAction) {
+                this.currentAction.reset();
+                this.currentAction.enabled = true;
+                this.currentAction.setEffectiveWeight(1.0);
+                this.currentAction.play();
+            }
+            
+            console.log('Switched back to running animation');
+            
+        }
         
         // Switch to flying animation
         if (isFlying && this.flyingMesh && this.flyingAction && !this.flyingMesh.visible) {
@@ -652,6 +944,8 @@ export class Player {
             activeMesh = this.stumbleMesh;
         } else if (this.flyingMesh && this.flyingMesh.visible) {
             activeMesh = this.flyingMesh;
+        } else if (this.isSliding && this.slidingMesh && this.slidingMesh.visible) {
+            activeMesh = this.slidingMesh;
         }
         const playerPos = activeMesh.position;
         
@@ -663,6 +957,11 @@ export class Player {
         let boxWidth = 0.2; // Base width
         let boxHeight = 1.0;
         let boxDepth = 0.3;
+        
+        // Reduce collision box height when sliding
+        if (this.isSliding) {
+            boxHeight *= 0.4; // Make collision box 60% shorter when sliding
+        }
         
         // Shrink collision box width during lane changes
         const targetX = LANES.POSITIONS[this.lane];
@@ -745,16 +1044,34 @@ export class Player {
             this.stumbleMesh.visible = false; // Hide stumble mesh
         }
         
+        if (this.slidingMesh) {
+            this.slidingMesh.position.set(LANES.POSITIONS[this.lane], visualGroundHeight, 0);
+            this.slidingMesh.visible = false; // Hide sliding mesh
+        }
+        
         this.isJumping = false;
         this.velocityY = 0;
         this.hasDoubleJumped = false;
         this.canDoubleJump = false;
         this.isStumbling = false; // Reset stumble state
         this.isFlying = false; // Reset flying state
+        this.isSliding = false; // Reset sliding state
         this.flyingTime = 0;
         this.flyingHoverOffset = 0;
         this.gameOverCallback = null; // Clear any pending callback
         this.resetToNormalColor();
+        
+        // Stop all animations
+        if (this.slidingAction) {
+            this.slidingAction.stop();
+        }
+        
+        // Reset any sliding animation transformations
+        if (this.mesh && this.originalScale) {
+            this.mesh.scale.copy(this.originalScale);
+            this.mesh.rotation.copy(this.originalRotation);
+            this.mesh.position.copy(this.originalPosition);
+        }
         
         // Restart running animation properly
         if (this.currentAction) {
@@ -772,6 +1089,8 @@ export class Player {
             return this.flyingMesh.position;
         } else if (this.isStumbling && this.stumbleMesh && this.stumbleMesh.visible) {
             return this.stumbleMesh.position;
+        } else if (this.isSliding && this.slidingMesh && this.slidingMesh.visible) {
+            return this.slidingMesh.position;
         } else {
             return this.mesh ? this.mesh.position : new THREE.Vector3();
         }

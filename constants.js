@@ -43,7 +43,8 @@ export const COLORS = {
         POTHOLE: 0x333333,
         CONSTRUCTION_BARRIER: 0xff4444,
         CONE: 0xff8800,
-        RUBBLE: 0x808080
+        RUBBLE: 0x808080,
+        ELECTRIC_LINE: 0xffff00
     },
     COLLECTABLES: {
         BLUEPRINT: 0x0000ff,
@@ -176,6 +177,43 @@ export const OBSTACLE_TYPES = {
         color: COLORS.OBSTACLES.RUBBLE,
         yPos: 0.2,
         description: 'Construction debris'
+    },
+    'electricLine': {
+        geometry: () => {
+            // Create a group to hold the poles and wire
+            const group = new THREE.Group();
+            
+            // Create left pole (positioned in the middle of the left side lane)
+            const leftPole = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.05, 0.05, 2.5, 8),
+                new THREE.MeshStandardMaterial({ color: 0x8B4513 })
+            );
+            leftPole.position.set(-4.5, 1.25, 0);
+            group.add(leftPole);
+            
+            // Create right pole (positioned in the middle of the right side lane)
+            const rightPole = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.05, 0.05, 2.5, 8),
+                new THREE.MeshStandardMaterial({ color: 0x8B4513 })
+            );
+            rightPole.position.set(4.5, 1.25, 0);
+            group.add(rightPole);
+            
+            // Create the electric wire (loose/sagging)
+            const wireGeometry = new THREE.CylinderGeometry(0.02, 0.02, 9, 8);
+            const wire = new THREE.Mesh(
+                wireGeometry,
+                new THREE.MeshStandardMaterial({ color: COLORS.OBSTACLES.ELECTRIC_LINE })
+            );
+            wire.rotation.z = Math.PI / 2; // Rotate to horizontal
+            wire.position.set(0, 1.2, 0); // Position at medium height
+            group.add(wire);
+            
+            return group;
+        },
+        color: COLORS.OBSTACLES.ELECTRIC_LINE,
+        yPos: 0, // Group positioning handled in geometry
+        description: 'Loose electric line - slide or jump to avoid'
     }
 };
 

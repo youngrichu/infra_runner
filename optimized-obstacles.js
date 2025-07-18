@@ -362,18 +362,29 @@ export class OptimizedObstacleManager {
         
         this.lastObstacleType = obstacleType;
         
-        // Select lane (avoid spawning in player's current lane if possible)
-        const playerLane = this.gameController?.player?.lane || LANES.CENTER;
-        const availableLanes = [0, 1, 2].filter(lane => lane !== playerLane);
-        const selectedLane = availableLanes.length > 0 
-            ? availableLanes[Math.floor(Math.random() * availableLanes.length)]
-            : Math.floor(Math.random() * LANES.COUNT);
-        
-        const position = new THREE.Vector3(
-            LANES.POSITIONS[selectedLane],
-            0,
-            spawnZ
-        );
+        let position, selectedLane;
+        if (obstacleType === 'electricLine') {
+            // Electric line spans across all lanes, position at center of road
+            selectedLane = LANES.CENTER; // Use center lane for reference
+            position = new THREE.Vector3(
+                0, // Center of road
+                0,
+                spawnZ
+            );
+        } else {
+            // Select lane (avoid spawning in player's current lane if possible)
+            const playerLane = this.gameController?.player?.lane || LANES.CENTER;
+            const availableLanes = [0, 1, 2].filter(lane => lane !== playerLane);
+            selectedLane = availableLanes.length > 0 
+                ? availableLanes[Math.floor(Math.random() * availableLanes.length)]
+                : Math.floor(Math.random() * LANES.COUNT);
+            
+            position = new THREE.Vector3(
+                LANES.POSITIONS[selectedLane],
+                0,
+                spawnZ
+            );
+        }
         
         this.createOptimizedObstacle(obstacleType, position, selectedLane);
     }
@@ -388,14 +399,29 @@ export class OptimizedObstacleManager {
             }
             
             // Use high-speed collision detection for fast gameplay
+            let collisionDetected = false;
             if (this.gameController?.getGameSpeed() > PHYSICS.HIGH_SPEED_THRESHOLD) {
-                if (CollisionUtils.checkExpandedCollision(playerBox, obstacle.boundingBox, 1.2)) {
-                    return obstacle;
-                }
+                collisionDetected = CollisionUtils.checkExpandedCollision(playerBox, obstacle.boundingBox, 1.2);
             } else {
-                if (playerBox.intersectsBox(obstacle.boundingBox)) {
-                    return obstacle;
+                collisionDetected = playerBox.intersectsBox(obstacle.boundingBox);
+            }
+            
+            if (collisionDetected) {
+                // Special handling for electric line obstacle
+                if (obstacle.type === 'electricLine') {
+                    // Check if player is sliding or jumping high enough
+                    const playerHeight = playerBox.max.y;
+                    const wireHeight = 1.2; // Height of the electric wire
+                    
+                    // Allow passing if player is sliding (low collision box) or jumping high enough
+                    if (this.gameController && this.gameController.player) {
+                        const player = this.gameController.player;
+                        if (player.isSliding || playerHeight > wireHeight + 0.3) {
+                            continue; // No collision, player can pass
+                        }
+                    }
                 }
+                return obstacle;
             }
         }
         
@@ -449,7 +475,8 @@ export class OptimizedObstacleManager {
             cone: new THREE.Vector3(0.6, 0.8, 0.6),
             rubble: new THREE.Vector3(0.8, 0.4, 0.8),
             trafficBarrier: new THREE.Vector3(1.8, 0.8, 0.5),
-            floorHole: new THREE.Vector3(1.2, 0.1, 1.2)
+            floorHole: new THREE.Vector3(1.2, 0.1, 1.2),
+            electricLine: new THREE.Vector3(9, 2.5, 0.5) // Wide obstacle spanning across lanes
         };
         
         return sizeMap[type] || new THREE.Vector3(1, 1, 1);

@@ -5,7 +5,8 @@ export class InputManager {
         this.keys = {
             left: false,
             right: false,
-            jump: false
+            jump: false,
+            slide: false
         };
         this.enabled = true;
         
@@ -82,6 +83,13 @@ export class InputManager {
                     this.player.jump();
                 }
                 break;
+            case 'ArrowDown':
+            case 'KeyS':
+                if (!this.keys.slide) {
+                    this.keys.slide = true;
+                    this.player.slide();
+                }
+                break;
         }
     }
 
@@ -107,6 +115,10 @@ export class InputManager {
             case 'ArrowUp':
             case 'KeyW':
                 this.keys.jump = false;
+                break;
+            case 'ArrowDown':
+            case 'KeyS':
+                this.keys.slide = false;
                 break;
         }
     }
@@ -171,7 +183,8 @@ export class InputManager {
         this.mobileButtons = {
             left: false,
             right: false,
-            jump: false
+            jump: false,
+            slide: false
         };
 
         // Create left arrow button with mobile-only debouncing
@@ -217,10 +230,31 @@ export class InputManager {
                 }, 200);
             }
         });
+        
+        // Create slide button with mobile-only debouncing
+        const slideButton = this.createMobileButton('▼', () => {
+            if (!this.mobileButtons.slide) {
+                this.mobileButtons.slide = true;
+                this.player.slide();
+                // Reset mobile button state after delay
+                setTimeout(() => {
+                    this.mobileButtons.slide = false;
+                }, 200);
+            }
+        });
+        slideButton.className = 'mobile-gamepad-button mobile-gamepad-slide-button';
+        Object.assign(slideButton.style, {
+            background: 'linear-gradient(145deg, #9C27B0 0%, #7B1FA2 100%)',
+            width: '70px',
+            height: '70px',
+            fontSize: '28px',
+            boxShadow: '0 8px 16px rgba(156, 39, 176, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)'
+        });
 
         // Add buttons to container
         gamepadContainer.appendChild(leftButton);
         gamepadContainer.appendChild(jumpButton);
+        gamepadContainer.appendChild(slideButton);
         gamepadContainer.appendChild(rightButton);
         
         document.body.appendChild(gamepadContainer);

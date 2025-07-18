@@ -24,13 +24,24 @@ export class ObstacleManager {
         const availableTypes = Object.keys(OBSTACLE_TYPES).filter(type => type !== this.lastObstacleType);
         const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
         const obstacleConfig = OBSTACLE_TYPES[type];
-        const laneIndex = Math.floor(Math.random() * LANES.COUNT);
         
-        const spawnPosition = new THREE.Vector3(
-            LANES.POSITIONS[laneIndex], 
-            obstacleConfig.yPos, 
-            playerZ - 50
-        );
+        let spawnPosition;
+        if (type === 'electricLine') {
+            // Electric line spans across all lanes, position at center of road
+            spawnPosition = new THREE.Vector3(
+                0, // Center of road
+                obstacleConfig.yPos, 
+                playerZ - 50
+            );
+        } else {
+            // Regular obstacles spawn in specific lanes
+            const laneIndex = Math.floor(Math.random() * LANES.COUNT);
+            spawnPosition = new THREE.Vector3(
+                LANES.POSITIONS[laneIndex], 
+                obstacleConfig.yPos, 
+                playerZ - 50
+            );
+        }
 
         // Try to create GLB model first (using collectables manager GLB system)
         let obstacleMesh = null;
@@ -40,10 +51,26 @@ export class ObstacleManager {
         
         // Fallback to original geometry if GLB failed
         if (!obstacleMesh) {
-            const material = new THREE.MeshStandardMaterial({ color: obstacleConfig.color });
-            obstacleMesh = new THREE.Mesh(obstacleConfig.geometry(), material);
-            obstacleMesh.position.copy(spawnPosition);
-            obstacleMesh.castShadow = true;
+            const geometry = obstacleConfig.geometry();
+            
+            // Handle group-based obstacles (like electric lines)
+            if (geometry instanceof THREE.Group) {
+                obstacleMesh = geometry;
+                obstacleMesh.position.copy(spawnPosition);
+                // Set shadows for all children in the group
+                obstacleMesh.traverse((child) => {
+                    if (child instanceof THREE.Mesh) {
+                        child.castShadow = true;
+                    }
+                });
+            } else {
+                // Handle regular geometry-based obstacles
+                const material = new THREE.MeshStandardMaterial({ color: obstacleConfig.color });
+                obstacleMesh = new THREE.Mesh(geometry, material);
+                obstacleMesh.position.copy(spawnPosition);
+                obstacleMesh.castShadow = true;
+            }
+            
             this.scene.add(obstacleMesh);
         }
         
@@ -167,6 +194,20 @@ export class ObstacleManager {
             }
             
             if (!isProtectedByWaterSlide && collisionDetected) {
+                // Special handling for electric line obstacle
+                if (this.obstacles[i].type === 'electricLine') {
+                    // Check if player is sliding or jumping high enough
+                    const playerHeight = playerBox.max.y;
+                    const wireHeight = 1.2; // Height of the electric wire
+                    
+                    // Allow passing if player is sliding (low collision box) or jumping high enough
+                    if (this.gameController && this.gameController.player) {
+                        const player = this.gameController.player;
+                        if (player.isSliding || playerHeight > wireHeight + 0.3) {
+                            continue; // No collision, player can pass
+                        }
+                    }
+                }
                 return true;
             }
         }
