@@ -593,15 +593,126 @@ export class CollectableManager {
         const powerUps = ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'];
         
         if (powerUps.includes(type)) {
+            // Debug logging to track power-up glow effect
+            console.log(`Adding glow effect to power-up: ${type}`);
+            
             // Power-ups get subtle bouncing animation (no rotation to preserve front face)
             collectableMesh.userData.bounceSpeed = 1.0; // Subtle bounce speed
             collectableMesh.userData.bounceOffset = Math.random() * Math.PI * 2; // Random phase offset
             collectableMesh.userData.bounceHeight = 0.12; // Subtle bounce height
             collectableMesh.userData.baseY = collectableMesh.position.y; // Store original Y position
             collectableMesh.userData.isPowerUp = true; // Flag to identify power-ups
+            
+            // Add magical glow effect for power-ups
+            this.addMagicalGlow(collectableMesh, type);
         } else {
             // Regular collectibles get very subtle, consistent spinning
             collectableMesh.userData.rotationSpeed = 0.015 + (Math.random() * 0.005); // Subtle spinning
+        }
+    }
+
+    addMagicalGlow(collectableMesh, type) {
+        // Create magical glow effect around power-ups
+        const glowGroup = new THREE.Group();
+        
+        // Get power-up specific color
+        const glowColor = this.getPowerUpGlowColor(type);
+        
+        // Debug logging to track glow creation
+        console.log(`Creating magical glow for ${type} with color:`, glowColor);
+        
+        // Create multiple layers of glow for realistic effect
+        
+        // Inner bright core glow
+        const innerGlowGeometry = new THREE.SphereGeometry(0.6, 16, 16);
+        const innerGlowMaterial = new THREE.MeshBasicMaterial({
+            color: glowColor,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.BackSide // Render from inside
+        });
+        const innerGlow = new THREE.Mesh(innerGlowGeometry, innerGlowMaterial);
+        glowGroup.add(innerGlow);
+        
+        // Middle glow layer
+        const middleGlowGeometry = new THREE.SphereGeometry(0.8, 16, 16);
+        const middleGlowMaterial = new THREE.MeshBasicMaterial({
+            color: glowColor,
+            transparent: true,
+            opacity: 0.2,
+            side: THREE.BackSide
+        });
+        const middleGlow = new THREE.Mesh(middleGlowGeometry, middleGlowMaterial);
+        glowGroup.add(middleGlow);
+        
+        // Outer soft glow
+        const outerGlowGeometry = new THREE.SphereGeometry(1.0, 16, 16);
+        const outerGlowMaterial = new THREE.MeshBasicMaterial({
+            color: glowColor,
+            transparent: true,
+            opacity: 0.1,
+            side: THREE.BackSide
+        });
+        const outerGlow = new THREE.Mesh(outerGlowGeometry, outerGlowMaterial);
+        glowGroup.add(outerGlow);
+        
+        // Create magical particles floating around
+        const particleCount = 8;
+        const particles = [];
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particleGeometry = new THREE.SphereGeometry(0.03, 8, 8);
+            const particleMaterial = new THREE.MeshBasicMaterial({
+                color: glowColor,
+                transparent: true,
+                opacity: 0.8
+            });
+            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+            
+            // Position particles in a circle around the power-up
+            const angle = (i / particleCount) * Math.PI * 2;
+            const radius = 1.2;
+            particle.position.set(
+                Math.cos(angle) * radius,
+                Math.sin(angle * 2) * 0.3, // Vertical movement
+                Math.sin(angle) * radius
+            );
+            
+            particle.userData = {
+                originalAngle: angle,
+                orbitRadius: radius,
+                verticalOffset: Math.sin(angle * 2) * 0.3
+            };
+            
+            particles.push(particle);
+            glowGroup.add(particle);
+        }
+        
+        // Store glow components for animation
+        collectableMesh.userData.glowGroup = glowGroup;
+        collectableMesh.userData.glowLayers = [innerGlow, middleGlow, outerGlow];
+        collectableMesh.userData.glowParticles = particles;
+        collectableMesh.userData.glowTime = 0;
+        
+        // Add glow group to the collectable
+        collectableMesh.add(glowGroup);
+    }
+    
+    getPowerUpGlowColor(type) {
+        // Return appropriate glow colors for each power-up type
+        switch (type) {
+            case 'hardHat':
+                return new THREE.Color(0xffa500); // Orange glow
+            case 'helicopter':
+                return new THREE.Color(0x00ffff); // Cyan glow
+            case 'solarPower':
+                return new THREE.Color(0xffff00); // Yellow glow
+            case 'windPower':
+                return new THREE.Color(0x00ff88); // Green glow
+            case 'waterPipeline':
+                return new THREE.Color(0x0088ff); // Blue glow
+            default:
+                return new THREE.Color(0xffffff); // White glow fallback
         }
     }
 
@@ -649,6 +760,9 @@ export class CollectableManager {
                 const bounceOffset = Math.sin(time * collectable.mesh.userData.bounceSpeed + collectable.mesh.userData.bounceOffset);
                 const newY = collectable.mesh.userData.baseY + (bounceOffset * collectable.mesh.userData.bounceHeight);
                 collectable.mesh.position.y = newY;
+                
+                // Animate magical glow effect
+                this.updateMagicalGlow(collectable.mesh, time);
             }
             
             // Apply subtle spinning to regular collectibles
@@ -683,6 +797,48 @@ export class CollectableManager {
         
         // Update collection effects
         this.updateCollectionEffects();
+    }
+    
+    updateMagicalGlow(collectableMesh, time) {
+        if (!collectableMesh.userData.glowGroup) return;
+        
+        collectableMesh.userData.glowTime = time;
+        
+        // Animate glow layers with pulsing effect
+        if (collectableMesh.userData.glowLayers) {
+            collectableMesh.userData.glowLayers.forEach((layer, index) => {
+                const pulseSpeed = 2.0 + (index * 0.5); // Different speeds for each layer
+                const pulse = Math.sin(time * pulseSpeed) * 0.5 + 0.5;
+                const baseOpacity = [0.3, 0.2, 0.1][index]; // Base opacity for each layer
+                layer.material.opacity = baseOpacity + (pulse * baseOpacity * 0.5);
+                
+                // Slight scale animation
+                const scale = 1.0 + (pulse * 0.1);
+                layer.scale.setScalar(scale);
+            });
+        }
+        
+        // Animate floating particles
+        if (collectableMesh.userData.glowParticles) {
+            collectableMesh.userData.glowParticles.forEach((particle, index) => {
+                const orbitSpeed = 0.5;
+                const verticalSpeed = 1.0;
+                
+                // Orbit around the power-up
+                const angle = particle.userData.originalAngle + (time * orbitSpeed);
+                const radius = particle.userData.orbitRadius;
+                
+                particle.position.x = Math.cos(angle) * radius;
+                particle.position.z = Math.sin(angle) * radius;
+                
+                // Floating vertical movement
+                particle.position.y = Math.sin(time * verticalSpeed + particle.userData.originalAngle) * 0.4;
+                
+                // Pulsing opacity
+                const pulse = Math.sin(time * 3.0 + index) * 0.5 + 0.5;
+                particle.material.opacity = 0.6 + (pulse * 0.4);
+            });
+        }
     }
 
     checkCollisions(playerBox) {
