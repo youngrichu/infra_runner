@@ -92,9 +92,11 @@ export class CollisionUtils {
         const expandedPlayerBox = playerBox.clone();
         let expansionFactor = PHYSICS.COLLECTABLE_EXPANSION_BASE;
         
-        // Increase collection radius at high speeds
+        // Increase collection radius at high speeds, but cap it to prevent lane bleeding
         if (gameSpeed > PHYSICS.HIGH_SPEED_THRESHOLD) {
-            expansionFactor += (gameSpeed - PHYSICS.HIGH_SPEED_THRESHOLD) * PHYSICS.COLLECTABLE_SPEED_EXPANSION;
+            const speedFactor = (gameSpeed - PHYSICS.HIGH_SPEED_THRESHOLD) * PHYSICS.COLLECTABLE_SPEED_EXPANSION;
+            // Cap expansion to 1.0 (full lane width) to prevent collecting from adjacent lanes
+            expansionFactor += Math.min(speedFactor, 1.0);
         }
         
         // Magnet effect provides even larger collection radius

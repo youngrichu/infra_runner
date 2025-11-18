@@ -13,7 +13,7 @@ export class CollectableManager {
         this.scene = scene;
         this.collectables = [];
         this.gameController = null; // Will be set by game.js
-        
+
         // "Shuffle bag" system for fair power-up spawning
         this.powerUpDeck = [];
         this.shufflePowerUpDeck();
@@ -23,7 +23,7 @@ export class CollectableManager {
         this.powerUpInterval = 10000; // Guarantee power-up every 10 seconds
         this.regularCollectionsCount = 0;
         this.powerUpAfterCollections = 3; // Or after collecting 3 regular items
-        
+
         // GLB Model loading system with Draco support (maintaining performance optimizations)
         this.loader = new GLTFLoader();
         this.dracoLoader = new DRACOLoader();
@@ -32,7 +32,7 @@ export class CollectableManager {
         this.loadedModels = new Map();
         this.loadingPromises = new Map();
         this.priorityModelsLoaded = false;
-        
+
         // Model loading will be initialized explicitly by game.js during setup
     }
 
@@ -44,25 +44,25 @@ export class CollectableManager {
             [this.powerUpDeck[i], this.powerUpDeck[j]] = [this.powerUpDeck[j], this.powerUpDeck[i]];
         }
     }
-    
+
     async initializeModelLoading() {
         // Loading models (collectables, power-ups, obstacles)
-        
+
         // Load priority models first (collectables, power-ups, and obstacles)
         const priorityTypes = PRIORITY_LOADING_ORDER;
-        
+
         await this.loadPriorityModels(priorityTypes);
         this.priorityModelsLoaded = true;
         // Models ready (collectables, power-ups, obstacles)
     }
-    
+
     async loadPriorityModels(modelTypes) {
         const loadPromises = modelTypes
             .filter(type => shouldLoadModel(type))
             .map(type => this.loadModel(type));
-            
+
         const results = await Promise.allSettled(loadPromises);
-        
+
         // Log results
         results.forEach((result, index) => {
             const type = modelTypes.filter(t => shouldLoadModel(t))[index];
@@ -73,28 +73,28 @@ export class CollectableManager {
             }
         });
     }
-    
+
     async loadModel(type) {
         if (this.loadedModels.has(type) || this.loadingPromises.has(type)) {
             return this.loadingPromises.get(type);
         }
-        
+
         const config = getModelConfig(type);
         if (!config || !shouldLoadModel(type)) {
             return null;
         }
-        
+
         // Check if asset is preloaded first
         const fileName = config.path.split('/').pop(); // Extract filename from path
         const preloadedKey = `collectable_${fileName}`;
-        
+
         if (window.assetPreloader && window.assetPreloader.getLoadedAsset(preloadedKey)) {
             const gltf = window.assetPreloader.getLoadedAsset(preloadedKey);
             this.loadedModels.set(type, gltf);
             // Using preloaded collectable model
             return Promise.resolve(gltf);
         }
-        
+
         // Fallback to loading if not preloaded
         const loadPromise = this.loader.loadAsync(config.path)
             .then(gltf => {
@@ -106,7 +106,7 @@ export class CollectableManager {
                 // Model failed to load, using fallback
                 return null;
             });
-        
+
         this.loadingPromises.set(type, loadPromise);
         return loadPromise;
     }
@@ -219,7 +219,7 @@ export class CollectableManager {
             this.addSpinningAnimation(glbMesh, type);
             return glbMesh;
         }
-        
+
         // Fallback to original geometry system
         let geometry, material, color;
 
@@ -253,29 +253,29 @@ export class CollectableManager {
             default:
                 return null;
         }
-        
+
         material = new THREE.MeshStandardMaterial({ color: color });
         const collectableMesh = new THREE.Mesh(geometry, material);
         collectableMesh.position.copy(spawnPosition);
-        
+
         // Adjust height if above obstacles
         this.adjustHeightForObstacles(collectableMesh, obstacles);
-        
+
         // Add spinning animation to fallback geometry
         this.addSpinningAnimation(collectableMesh, type);
-        
+
         collectableMesh.castShadow = true;
         this.scene.add(collectableMesh);
         return collectableMesh;
     }
-    
+
     tryCreateGLBMesh(type, spawnPosition) {
         const config = getModelConfig(type);
         if (!config || !shouldLoadModel(type)) {
             // No config available or model skipped
             return null;
         }
-        
+
         const gltf = this.loadedModels.get(type);
         if (!gltf) {
             // Model not loaded yet, trigger loading for next time
@@ -283,47 +283,47 @@ export class CollectableManager {
             this.loadModel(type);
             return null;
         }
-        
+
         try {
             // Clone the GLB scene
             const modelScene = gltf.scene.clone();
-            
+
             // Apply the calculated scale from our analysis
             const scale = config.scale;
             modelScene.scale.set(scale[0], scale[1], scale[2]);
-            
-            
+
+
             // Position the model
             modelScene.position.copy(spawnPosition);
-            
+
             // Enhanced lighting and visibility for all meshes in the model
             modelScene.traverse((child) => {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    
+
                     // Enhanced material processing for problem models
                     if (child.material) {
                         // Clone material to avoid affecting other instances
                         child.material = child.material.clone();
-                        
+
                         // Special handling for problematic dark models  
                         const isDarkModel = ['waterDrop', 'rubble', 'blueprint', 'constructionBarrier', 'windPower', 'pothole', 'waterPipeline', 'solarPower', 'helicopter', 'hardHat'].includes(type);
-                        
+
                         // Ensure materials respond well to lighting
                         child.material.roughness = Math.min(child.material.roughness || 0.7, 0.8);
                         child.material.metalness = Math.max(child.material.metalness || 0.0, 0.1);
-                        
+
                         // Add stronger emissive glow for better visibility
                         if (!child.material.emissive || child.material.emissive.isColor) {
                             child.material.emissive = child.material.emissive || new THREE.Color(0x222222);
                             child.material.emissiveIntensity = isDarkModel ? 0.25 : 0.15; // Extra glow for dark models
                         }
-                        
+
                         // More aggressive brightening for problem models
                         if (child.material.color && child.material.color.isColor) {
                             const brightness = (child.material.color.r + child.material.color.g + child.material.color.b) / 3;
-                            
+
                             if (isDarkModel) {
                                 // Force brighten problematic models regardless of current brightness
                                 child.material.color.multiplyScalar(3.0);
@@ -336,30 +336,30 @@ export class CollectableManager {
                                 }
                             }
                         }
-                        
+
                         // Force material properties for dark models
                         if (isDarkModel) {
                             child.material.roughness = 0.6; // Less rough for more reflection
                             child.material.metalness = 0.2; // Slight metallic for better light response
-                            
+
                             // Add ambient enhancement
                             if (child.material.emissive) {
                                 child.material.emissive.multiplyScalar(1.5);
                             }
-                            
+
                             // Special pothole road-blending effect
                             if (type === 'pothole') {
                                 // Create a gradient effect by adding a darker ring around edges
                                 child.material.transparent = true;
                                 child.material.opacity = 0.9; // Slightly transparent for blending
-                                
+
                                 // Add road-like coloring to blend with asphalt
                                 if (child.material.color) {
                                     // Mix with road color (#404040) for better blending
                                     const roadColor = new THREE.Color(0x404040);
                                     child.material.color.lerp(roadColor, 0.3); // 30% road color mix
                                 }
-                                
+
                                 // Add subtle emission to make it look like a real hole
                                 child.material.emissive = new THREE.Color(0x1a1a1a); // Very dark emission
                                 child.material.emissiveIntensity = 0.1;
@@ -368,16 +368,16 @@ export class CollectableManager {
                     }
                 }
             });
-            
+
             // Add animation data to the GLB model
             this.addSpinningAnimation(modelScene, type);
-            
+
             // Add to scene
             this.scene.add(modelScene);
-            
+
             // Using GLB model for collectable
             return modelScene;
-            
+
         } catch (error) {
             // GLB creation failed, using fallback
             return null;
@@ -390,22 +390,22 @@ export class CollectableManager {
         if (glbMesh) {
             return glbMesh;
         }
-        
+
         // Fallback to original helicopter geometry
         const geometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8);
         const rotorGeometry = new THREE.BoxGeometry(0.5, 0.05, 0.1);
         const material = new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.HELICOPTER });
-        
+
         const collectableMesh = new THREE.Mesh(geometry, material);
         const rotor = new THREE.Mesh(rotorGeometry, material);
         rotor.position.y = 0.1;
         collectableMesh.add(rotor);
-        
+
         collectableMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
-        
+
         // Add spinning animation
         this.addSpinningAnimation(collectableMesh, 'helicopter');
-        
+
         collectableMesh.castShadow = true;
         this.scene.add(collectableMesh);
         return collectableMesh;
@@ -417,21 +417,21 @@ export class CollectableManager {
         if (glbMesh) {
             return glbMesh;
         }
-        
+
         // Fallback to original solar panel geometry
         const geometry = new THREE.CircleGeometry(0.25, 16);
-        const material = new THREE.MeshStandardMaterial({ 
-            color: COLORS.COLLECTABLES.SOLAR_POWER, 
-            side: THREE.DoubleSide 
+        const material = new THREE.MeshStandardMaterial({
+            color: COLORS.COLLECTABLES.SOLAR_POWER,
+            side: THREE.DoubleSide
         });
         const solarMesh = new THREE.Mesh(geometry, material);
         solarMesh.rotation.x = -Math.PI / 2;
-        
+
         solarMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
-        
+
         // Add spinning animation
         this.addSpinningAnimation(solarMesh, 'solarPower');
-        
+
         solarMesh.castShadow = true;
         this.scene.add(solarMesh);
         return solarMesh;
@@ -443,24 +443,24 @@ export class CollectableManager {
         if (glbMesh) {
             return glbMesh;
         }
-        
+
         // Fallback to original wind power geometry with particles
         const geometry = new THREE.SphereGeometry(0.2, 16, 16);
-        const material = new THREE.MeshStandardMaterial({ 
-            color: COLORS.COLLECTABLES.WIND_POWER, 
-            transparent: true, 
-            opacity: 0.7 
+        const material = new THREE.MeshStandardMaterial({
+            color: COLORS.COLLECTABLES.WIND_POWER,
+            transparent: true,
+            opacity: 0.7
         });
         const windMesh = new THREE.Mesh(geometry, material);
-        
+
         // Add particle effects
         const particleGeometry = new THREE.SphereGeometry(0.05, 8, 8);
-        const particleMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0xffffff, 
-            transparent: true, 
-            opacity: 0.5 
+        const particleMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.5
         });
-        
+
         for (let i = 0; i < 5; i++) {
             const particle = new THREE.Mesh(particleGeometry, particleMaterial);
             particle.position.set(
@@ -470,12 +470,12 @@ export class CollectableManager {
             );
             windMesh.add(particle);
         }
-        
+
         windMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
-        
+
         // Add spinning animation
         this.addSpinningAnimation(windMesh, 'windPower');
-        
+
         windMesh.castShadow = true;
         this.scene.add(windMesh);
         return windMesh;
@@ -488,7 +488,7 @@ export class CollectableManager {
             2.5, // Fixed height for aerial stars - high enough to be clearly aerial
             playerPosition.z - 30 - (Math.random() * 20)
         );
-        
+
         // Try GLB model first (Star)
         const glbMesh = this.tryCreateGLBMesh('aerialStar', spawnPosition);
         if (glbMesh) {
@@ -498,23 +498,23 @@ export class CollectableManager {
             this.collectables.push({ mesh: glbMesh, type: 'aerialStar' });
             return;
         }
-        
+
         // Fallback to original octahedron geometry
         const geometry = new THREE.OctahedronGeometry(0.3, 0);
-        const material = new THREE.MeshStandardMaterial({ 
+        const material = new THREE.MeshStandardMaterial({
             color: COLORS.COLLECTABLES.AERIAL_STAR,
             emissive: 0xffaa00,
             metalness: 0.7,
             roughness: 0.3
         });
-        
+
         const collectableMesh = new THREE.Mesh(geometry, material);
         collectableMesh.position.copy(spawnPosition);
-        
+
         collectableMesh.userData = {
             rotationSpeed: 0.015 + Math.random() * 0.005  // Match the subtle speed
         };
-        
+
         collectableMesh.castShadow = true;
         this.scene.add(collectableMesh);
         this.collectables.push({ mesh: collectableMesh, type: 'aerialStar' });
@@ -523,7 +523,7 @@ export class CollectableManager {
     createSolarOrb(playerPosition) {
         // Create a light bulb/solar energy orb that appears during solar boost
         const geometry = new THREE.SphereGeometry(0.25, 16, 16);
-        const material = new THREE.MeshStandardMaterial({ 
+        const material = new THREE.MeshStandardMaterial({
             color: COLORS.COLLECTABLES.SOLAR_ORB,
             emissive: 0xffaa00,
             emissiveIntensity: 0.4,
@@ -532,9 +532,9 @@ export class CollectableManager {
             transparent: true,
             opacity: 0.9
         });
-        
+
         const collectableMesh = new THREE.Mesh(geometry, material);
-        
+
         // Add a glowing inner core
         const coreGeometry = new THREE.SphereGeometry(0.15, 8, 8);
         const coreMaterial = new THREE.MeshStandardMaterial({
@@ -546,7 +546,7 @@ export class CollectableManager {
         });
         const core = new THREE.Mesh(coreGeometry, coreMaterial);
         collectableMesh.add(core);
-        
+
         // Add light rays (4 extending lines)
         for (let i = 0; i < 4; i++) {
             const rayGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8);
@@ -558,30 +558,30 @@ export class CollectableManager {
                 opacity: 0.6
             });
             const ray = new THREE.Mesh(rayGeometry, rayMaterial);
-            
+
             // Position rays in cross pattern
             if (i < 2) {
                 ray.rotation.z = (i * Math.PI) + (Math.PI / 4); // Diagonal rays
             } else {
                 ray.rotation.x = ((i - 2) * Math.PI) + (Math.PI / 4); // Other diagonal rays
             }
-            
+
             collectableMesh.add(ray);
         }
-        
+
         const laneIndex = Math.floor(Math.random() * LANES.COUNT);
-        
+
         collectableMesh.position.set(
             LANES.POSITIONS[laneIndex],
             playerPosition.y + 0.5, // Slightly closer to player than aerial stars
             playerPosition.z - 25 - (Math.random() * 15)
         );
-        
+
         collectableMesh.userData = {
             rotationSpeed: 0.08 + Math.random() * 0.04, // Faster rotation than aerial stars
             pulseSpeed: 0.03 + Math.random() * 0.02
         };
-        
+
         collectableMesh.castShadow = true;
         this.scene.add(collectableMesh);
         this.collectables.push({ mesh: collectableMesh, type: 'solarOrb' });
@@ -589,20 +589,20 @@ export class CollectableManager {
 
     addSpinningAnimation(collectableMesh, type) {
         collectableMesh.userData = collectableMesh.userData || {};
-        
+
         const powerUps = ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'];
-        
+
         if (powerUps.includes(type)) {
             // Debug logging to track power-up glow effect
             console.log(`Adding glow effect to power-up: ${type}`);
-            
+
             // Power-ups get subtle bouncing animation (no rotation to preserve front face)
             collectableMesh.userData.bounceSpeed = 1.0; // Subtle bounce speed
             collectableMesh.userData.bounceOffset = Math.random() * Math.PI * 2; // Random phase offset
             collectableMesh.userData.bounceHeight = 0.12; // Subtle bounce height
             collectableMesh.userData.baseY = collectableMesh.position.y; // Store original Y position
             collectableMesh.userData.isPowerUp = true; // Flag to identify power-ups
-            
+
             // Add magical glow effect for power-ups
             this.addMagicalGlow(collectableMesh, type);
         } else {
@@ -611,93 +611,171 @@ export class CollectableManager {
         }
     }
 
+    createRayTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const context = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = canvas.width / 2;
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw rays
+        const rayCount = 12;
+        context.fillStyle = '#FFFFFF';
+
+        for (let i = 0; i < rayCount; i++) {
+            context.beginPath();
+            context.moveTo(centerX, centerY);
+            const angle = (i / rayCount) * Math.PI * 2;
+            const width = (Math.PI * 2) / (rayCount * 2); // Half width for gaps
+
+            context.arc(centerX, centerY, radius, angle - width / 2, angle + width / 2);
+            context.lineTo(centerX, centerY);
+            context.fill();
+        }
+
+        // Soften edges
+        const gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        context.globalCompositeOperation = 'destination-in';
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        return texture;
+    }
+
+    createGlowTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const context = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = canvas.width / 2;
+
+        const gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.5)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        return texture;
+    }
+
     addMagicalGlow(collectableMesh, type) {
         // Create magical glow effect around power-ups
         const glowGroup = new THREE.Group();
-        
+
         // Get power-up specific color
         const glowColor = this.getPowerUpGlowColor(type);
-        
+
         // Debug logging to track glow creation
         console.log(`Creating magical glow for ${type} with color:`, glowColor);
-        
-        // Create multiple layers of glow for realistic effect
-        
-        // Inner bright core glow
-        const innerGlowGeometry = new THREE.SphereGeometry(0.6, 16, 16);
+
+        // 1. Rotating Sunburst Rays (Behind)
+        if (!this.rayTexture) this.rayTexture = this.createRayTexture();
+
+        const raysGeometry = new THREE.PlaneGeometry(4, 4);
+        const raysMaterial = new THREE.MeshBasicMaterial({
+            color: glowColor,
+            map: this.rayTexture,
+            transparent: true,
+            opacity: 0.6,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const rays = new THREE.Mesh(raysGeometry, raysMaterial);
+        rays.position.z = -0.5; // Slightly behind
+        glowGroup.add(rays);
+
+        // 2. Bottom Glow (Ground illumination)
+        if (!this.glowTexture) this.glowTexture = this.createGlowTexture();
+
+        const bottomGlowGeometry = new THREE.PlaneGeometry(2.5, 2.5);
+        const bottomGlowMaterial = new THREE.MeshBasicMaterial({
+            color: glowColor,
+            map: this.glowTexture,
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const bottomGlow = new THREE.Mesh(bottomGlowGeometry, bottomGlowMaterial);
+        bottomGlow.rotation.x = -Math.PI / 2; // Lay flat
+        bottomGlow.position.y = -0.5; // At feet level
+        glowGroup.add(bottomGlow);
+
+        // 3. Inner bright core glow (Intense)
+        const innerGlowGeometry = new THREE.SphereGeometry(0.6, 32, 32);
         const innerGlowMaterial = new THREE.MeshBasicMaterial({
             color: glowColor,
             transparent: true,
-            opacity: 0.3,
-            side: THREE.BackSide // Render from inside
+            opacity: 0.4,
+            side: THREE.BackSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
         });
         const innerGlow = new THREE.Mesh(innerGlowGeometry, innerGlowMaterial);
         glowGroup.add(innerGlow);
-        
-        // Middle glow layer
-        const middleGlowGeometry = new THREE.SphereGeometry(0.8, 16, 16);
-        const middleGlowMaterial = new THREE.MeshBasicMaterial({
-            color: glowColor,
-            transparent: true,
-            opacity: 0.2,
-            side: THREE.BackSide
-        });
-        const middleGlow = new THREE.Mesh(middleGlowGeometry, middleGlowMaterial);
-        glowGroup.add(middleGlow);
-        
-        // Outer soft glow
-        const outerGlowGeometry = new THREE.SphereGeometry(1.0, 16, 16);
-        const outerGlowMaterial = new THREE.MeshBasicMaterial({
-            color: glowColor,
-            transparent: true,
-            opacity: 0.1,
-            side: THREE.BackSide
-        });
-        const outerGlow = new THREE.Mesh(outerGlowGeometry, outerGlowMaterial);
-        glowGroup.add(outerGlow);
-        
-        // Create magical particles floating around
-        const particleCount = 8;
+
+        // 4. Dynamic Sparkles/Particles
+        const particleCount = 12;
         const particles = [];
-        
+
+        const particleGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+        const particleMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending
+        });
+
         for (let i = 0; i < particleCount; i++) {
-            const particleGeometry = new THREE.SphereGeometry(0.03, 8, 8);
-            const particleMaterial = new THREE.MeshBasicMaterial({
-                color: glowColor,
-                transparent: true,
-                opacity: 0.8
-            });
             const particle = new THREE.Mesh(particleGeometry, particleMaterial);
-            
+
             // Position particles in a circle around the power-up
             const angle = (i / particleCount) * Math.PI * 2;
-            const radius = 1.2;
+            const radius = 1.0 + Math.random() * 0.5;
             particle.position.set(
                 Math.cos(angle) * radius,
-                Math.sin(angle * 2) * 0.3, // Vertical movement
+                (Math.random() - 0.5) * 1.0,
                 Math.sin(angle) * radius
             );
-            
+
             particle.userData = {
                 originalAngle: angle,
                 orbitRadius: radius,
-                verticalOffset: Math.sin(angle * 2) * 0.3
+                verticalSpeed: 0.5 + Math.random() * 1.0,
+                orbitSpeed: 1.0 + Math.random() * 1.0,
+                yOffset: Math.random() * Math.PI * 2
             };
-            
+
             particles.push(particle);
             glowGroup.add(particle);
         }
-        
+
         // Store glow components for animation
         collectableMesh.userData.glowGroup = glowGroup;
-        collectableMesh.userData.glowLayers = [innerGlow, middleGlow, outerGlow];
+        collectableMesh.userData.glowLayers = [innerGlow, rays, bottomGlow];
         collectableMesh.userData.glowParticles = particles;
         collectableMesh.userData.glowTime = 0;
-        
+
         // Add glow group to the collectable
         collectableMesh.add(glowGroup);
     }
-    
+
     getPowerUpGlowColor(type) {
         // Return appropriate glow colors for each power-up type
         switch (type) {
@@ -719,10 +797,10 @@ export class CollectableManager {
     adjustHeightForObstacles(collectableMesh, obstacles) {
         let yOffset = 0;
         for (const obstacle of obstacles) {
-            if (Math.abs(obstacle.mesh.position.x - collectableMesh.position.x) < 1 && 
+            if (Math.abs(obstacle.mesh.position.x - collectableMesh.position.x) < 1 &&
                 Math.abs(obstacle.mesh.position.z - collectableMesh.position.z) < 1 &&
                 obstacle.mesh.position.y > 0.1) {
-                yOffset = obstacle.mesh.geometry.parameters.height ? 
+                yOffset = obstacle.mesh.geometry.parameters.height ?
                     obstacle.mesh.geometry.parameters.height + 0.2 : 0.5;
                 break;
             }
@@ -738,11 +816,11 @@ export class CollectableManager {
         if (!this.gameController || !this.gameController.isGameActive()) {
             return;
         }
-        
+
         const playerZ = this.gameController.getPlayerPosition().z;
         const obstacles = this.gameController.getObstacles();
         this.createCollectable(playerZ, obstacles);
-        
+
         setTimeout(() => {
             this.spawnCollectable(); // Recursive call without parameters
         }, Math.random() * SPAWN_CONFIG.COLLECTABLE_INTERVAL.MAX + SPAWN_CONFIG.COLLECTABLE_INTERVAL.MIN);
@@ -750,33 +828,33 @@ export class CollectableManager {
 
     updateCollectables(gameSpeed, cameraZ) {
         const time = Date.now() * 0.001;
-        
+
         for (let i = this.collectables.length - 1; i >= 0; i--) {
             const collectable = this.collectables[i];
             collectable.mesh.position.z += gameSpeed;
-            
+
             // Apply bouncing animation to power-ups (no rotation to preserve front face)
             if (collectable.mesh.userData.isPowerUp && collectable.mesh.userData.bounceSpeed) {
                 const bounceOffset = Math.sin(time * collectable.mesh.userData.bounceSpeed + collectable.mesh.userData.bounceOffset);
                 const newY = collectable.mesh.userData.baseY + (bounceOffset * collectable.mesh.userData.bounceHeight);
                 collectable.mesh.position.y = newY;
-                
+
                 // Animate magical glow effect
                 this.updateMagicalGlow(collectable.mesh, time);
             }
-            
+
             // Apply subtle spinning to regular collectibles
             if (collectable.mesh.userData.rotationSpeed) {
                 collectable.mesh.rotation.y += collectable.mesh.userData.rotationSpeed;
             }
-            
+
             // Special handling for specific types
             if (collectable.type === 'solarOrb') {
                 // Solar orbs get multi-axis rotation and pulsing
                 if (collectable.mesh.userData.rotationSpeed) {
                     collectable.mesh.rotation.z += collectable.mesh.userData.rotationSpeed * 0.3;
                 }
-                
+
                 // Pulsing glow effect
                 if (collectable.mesh.userData.pulseSpeed) {
                     const pulse = Math.sin(time * collectable.mesh.userData.pulseSpeed * 10) * 0.5 + 0.5;
@@ -788,115 +866,135 @@ export class CollectableManager {
                     collectable.mesh.rotation.y += collectable.mesh.userData.rotationSpeed;
                 }
             }
-            
+
             if (collectable.mesh.position.z > cameraZ + 5) {
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
+            } else {
+                // Far culling: Hide collectables that are too far ahead (beyond fog)
+                const distanceAhead = Math.abs(collectable.mesh.position.z - cameraZ);
+                if (distanceAhead > 160) {
+                    collectable.mesh.visible = false;
+                } else {
+                    collectable.mesh.visible = true;
+                }
             }
         }
-        
+
         // Update collection effects
         this.updateCollectionEffects();
     }
-    
+
     updateMagicalGlow(collectableMesh, time) {
         if (!collectableMesh.userData.glowGroup) return;
-        
+
         collectableMesh.userData.glowTime = time;
-        
-        // Animate glow layers with pulsing effect
+
+        // Animate glow layers (Inner, Rays, Bottom)
         if (collectableMesh.userData.glowLayers) {
-            collectableMesh.userData.glowLayers.forEach((layer, index) => {
-                const pulseSpeed = 2.0 + (index * 0.5); // Different speeds for each layer
-                const pulse = Math.sin(time * pulseSpeed) * 0.5 + 0.5;
-                const baseOpacity = [0.3, 0.2, 0.1][index]; // Base opacity for each layer
-                layer.material.opacity = baseOpacity + (pulse * baseOpacity * 0.5);
-                
-                // Slight scale animation
-                const scale = 1.0 + (pulse * 0.1);
-                layer.scale.setScalar(scale);
-            });
+            const [inner, rays, bottom] = collectableMesh.userData.glowLayers;
+
+            // Pulse inner core
+            if (inner) {
+                const pulse = Math.sin(time * 3.0) * 0.5 + 0.5;
+                inner.material.opacity = 0.4 + (pulse * 0.2);
+                inner.scale.setScalar(0.9 + (pulse * 0.1));
+            }
+
+            // Rotate rays
+            if (rays) {
+                rays.rotation.z = time * 0.5; // Slow rotation
+                const rayPulse = Math.sin(time * 2.0) * 0.5 + 0.5;
+                rays.material.opacity = 0.4 + (rayPulse * 0.2);
+            }
+
+            // Pulse bottom glow
+            if (bottom) {
+                const bottomPulse = Math.sin(time * 4.0) * 0.5 + 0.5;
+                bottom.material.opacity = 0.6 + (bottomPulse * 0.2);
+                const scale = 1.0 + (bottomPulse * 0.2);
+                bottom.scale.setScalar(scale);
+            }
         }
-        
+
         // Animate floating particles
         if (collectableMesh.userData.glowParticles) {
             collectableMesh.userData.glowParticles.forEach((particle, index) => {
-                const orbitSpeed = 0.5;
-                const verticalSpeed = 1.0;
-                
-                // Orbit around the power-up
-                const angle = particle.userData.originalAngle + (time * orbitSpeed);
+                // Orbit
+                const angle = particle.userData.originalAngle + (time * particle.userData.orbitSpeed);
                 const radius = particle.userData.orbitRadius;
-                
+
                 particle.position.x = Math.cos(angle) * radius;
                 particle.position.z = Math.sin(angle) * radius;
-                
-                // Floating vertical movement
-                particle.position.y = Math.sin(time * verticalSpeed + particle.userData.originalAngle) * 0.4;
-                
-                // Pulsing opacity
-                const pulse = Math.sin(time * 3.0 + index) * 0.5 + 0.5;
-                particle.material.opacity = 0.6 + (pulse * 0.4);
+
+                // Vertical bobbing
+                particle.position.y = Math.sin(time * particle.userData.verticalSpeed + particle.userData.yOffset) * 0.5;
+
+                // Twinkle
+                const twinkle = Math.sin(time * 10.0 + index) * 0.5 + 0.5;
+                particle.material.opacity = 0.4 + (twinkle * 0.6);
+                const scale = 0.8 + (twinkle * 0.4);
+                particle.scale.setScalar(scale);
             });
         }
     }
 
     checkCollisions(playerBox) {
         const collectedItems = [];
-        
+
         // Get current game speed and magnet status for enhanced collision detection
         const gameSpeed = this.gameController ? this.gameController.getGameSpeed() : 0;
-        const hasMagnetEffect = this.gameController && this.gameController.powerUpManager ? 
-                              this.gameController.powerUpManager.getSolarBoostStatus() : false;
-        
+        const hasMagnetEffect = this.gameController && this.gameController.powerUpManager ?
+            this.gameController.powerUpManager.getSolarBoostStatus() : false;
+
         for (let i = this.collectables.length - 1; i >= 0; i--) {
             const collectable = this.collectables[i];
             const collectableBox = new THREE.Box3().setFromObject(collectable.mesh);
-            
+
             // Skip aerial stars if player is not flying
             if (collectable.type === 'aerialStar') {
-                const isFlying = this.gameController && this.gameController.powerUpManager && 
-                                this.gameController.powerUpManager.getFlyingStatus();
+                const isFlying = this.gameController && this.gameController.powerUpManager &&
+                    this.gameController.powerUpManager.getFlyingStatus();
                 if (!isFlying) {
                     continue; // Don't collect aerial stars when not flying
                 }
             }
-            
+
             // Skip solar orbs if player doesn't have solar boost
             if (collectable.type === 'solarOrb') {
-                const hasSolarBoost = this.gameController && this.gameController.powerUpManager && 
-                                     this.gameController.powerUpManager.getSolarBoostStatus();
+                const hasSolarBoost = this.gameController && this.gameController.powerUpManager &&
+                    this.gameController.powerUpManager.getSolarBoostStatus();
                 if (!hasSolarBoost) {
                     continue; // Don't collect solar orbs when not in solar boost mode
                 }
             }
-            
+
             // Use enhanced collision detection for collectibles
             let collisionDetected = false;
-            
+
             if (gameSpeed > PHYSICS.HIGH_SPEED_THRESHOLD) {
                 // High-speed: Use enhanced collision detection with larger collection radius
                 collisionDetected = CollisionUtils.checkCollectableCollision(
-                    playerBox, 
-                    collectableBox, 
-                    gameSpeed, 
+                    playerBox,
+                    collectableBox,
+                    gameSpeed,
                     hasMagnetEffect
                 );
             } else {
                 // Low-speed: Use standard collision detection
                 collisionDetected = playerBox.intersectsBox(collectableBox);
             }
-            
+
             if (collisionDetected) {
                 // Create collection effect before removing the collectable
                 this.createCollectionEffect(collectable.mesh.position, collectable.type);
-                
+
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
                 collectedItems.push(collectable.type);
-                
+
                 // High-speed collection detected
-                
+
                 // Track regular collections for fair power-up spawning
                 const regularTypes = ['blueprint', 'waterDrop', 'energyCell'];
                 if (regularTypes.includes(collectable.type)) {
@@ -905,18 +1003,18 @@ export class CollectableManager {
                 }
             }
         }
-        
+
         return collectedItems;
     }
 
     createCollectionEffect(position, type) {
         const powerUps = ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'];
         const isPowerUp = powerUps.includes(type);
-        
+
         // Create particle burst effect
         const particleCount = isPowerUp ? 12 : 6;
         const particleSize = isPowerUp ? 0.08 : 0.04;
-        
+
         for (let i = 0; i < particleCount; i++) {
             const particle = new THREE.Mesh(
                 new THREE.SphereGeometry(particleSize, 8, 8),
@@ -928,14 +1026,14 @@ export class CollectableManager {
                     opacity: 0.8
                 })
             );
-            
+
             particle.position.copy(position);
-            
+
             // Random burst direction
             const angle = (i / particleCount) * Math.PI * 2;
             const radius = 0.3 + Math.random() * 0.2;
             const height = (Math.random() - 0.5) * 0.3;
-            
+
             particle.userData = {
                 velocity: new THREE.Vector3(
                     Math.cos(angle) * radius,
@@ -945,12 +1043,12 @@ export class CollectableManager {
                 life: 1.0,
                 decay: 0.02 + Math.random() * 0.01
             };
-            
+
             this.scene.add(particle);
             this.collectionEffects = this.collectionEffects || [];
             this.collectionEffects.push(particle);
         }
-        
+
         // Create extra effects for power-ups
         if (isPowerUp) {
             // Create a expanding ring effect
@@ -963,24 +1061,24 @@ export class CollectableManager {
                 opacity: 0.6,
                 side: THREE.DoubleSide
             });
-            
+
             const ring = new THREE.Mesh(ringGeometry, ringMaterial);
             ring.position.copy(position);
             ring.rotation.x = -Math.PI / 2;
-            
+
             ring.userData = {
                 scale: 1.0,
                 expansion: 0.1,
                 life: 1.0,
                 decay: 0.03
             };
-            
+
             this.scene.add(ring);
             this.collectionEffects = this.collectionEffects || [];
             this.collectionEffects.push(ring);
         }
     }
-    
+
     getCollectableColor(type) {
         const colors = {
             'blueprint': 0x4A90E2,
@@ -996,22 +1094,22 @@ export class CollectableManager {
         };
         return colors[type] || 0xFFFFFF;
     }
-    
+
     updateCollectionEffects() {
         if (!this.collectionEffects) return;
-        
+
         for (let i = this.collectionEffects.length - 1; i >= 0; i--) {
             const effect = this.collectionEffects[i];
-            
+
             if (effect.userData.velocity) {
                 // Particle effect
                 effect.position.add(effect.userData.velocity);
                 effect.userData.velocity.y -= 0.01; // Gravity
                 effect.userData.velocity.multiplyScalar(0.95); // Air resistance
-                
+
                 effect.userData.life -= effect.userData.decay;
                 effect.material.opacity = effect.userData.life;
-                
+
                 if (effect.userData.life <= 0) {
                     this.scene.remove(effect);
                     this.collectionEffects.splice(i, 1);
@@ -1020,10 +1118,10 @@ export class CollectableManager {
                 // Ring effect
                 effect.userData.scale += effect.userData.expansion;
                 effect.scale.setScalar(effect.userData.scale);
-                
+
                 effect.userData.life -= effect.userData.decay;
                 effect.material.opacity = effect.userData.life * 0.6;
-                
+
                 if (effect.userData.life <= 0) {
                     this.scene.remove(effect);
                     this.collectionEffects.splice(i, 1);
@@ -1052,37 +1150,37 @@ export class CollectableManager {
     shouldSpawnPowerUp() {
         const currentTime = Date.now();
         const timeSinceLastPowerUp = currentTime - this.lastPowerUpTime;
-        
+
         // Power-up should spawn if:
         // 1. Time interval reached (25 seconds)
         // 2. OR collected enough regular items (8 items)
-        if (timeSinceLastPowerUp >= this.powerUpInterval || 
+        if (timeSinceLastPowerUp >= this.powerUpInterval ||
             this.regularCollectionsCount >= this.powerUpAfterCollections) {
             return true;
         }
         return false;
     }
-    
+
     // NEW: Mark that a power-up was spawned
     markPowerUpSpawned() {
         this.lastPowerUpTime = Date.now();
         this.regularCollectionsCount = 0; // Reset collection counter
         // Power-up spawned - timers reset
     }
-    
+
     reset() {
         this.collectables.forEach(collectable => this.scene.remove(collectable.mesh));
         this.collectables = [];
-        
+
         // Clean up collection effects
         if (this.collectionEffects) {
             this.collectionEffects.forEach(effect => this.scene.remove(effect));
             this.collectionEffects = [];
         }
-        
+
         // Reset and reshuffle the power-up deck
         this.shufflePowerUpDeck();
-        
+
         // Reset fair spawning system
         this.lastPowerUpTime = Date.now();
         this.regularCollectionsCount = 0;
@@ -1111,7 +1209,7 @@ export class CollectableManager {
             }
         }
     }
-    
+
     // NEW: Create obstacle GLB mesh (for use by obstacle manager)
     createObstacleGLBMesh(type, spawnPosition) {
         const config = getModelConfig(type);
@@ -1119,7 +1217,7 @@ export class CollectableManager {
             // No obstacle config available or skipped
             return null;
         }
-        
+
         const gltf = this.loadedModels.get(type);
         if (!gltf) {
             // Model not loaded yet, trigger loading for next time
@@ -1127,18 +1225,18 @@ export class CollectableManager {
             this.loadModel(type);
             return null;
         }
-        
+
         try {
             // Clone the GLB scene
             const modelScene = gltf.scene.clone();
-            
+
             // Apply the calculated scale from our analysis
             const scale = config.scale;
             modelScene.scale.set(scale[0], scale[1], scale[2]);
-            
+
             // Position the model
             modelScene.position.copy(spawnPosition);
-            
+
             // Fix Y positioning for GLB obstacle models (ground them properly)
             if (type === 'constructionBarrier') {
                 // Plastic barrier should sit on ground
@@ -1153,35 +1251,35 @@ export class CollectableManager {
                 // Pothole should be visible at ground level (not below)
                 modelScene.position.y = 0.05; // Slightly above ground to ensure visibility
             }
-            
+
             // Enhanced lighting and visibility for all meshes in the obstacle model
             modelScene.traverse((child) => {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    
+
                     // Enhanced material processing for problem models
                     if (child.material) {
                         // Clone material to avoid affecting other instances
                         child.material = child.material.clone();
-                        
+
                         // Special handling for problematic dark models  
                         const isDarkModel = ['waterDrop', 'rubble', 'blueprint', 'constructionBarrier', 'windPower', 'pothole', 'waterPipeline', 'solarPower', 'helicopter', 'hardHat'].includes(type);
-                        
+
                         // Ensure materials respond well to lighting
                         child.material.roughness = Math.min(child.material.roughness || 0.7, 0.8);
                         child.material.metalness = Math.max(child.material.metalness || 0.0, 0.1);
-                        
+
                         // Add stronger emissive glow for better visibility
                         if (!child.material.emissive || child.material.emissive.isColor) {
                             child.material.emissive = child.material.emissive || new THREE.Color(0x222222);
                             child.material.emissiveIntensity = isDarkModel ? 0.25 : 0.15; // Extra glow for dark models
                         }
-                        
+
                         // More aggressive brightening for problem models
                         if (child.material.color && child.material.color.isColor) {
                             const brightness = (child.material.color.r + child.material.color.g + child.material.color.b) / 3;
-                            
+
                             if (isDarkModel) {
                                 // Force brighten problematic models regardless of current brightness
                                 child.material.color.multiplyScalar(3.0);
@@ -1194,30 +1292,30 @@ export class CollectableManager {
                                 }
                             }
                         }
-                        
+
                         // Force material properties for dark models
                         if (isDarkModel) {
                             child.material.roughness = 0.6; // Less rough for more reflection
                             child.material.metalness = 0.2; // Slight metallic for better light response
-                            
+
                             // Add ambient enhancement
                             if (child.material.emissive) {
                                 child.material.emissive.multiplyScalar(1.5);
                             }
-                            
+
                             // Special pothole road-blending effect
                             if (type === 'pothole') {
                                 // Create a gradient effect by adding a darker ring around edges
                                 child.material.transparent = true;
                                 child.material.opacity = 0.9; // Slightly transparent for blending
-                                
+
                                 // Add road-like coloring to blend with asphalt
                                 if (child.material.color) {
                                     // Mix with road color (#404040) for better blending
                                     const roadColor = new THREE.Color(0x404040);
                                     child.material.color.lerp(roadColor, 0.3); // 30% road color mix
                                 }
-                                
+
                                 // Add subtle emission to make it look like a real hole
                                 child.material.emissive = new THREE.Color(0x1a1a1a); // Very dark emission
                                 child.material.emissiveIntensity = 0.1;
@@ -1226,13 +1324,13 @@ export class CollectableManager {
                     }
                 }
             });
-            
+
             // Add to scene
             this.scene.add(modelScene);
-            
+
             // Using GLB obstacle model
             return modelScene;
-            
+
         } catch (error) {
             // GLB obstacle creation failed, using fallback
             return null;
