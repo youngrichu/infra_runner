@@ -12,6 +12,7 @@ export class DirectModelEnvironment {
         this.ground = null;
         this.activeBuildings = [];
         this.streetDecorations = [];
+        this.lastTreeSpawnZ = -100; // Track last tree spawn position
         this.gameController = null;
 
         // Performance tracking - initialize immediately
@@ -195,8 +196,8 @@ export class DirectModelEnvironment {
                 gltf = window.assetPreloader.getLoadedAsset('tree_main');
                 // Using preloaded tree model
             } else {
-                // Fallback to loading if not preloaded
-                gltf = await this.gltfLoader.loadAsync('./assets/city/model/lowpolytrees.glb');
+                // Fallback to loading
+                gltf = await this.gltfLoader.loadAsync('./assets/city/model/Palm_Tree.glb');
             }
 
             this.treeTemplate = gltf.scene.clone();
@@ -242,7 +243,7 @@ export class DirectModelEnvironment {
                 window.gameLoadingManager.updateProgress(3, 'Loading tree models...');
             }
 
-            const treePromise = this.gltfLoader.loadAsync('./assets/city/model/lowpolytrees.glb')
+            const treePromise = this.gltfLoader.loadAsync('./assets/city/model/Palm_Tree.glb')
                 .then(gltf => {
                     this.treeTemplate = gltf.scene.clone();
                     this.enhanceTree(this.treeTemplate);
@@ -342,23 +343,18 @@ export class DirectModelEnvironment {
     }
 
     enhanceTree(tree) {
-        // Enhance tree with natural colors - PERFORMANCE OPTIMIZED
+        // Enhance tree - Enable shadows and keep original materials
         tree.traverse((child) => {
             if (child.isMesh) {
-                // DISABLE SHADOWS for trees - major performance boost
-                child.castShadow = false;
-                child.receiveShadow = false;
+                // ENABLE SHADOWS for better realism
+                child.castShadow = true;
+                child.receiveShadow = true;
 
+                // Removed manual color override to allow original model textures/colors to show
                 if (child.material) {
-                    child.material = child.material.clone();
-                    // Keep natural tree colors or enhance slightly
-                    if (child.material.color.r < 0.5) {
-                        // Likely foliage - enhance green
-                        child.material.color = new THREE.Color(0x228B22);
-                    } else {
-                        // Likely trunk - enhance brown
-                        child.material.color = new THREE.Color(0x8B4513);
-                    }
+                    // Ensure material handles light correctly
+                    child.material.roughness = 0.8;
+                    child.material.metalness = 0.1;
                 }
             }
         });
@@ -459,10 +455,10 @@ export class DirectModelEnvironment {
             this.spawnSpecificBuilding(z - 6, 'right', 0); // Slight offset for variety
         }
 
-        // Trees disabled temporarily
-        // for (let i = 0; i < 2; i++) {
-        //     this.spawnSpecificTree(-100 - (i * 150));
-        // }
+        // Trees enabled - spaced out for individual placement
+        for (let i = 0; i < 10; i++) {
+            this.spawnSpecificTree(-20 - (i * 60));
+        }
     }
 
     spawnSpecificBuilding(zPosition, forceSide = null, cameraZ = 0) {
@@ -540,26 +536,30 @@ export class DirectModelEnvironment {
             return;
         }
 
+        // UNIFORM SCALING - Perfect size (User defined)
         const tree = this.treeTemplate.clone();
 
-        // Much smaller scale for trees - better performance
-        const scale = 0.008 + Math.random() * 0.005; // 0.008 to 0.013 scale (smaller)
+        // Scale: 1.4 to 2.4
+        let scale = 1.4 + Math.random() * 1.0;
         tree.scale.setScalar(scale);
 
-        // Position tree AFTER scaling - CLOSE to road but not ON road
-        const bbox = new THREE.Box3().setFromObject(tree);
+        // Calculate bounding box to check dimensions
+        let bbox = new THREE.Box3().setFromObject(tree);
         const groundY = -bbox.min.y;
 
-        // HARDCODED SAFE POSITIONS - no calculations, no randomness, no math
-        // Just alternate between left and right with FIXED safe positions
         const isEvenZ = Math.floor(Math.abs(zPosition / 100)) % 2 === 0;
         const side = isEvenZ ? 'left' : 'right';
 
+        // ORIGINAL PLACEMENT: +/- 5.5
+        // We are intentionally IGNORING width checks (scale-to-fit disabled)
+        // The canopy WILL overhang the road, but it's high enough to run under.
+
         let xOffset;
+
         if (side === 'left') {
-            xOffset = -5.5; // HARDCODED left sidewalk center
+            xOffset = -5.5;
         } else {
-            xOffset = 5.5;  // HARDCODED right sidewalk center
+            xOffset = 5.5;
         }
 
         tree.position.set(xOffset, groundY, zPosition);
@@ -570,7 +570,7 @@ export class DirectModelEnvironment {
             zPosition: zPosition
         });
 
-        // Tree spawned with calculated position and scale
+        // Tree spawned with forced large scale and original placement
     }
 
     createFallbackBuilding(zPosition, forceSide = null) {
@@ -654,10 +654,12 @@ export class DirectModelEnvironment {
         // Batch spawn in single operation with camera position for LOD
         this.batchSpawnBuildings(buildingsToSpawn, playerZ);
 
-        // Trees disabled temporarily
-        // if (Math.random() < 0.05) {
-        //     this.spawnSpecificTree(spawnZ - 30);
-        // }
+        // Trees enabled - DISTANCE BASED SPAWNING for consistency at high speeds
+        // Check distance since last spawn
+        if (Math.abs(spawnZ - this.lastTreeSpawnZ) > (40 + Math.random() * 40)) {
+            this.spawnSpecificTree(spawnZ - 30);
+            this.lastTreeSpawnZ = spawnZ;
+        }
 
         // Adaptive spawn timing based on game speed and performance
         const adaptiveDelay = this.calculateAdaptiveSpawnDelay(gameSpeed);
@@ -724,7 +726,9 @@ export class DirectModelEnvironment {
         this.activeBuildings = [];
 
         this.streetDecorations.forEach(decoration => this.scene.remove(decoration.object));
+        this.streetDecorations.forEach(decoration => this.scene.remove(decoration.object));
         this.streetDecorations = [];
+        this.lastTreeSpawnZ = -100; // Reset spawn tracker
 
         this.currentBuildingIndex = 0;
 
@@ -848,4 +852,6 @@ export class DirectModelEnvironment {
         this.updateModels(gameSpeed, cameraZ);
     }
 }
+
+
 

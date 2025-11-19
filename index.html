@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <!-- Enhanced mobile optimizations -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -32,6 +34,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
+
         #game-container {
             width: 100vw;
             height: 100vh;
@@ -42,7 +45,7 @@
             will-change: transform;
             backface-visibility: hidden;
         }
-        
+
         #game-container canvas {
             display: block;
             width: 100% !important;
@@ -53,7 +56,7 @@
             will-change: transform;
             backface-visibility: hidden;
         }
-        
+
         /* Loading screen */
         #loading {
             position: fixed;
@@ -69,34 +72,34 @@
             z-index: 2000;
             font-family: Arial, sans-serif;
         }
-        
+
         .loading-content {
             text-align: center;
             color: white;
         }
-        
+
         .loading-title {
             font-size: clamp(24px, 6vw, 32px);
             font-weight: bold;
             margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
-        
+
         .loading-subtitle {
             font-size: clamp(14px, 4vw, 18px);
             margin-bottom: 30px;
             opacity: 0.9;
         }
-        
+
         .progress-container {
             width: min(300px, 80vw);
             height: 6px;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             border-radius: 3px;
             overflow: hidden;
             margin-bottom: 15px;
         }
-        
+
         .progress-bar {
             width: 0%;
             height: 100%;
@@ -104,12 +107,12 @@
             border-radius: 3px;
             transition: width 0.3s ease;
         }
-        
+
         .progress-text {
             font-size: 14px;
             opacity: 0.8;
         }
-        
+
         /* Professional Onboarding System */
         #onboarding-overlay {
             position: fixed;
@@ -126,12 +129,12 @@
             visibility: hidden;
             transition: all 0.3s ease;
         }
-        
+
         #onboarding-overlay.active {
             opacity: 1;
             visibility: visible;
         }
-        
+
         .onboarding-modal {
             background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
             border-radius: 20px;
@@ -142,52 +145,64 @@
             text-align: center;
             color: white;
             border: 2px solid #FF6B35;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
             position: relative;
         }
-        
+
         .onboarding-header {
             margin-bottom: 25px;
         }
-        
+
         .onboarding-title {
             font-size: clamp(20px, 5vw, 28px);
             font-weight: bold;
             color: #FFD700;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
-        
+
         .onboarding-subtitle {
             font-size: clamp(12px, 3.5vw, 16px);
             color: #FF6B35;
             margin-bottom: 20px;
         }
-        
+
         .onboarding-content {
             margin: 20px 0;
             line-height: 1.6;
         }
-        
+
         .onboarding-step {
             display: none;
             animation: fadeIn 0.5s ease;
         }
-        
+
         .onboarding-step.active {
             display: block;
         }
-        
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
-        
+
         .control-demo {
             display: flex;
             justify-content: center;
@@ -196,7 +211,7 @@
             flex-wrap: wrap;
             gap: 15px;
         }
-        
+
         .control-key {
             background: #333;
             border: 2px solid #555;
@@ -206,21 +221,21 @@
             font-size: 14px;
             min-width: 40px;
             text-align: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
-        
+
         .collectible-demo {
             display: flex;
             justify-content: space-around;
             margin: 20px 0;
             flex-wrap: wrap;
         }
-        
+
         .collectible-item {
             text-align: center;
             margin: 10px;
         }
-        
+
         .collectible-icon {
             font-size: 24px;
             margin-bottom: 5px;
@@ -229,7 +244,7 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         .power-up-demo {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -239,7 +254,7 @@
             margin-left: auto;
             margin-right: auto;
         }
-        
+
         .power-up-item {
             text-align: center;
             padding: 10px;
@@ -247,7 +262,7 @@
             border-radius: 10px;
             border: 1px solid rgba(255, 107, 53, 0.3);
         }
-        
+
         .power-up-icon {
             min-height: 100px;
             display: flex;
@@ -255,14 +270,14 @@
             justify-content: center;
             margin-bottom: 8px;
         }
-        
+
         .onboarding-navigation {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-top: 30px;
         }
-        
+
         .onboarding-btn {
             background: #FF6B35;
             color: white;
@@ -275,38 +290,38 @@
             transition: all 0.3s ease;
             text-transform: uppercase;
         }
-        
+
         .onboarding-btn:hover {
             background: #e55a2b;
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
         }
-        
+
         .onboarding-btn:disabled {
             background: #666;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
         }
-        
+
         .onboarding-btn.secondary {
             background: transparent;
             border: 2px solid #FF6B35;
             color: #FF6B35;
         }
-        
+
         .onboarding-btn.secondary:hover {
             background: #FF6B35;
             color: white;
         }
-        
+
         .step-indicator {
             display: flex;
             justify-content: center;
             gap: 8px;
             margin: 20px 0;
         }
-        
+
         .step-dot {
             width: 10px;
             height: 10px;
@@ -314,17 +329,17 @@
             background: #555;
             transition: background 0.3s ease;
         }
-        
+
         .step-dot.active {
             background: #FF6B35;
         }
-        
+
         .skip-option {
             position: absolute;
             top: 15px;
             right: 15px;
         }
-        
+
         .skip-btn {
             background: none;
             border: none;
@@ -333,91 +348,91 @@
             cursor: pointer;
             text-decoration: underline;
         }
-        
+
         .skip-btn:hover {
             color: #FF6B35;
         }
-        
+
         /* Tablet optimizations */
         @media (min-width: 769px) and (max-width: 1024px) {
             .loading-content {
                 padding: 0 30px;
             }
-            
+
             .onboarding-modal {
                 max-width: 600px;
                 padding: 25px;
                 margin: 20px;
             }
-            
+
             .control-demo {
                 gap: 12px;
             }
-            
+
             .control-key {
                 padding: 8px 12px;
                 font-size: 14px;
                 min-width: 35px;
             }
-            
+
             .collectible-demo {
                 flex-direction: row;
                 justify-content: space-around;
                 gap: 15px;
             }
-            
+
             .collectible-item {
                 font-size: 13px;
             }
-            
+
             .collectible-icon {
                 min-height: 100px;
             }
-            
+
             .power-up-demo {
                 grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
                 gap: 12px;
             }
-            
+
             .power-up-item {
                 padding: 10px;
                 font-size: 12px;
             }
-            
+
             .power-up-icon {
                 min-height: 85px;
             }
-            
+
             .onboarding-btn {
                 padding: 12px 20px;
                 font-size: 15px;
             }
-            
+
             .onboarding-navigation {
                 flex-direction: row;
                 justify-content: space-between;
                 margin-top: 25px;
             }
         }
-        
+
         /* Mobile optimizations */
         @media (max-width: 768px) {
             .loading-content {
                 padding: 0 20px;
             }
-            
+
             .loading-title {
                 font-size: clamp(20px, 6vw, 28px);
             }
-            
+
             .loading-subtitle {
                 font-size: clamp(12px, 4vw, 16px);
             }
-            
+
             .progress-container {
                 width: min(280px, 85vw);
             }
-            
+
             .onboarding-modal {
                 padding: 0;
                 margin: 10px;
@@ -428,7 +443,7 @@
                 display: flex;
                 flex-direction: column;
             }
-            
+
             .onboarding-content-wrapper {
                 padding: 15px;
                 padding-top: 45px;
@@ -436,7 +451,7 @@
                 flex: 1;
                 min-height: 0;
             }
-            
+
             .onboarding-footer {
                 padding: 15px;
                 border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -444,158 +459,159 @@
                 border-radius: 0 0 15px 15px;
                 flex-shrink: 0;
             }
-            
+
             .skip-option {
                 top: 8px;
                 right: 8px;
                 z-index: 10;
             }
-            
+
             .skip-btn {
                 font-size: 11px;
                 padding: 4px 8px;
-                background: rgba(0,0,0,0.7);
+                background: rgba(0, 0, 0, 0.7);
                 border-radius: 4px;
                 color: #ccc;
-                border: 1px solid rgba(255,255,255,0.2);
+                border: 1px solid rgba(255, 255, 255, 0.2);
             }
-            
+
             .onboarding-title {
                 font-size: clamp(18px, 5vw, 24px);
                 margin-bottom: 8px;
             }
-            
+
             .onboarding-subtitle {
                 font-size: clamp(11px, 3vw, 14px);
                 margin-bottom: 15px;
             }
-            
+
             .onboarding-content {
                 font-size: 13px;
                 margin: 15px 0;
             }
-            
+
             .onboarding-content h3 {
                 font-size: clamp(16px, 4.5vw, 20px);
                 margin-bottom: 12px;
                 line-height: 1.3;
             }
-            
+
             .onboarding-content p {
                 font-size: clamp(12px, 3.2vw, 14px);
                 margin-bottom: 8px;
                 line-height: 1.4;
             }
-            
+
             .onboarding-content ul {
                 font-size: clamp(11px, 2.8vw, 13px);
                 line-height: 1.5;
                 padding-left: 20px;
             }
-            
+
             .control-demo {
                 gap: 6px;
                 flex-wrap: wrap;
                 justify-content: center;
                 margin: 15px 0;
             }
-            
+
             .control-key {
                 padding: 6px 8px;
                 font-size: clamp(9px, 2.5vw, 11px);
                 min-width: 25px;
                 font-weight: 600;
             }
-            
+
             .collectible-demo {
                 flex-direction: column;
                 align-items: center;
                 gap: 8px;
                 margin: 15px 0;
             }
-            
+
             .collectible-item {
                 margin: 3px;
                 font-size: clamp(10px, 2.8vw, 12px);
                 text-align: center;
                 max-width: 90px;
             }
-            
+
             .collectible-icon {
                 min-height: 70px;
                 margin-bottom: 5px;
             }
-            
+
             .power-up-demo {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 8px;
                 max-width: 100%;
                 margin: 15px 0;
             }
-            
+
             .power-up-item {
                 padding: 6px;
                 font-size: clamp(9px, 2.2vw, 11px);
                 border-radius: 6px;
             }
-            
+
             .power-up-icon {
                 min-height: 60px;
                 margin-bottom: 4px;
             }
-            
+
             .onboarding-btn {
                 padding: 10px 16px;
                 font-size: clamp(11px, 3vw, 13px);
                 border-radius: 20px;
                 font-weight: 600;
-                min-height: 44px; /* Touch target size */
+                min-height: 44px;
+                /* Touch target size */
                 display: flex;
                 align-items: center;
                 justify-content: center;
             }
-            
+
             .onboarding-navigation {
                 flex-direction: column;
                 gap: 8px;
                 margin-top: 15px;
             }
-            
+
             .onboarding-navigation .onboarding-btn {
                 width: 100%;
                 max-width: none;
             }
-            
+
             .step-indicator {
                 margin: 15px 0;
                 gap: 6px;
             }
-            
+
             .step-dot {
                 width: 8px;
                 height: 8px;
             }
         }
-        
+
         /* Extra small mobile devices */
         @media (max-width: 480px) {
             .loading-title {
                 font-size: clamp(18px, 7vw, 24px);
             }
-            
+
             .loading-subtitle {
                 font-size: clamp(11px, 4.5vw, 14px);
             }
-            
+
             .loading-content {
                 padding: 0 10px;
             }
-            
+
             .progress-container {
                 width: min(260px, 90vw);
                 height: 4px;
             }
-            
+
             .onboarding-modal {
                 padding: 0;
                 margin: 5px;
@@ -606,7 +622,7 @@
                 display: flex;
                 flex-direction: column;
             }
-            
+
             .onboarding-content-wrapper {
                 padding: 8px;
                 padding-top: 35px;
@@ -614,7 +630,7 @@
                 flex: 1;
                 min-height: 0;
             }
-            
+
             .onboarding-footer {
                 padding: 8px;
                 border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -622,164 +638,164 @@
                 border-radius: 0 0 12px 12px;
                 flex-shrink: 0;
             }
-            
+
             .skip-option {
                 top: 6px;
                 right: 6px;
             }
-            
+
             .skip-btn {
                 font-size: 10px;
                 padding: 3px 6px;
                 border-radius: 3px;
             }
-            
+
             .onboarding-title {
                 font-size: clamp(16px, 5.5vw, 20px);
                 margin-bottom: 6px;
             }
-            
+
             .onboarding-subtitle {
                 font-size: clamp(10px, 3.5vw, 12px);
                 margin-bottom: 12px;
             }
-            
+
             .onboarding-content {
                 margin: 10px 0;
             }
-            
+
             .onboarding-content h3 {
                 font-size: clamp(14px, 4.8vw, 18px);
                 margin-bottom: 8px;
             }
-            
+
             .onboarding-content p {
                 font-size: clamp(10px, 3.5vw, 12px);
                 margin-bottom: 6px;
                 line-height: 1.5;
             }
-            
+
             .onboarding-content ul {
                 font-size: clamp(9px, 3vw, 11px);
                 line-height: 1.6;
                 padding-left: 16px;
             }
-            
+
             .control-demo {
                 gap: 4px;
                 margin: 10px 0;
             }
-            
+
             .control-key {
                 padding: 4px 6px;
                 font-size: clamp(8px, 2.8vw, 10px);
                 min-width: 20px;
                 border-radius: 4px;
             }
-            
+
             .collectible-demo {
                 gap: 6px;
                 margin: 10px 0;
             }
-            
+
             .collectible-item {
                 font-size: clamp(8px, 3vw, 10px);
                 max-width: 80px;
             }
-            
+
             .collectible-icon {
                 min-height: 55px;
             }
-            
+
             .power-up-demo {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 6px;
                 margin: 10px 0;
             }
-            
+
             .power-up-item {
                 padding: 4px;
                 font-size: clamp(8px, 2.5vw, 9px);
                 border-radius: 4px;
             }
-            
+
             .power-up-icon {
                 min-height: 45px;
                 margin-bottom: 2px;
             }
-            
+
             .onboarding-btn {
                 padding: 8px 12px;
                 font-size: clamp(10px, 3.5vw, 12px);
                 border-radius: 16px;
                 min-height: 40px;
             }
-            
+
             .onboarding-navigation {
                 gap: 6px;
                 margin-top: 10px;
             }
-            
+
             .step-indicator {
                 margin: 10px 0;
                 gap: 4px;
             }
-            
+
             .step-dot {
                 width: 6px;
                 height: 6px;
             }
         }
-        
+
         /* Tabler Icons Styling */
         .ti {
             margin-right: 8px;
             font-size: 1.1em;
             vertical-align: middle;
         }
-        
+
         .collectible-icon .ti {
             font-size: 1.5em;
             margin-right: 0;
         }
-        
+
         .loading-title .ti,
         .onboarding-title .ti {
             margin-right: 10px;
             font-size: 1.2em;
         }
-        
+
         .tab-header .ti {
             margin-right: 6px;
             font-size: 1em;
         }
-        
+
         /* Ensure icons align well with text */
         .ti::before {
             vertical-align: middle;
         }
-        
+
         /* Landscape orientation on mobile and tablet */
         @media (max-height: 600px) and (orientation: landscape) {
             .loading-content {
                 padding: 0 15px;
             }
-            
+
             .loading-title {
                 font-size: clamp(16px, 4vh, 20px);
                 margin-bottom: 10px;
             }
-            
+
             .loading-subtitle {
                 font-size: clamp(12px, 3vh, 14px);
                 margin-bottom: 15px;
             }
-            
+
             .progress-container {
                 width: min(300px, 60vw);
                 margin-bottom: 10px;
             }
-            
+
             .onboarding-modal {
                 max-height: 95vh;
                 padding: 8px 15px;
@@ -787,140 +803,150 @@
                 width: min(500px, 85vw);
                 max-width: 85vw;
             }
-            
+
             .onboarding-title {
                 font-size: clamp(16px, 4vh, 20px);
                 margin-bottom: 6px;
             }
-            
+
             .onboarding-subtitle {
                 font-size: clamp(10px, 2.5vh, 12px);
                 margin-bottom: 10px;
             }
-            
+
             .onboarding-content {
                 margin: 8px 0;
             }
-            
+
             .onboarding-content h3 {
                 font-size: clamp(14px, 3.5vh, 16px);
                 margin-bottom: 8px;
             }
-            
+
             .onboarding-content p {
                 font-size: clamp(10px, 2.5vh, 12px);
                 margin-bottom: 6px;
                 line-height: 1.3;
             }
-            
+
             .onboarding-content ul {
                 font-size: clamp(9px, 2.2vh, 11px);
                 line-height: 1.4;
                 padding-left: 16px;
             }
-            
-            .control-demo, .collectible-demo, .power-up-demo {
+
+            .control-demo,
+            .collectible-demo,
+            .power-up-demo {
                 margin: 8px 0;
             }
-            
+
             .collectible-demo {
                 flex-direction: row;
                 justify-content: space-around;
                 gap: 10px;
             }
-            
+
             .collectible-item {
                 font-size: clamp(8px, 2.2vh, 10px);
                 max-width: 70px;
             }
-            
+
             .collectible-icon {
                 min-height: 50px;
             }
-            
+
             .power-up-demo {
                 grid-template-columns: repeat(3, 1fr);
                 gap: 6px;
             }
-            
+
             .power-up-item {
                 padding: 4px;
                 font-size: clamp(7px, 2vh, 9px);
             }
-            
+
             .power-up-icon {
                 min-height: 40px;
             }
-            
+
             .onboarding-btn {
                 padding: 6px 12px;
                 font-size: clamp(9px, 2.5vh, 11px);
                 min-height: 32px;
             }
-            
+
             .onboarding-navigation {
                 margin-top: 10px;
                 gap: 6px;
             }
-            
+
             .step-indicator {
                 margin: 8px 0;
             }
-            
+
             .skip-btn {
                 font-size: clamp(8px, 2vh, 10px);
                 padding: 2px 4px;
             }
         }
-        
+
         /* Very wide screens landscape optimization */
         @media (min-width: 1024px) and (orientation: landscape) {
             .onboarding-modal {
                 max-width: 700px;
             }
-            
+
             .onboarding-content-wrapper {
                 padding: 35px;
             }
-            
+
             .collectible-demo {
                 flex-direction: row;
                 justify-content: space-around;
             }
-            
+
             .power-up-demo {
                 grid-template-columns: repeat(5, 1fr);
                 gap: 15px;
             }
         }
-        
+
         /* High-DPI device optimizations */
-        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-            .loading-title, .onboarding-title {
+        @media (-webkit-min-device-pixel-ratio: 2),
+        (min-resolution: 192dpi) {
+
+            .loading-title,
+            .onboarding-title {
                 text-rendering: optimizeLegibility;
                 -webkit-font-smoothing: subpixel-antialiased;
             }
-            
-            .onboarding-modal, .loading-content {
+
+            .onboarding-modal,
+            .loading-content {
                 image-rendering: -webkit-optimize-contrast;
                 image-rendering: crisp-edges;
             }
         }
-        
+
         /* Reduced motion preferences */
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
+
+            *,
+            *::before,
+            *::after {
                 animation-duration: 0.01ms !important;
                 animation-iteration-count: 1 !important;
                 transition-duration: 0.01ms !important;
                 scroll-behavior: auto !important;
             }
-            
-            .step-dot, .progress-bar {
+
+            .step-dot,
+            .progress-bar {
                 transition: none !important;
             }
         }
-        
+
         /* Dark mode enhancements */
         @media (prefers-color-scheme: dark) {
             .onboarding-modal {
@@ -928,38 +954,49 @@
                 border-color: #FF6B35;
             }
         }
-        
+
         /* Enhanced focus styles for accessibility */
-        button:focus-visible, input:focus-visible {
+        button:focus-visible,
+        input:focus-visible {
             outline: 3px solid #FF6B35 !important;
             outline-offset: 2px !important;
         }
-        
+
         /* iOS Safari specific fixes */
         @supports (-webkit-appearance: none) {
             body {
                 -webkit-text-size-adjust: 100%;
             }
-            
-            input[type="text"], input[type="email"] {
+
+            input[type="text"],
+            input[type="email"] {
                 -webkit-appearance: none;
+                appearance: none;
                 border-radius: 0;
             }
-            
-            .onboarding-modal, .loading-content {
+
+            .onboarding-modal,
+            .loading-content {
                 -webkit-transform: translateZ(0);
+                transform: translateZ(0);
             }
         }
-        
+
         /* Android Chrome specific optimizations */
         @media screen and (-webkit-min-device-pixel-ratio: 0) {
-            .onboarding-btn, .control-key {
+
+            .onboarding-btn,
+            .control-key {
                 -webkit-tap-highlight-color: rgba(255, 107, 53, 0.3);
             }
         }
-        
+
         /* Universal mobile touch optimizations */
-        .onboarding-btn, .control-key, .skip-btn, button, input[type="submit"] {
+        .onboarding-btn,
+        .control-key,
+        .skip-btn,
+        button,
+        input[type="submit"] {
             /* Ensure minimum touch target size (44px recommended) */
             min-height: 44px;
             min-width: 44px;
@@ -967,29 +1004,37 @@
             touch-action: manipulation;
             cursor: pointer;
         }
-        
+
         /* Ensure all interactive elements are easily touchable on mobile */
-        .tab-header, .view-btn {
+        .tab-header,
+        .view-btn {
             min-height: 48px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        
+
         /* Enhance scrollable areas for mobile */
-        .onboarding-modal, .tab-panel, .search-results, .leaderboard-container {
+        .onboarding-modal,
+        .tab-panel,
+        .search-results,
+        .leaderboard-container {
             -webkit-overflow-scrolling: touch;
             scroll-behavior: smooth;
         }
-        
+
         /* Prevent zoom on input focus (iOS Safari) */
         @media screen and (max-width: 768px) {
-            input[type="text"], input[type="email"] {
-                font-size: 16px !important; /* Prevents zoom on iOS */
+
+            input[type="text"],
+            input[type="email"] {
+                font-size: 16px !important;
+                /* Prevents zoom on iOS */
             }
         }
     </style>
 </head>
+
 <body>
     <div id="loading">
         <div class="loading-content">
@@ -1002,7 +1047,7 @@
         </div>
     </div>
     <div id="game-container"></div>
-    
+
     <!-- Professional Onboarding System -->
     <div id="onboarding-overlay">
         <div class="onboarding-modal">
@@ -1010,128 +1055,131 @@
                 <div class="skip-option">
                     <button class="skip-btn" onclick="skipOnboarding()">Skip Tutorial</button>
                 </div>
-                
+
                 <div class="onboarding-header">
                     <div class="onboarding-title"><i class="ti ti-building-factory2"></i> Infrastructure Runner</div>
                     <div class="onboarding-subtitle">Build the Future, One Run at a Time</div>
                 </div>
-            
-            <!-- Step 1: Welcome -->
-            <div class="onboarding-step active" id="step-0">
-                <div class="onboarding-content">
-                    <h3>Welcome to Infrastructure Runner!</h3>
-                    <p>You're an infrastructure engineer running through a vibrant African metropolis. Your mission: collect blueprints, water, and energy cells to build critical infrastructure while avoiding obstacles.</p>
-                    <p>Ready to learn how to play?</p>
-                </div>
-            </div>
-            
-            <!-- Step 2: Controls -->
-            <div class="onboarding-step" id="step-1">
-                <div class="onboarding-content">
-                    <h3>Master the Controls</h3>
-                    <p><strong>Desktop Controls:</strong></p>
-                    <div class="control-demo">
-                        <div class="control-key">←→</div>
-                        <div class="control-key">A D</div>
-                        <span style="margin: 0 10px;">Move Left/Right</span>
-                    </div>
-                    <div class="control-demo">
-                        <div class="control-key">↑</div>
-                        <div class="control-key">W</div>
-                        <div class="control-key">Space</div>
-                        <span style="margin: 0 10px;">Jump</span>
-                    </div>
-                    <div class="control-demo">
-                        <div class="control-key">R</div>
-                        <span style="margin: 0 10px;">Restart (when game over)</span>
-                    </div>
-                    <p style="margin-top: 20px;"><strong>Mobile/Touch Controls:</strong></p>
-                    <div class="gesture-demo" style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 24px;">👆</span>
-                            <span>Swipe Up: Jump</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 24px;">👇</span>
-                            <span>Swipe Down: Slide</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 24px;">👈👉</span>
-                            <span>Swipe Left/Right: Move</span>
-                        </div>
+
+                <!-- Step 1: Welcome -->
+                <div class="onboarding-step active" id="step-0">
+                    <div class="onboarding-content">
+                        <h3>Welcome to Infrastructure Runner!</h3>
+                        <p>You're an infrastructure engineer running through a vibrant African metropolis. Your mission:
+                            collect blueprints, water, and energy cells to build critical infrastructure while avoiding
+                            obstacles.</p>
+                        <p>Ready to learn how to play?</p>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Step 3: Collectibles -->
-            <div class="onboarding-step" id="step-2">
-                <div class="onboarding-content">
-                    <h3>Collect Infrastructure Materials</h3>
-                    <p>Gather these essential materials as you run:</p>
-                    <div class="collectible-demo">
-                        <div class="collectible-item">
-                            <div class="collectible-icon" id="blueprint-viewer"></div>
-                            <div><strong>Blueprints</strong><br>Essential construction plans<br>50 points</div>
+
+                <!-- Step 2: Controls -->
+                <div class="onboarding-step" id="step-1">
+                    <div class="onboarding-content">
+                        <h3>Master the Controls</h3>
+                        <p><strong>Desktop Controls:</strong></p>
+                        <div class="control-demo">
+                            <div class="control-key">←→</div>
+                            <div class="control-key">A D</div>
+                            <span style="margin: 0 10px;">Move Left/Right</span>
                         </div>
-                        <div class="collectible-item">
-                            <div class="collectible-icon" id="water-viewer"></div>
-                            <div><strong>Water</strong><br>Clean water supply<br>20 points</div>
+                        <div class="control-demo">
+                            <div class="control-key">↑</div>
+                            <div class="control-key">W</div>
+                            <div class="control-key">Space</div>
+                            <span style="margin: 0 10px;">Jump</span>
                         </div>
-                        <div class="collectible-item">
-                            <div class="collectible-icon" id="energy-viewer"></div>
-                            <div><strong>Energy Cells</strong><br>Power infrastructure<br>30 points</div>
+                        <div class="control-demo">
+                            <div class="control-key">R</div>
+                            <span style="margin: 0 10px;">Restart (when game over)</span>
+                        </div>
+                        <p style="margin-top: 20px;"><strong>Mobile/Touch Controls:</strong></p>
+                        <div class="gesture-demo"
+                            style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 24px;">👆</span>
+                                <span>Swipe Up: Jump</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 24px;">👇</span>
+                                <span>Swipe Down: Slide</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 24px;">👈👉</span>
+                                <span>Swipe Left/Right: Move</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Step 4: Power-ups -->
-            <div class="onboarding-step" id="step-3">
-                <div class="onboarding-content">
-                    <h3>Unlock Amazing Power-ups</h3>
-                    <p>Special power-ups give you incredible abilities:</p>
-                    <div class="power-up-demo">
-                        <div class="power-up-item">
-                            <div class="power-up-icon" id="hardhat-viewer"></div>
-                            <div><strong>Hard Hat Shield</strong><br>Temporary invincibility</div>
-                        </div>
-                        <div class="power-up-item">
-                            <div class="power-up-icon" id="jetpack-viewer"></div>
-                            <div><strong>Jetpack</strong><br>Fly above obstacles</div>
-                        </div>
-                        <div class="power-up-item">
-                            <div class="power-up-icon" id="solar-viewer"></div>
-                            <div><strong>Solar Power Boost</strong><br>Speed boost with magnetic collection</div>
-                        </div>
-                        <div class="power-up-item">
-                            <div class="power-up-icon" id="wind-viewer"></div>
-                            <div><strong>Wind Power</strong><br>Double jump ability</div>
-                        </div>
-                        <div class="power-up-item">
-                            <div class="power-up-icon" id="water-pipeline-viewer"></div>
-                            <div><strong>Water Pipeline</strong><br>Safe path that clears obstacles</div>
+
+                <!-- Step 3: Collectibles -->
+                <div class="onboarding-step" id="step-2">
+                    <div class="onboarding-content">
+                        <h3>Collect Infrastructure Materials</h3>
+                        <p>Gather these essential materials as you run:</p>
+                        <div class="collectible-demo">
+                            <div class="collectible-item">
+                                <div class="collectible-icon" id="blueprint-viewer"></div>
+                                <div><strong>Blueprints</strong><br>Essential construction plans<br>50 points</div>
+                            </div>
+                            <div class="collectible-item">
+                                <div class="collectible-icon" id="water-viewer"></div>
+                                <div><strong>Water</strong><br>Clean water supply<br>20 points</div>
+                            </div>
+                            <div class="collectible-item">
+                                <div class="collectible-icon" id="energy-viewer"></div>
+                                <div><strong>Energy Cells</strong><br>Power infrastructure<br>30 points</div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Step 5: Ready to Play -->
-            <div class="onboarding-step" id="step-4">
-                <div class="onboarding-content">
-                    <h3>You're Ready to Build!</h3>
-                    <p>Now you know everything you need to become a master infrastructure engineer. Remember:</p>
-                    <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
-                        <li>Avoid obstacles like potholes, construction barriers, and power lines</li>
-                        <li>Collect materials to build critical infrastructure</li>
-                        <li>Use power-ups strategically for maximum points</li>
-                        <li>Use gestures on mobile or keyboard controls on desktop</li>
-                        <li>The game gets faster as you progress - stay alert!</li>
-                    </ul>
-                    <p><strong>Good luck building the future!</strong></p>
+
+                <!-- Step 4: Power-ups -->
+                <div class="onboarding-step" id="step-3">
+                    <div class="onboarding-content">
+                        <h3>Unlock Amazing Power-ups</h3>
+                        <p>Special power-ups give you incredible abilities:</p>
+                        <div class="power-up-demo">
+                            <div class="power-up-item">
+                                <div class="power-up-icon" id="hardhat-viewer"></div>
+                                <div><strong>Hard Hat Shield</strong><br>Temporary invincibility</div>
+                            </div>
+                            <div class="power-up-item">
+                                <div class="power-up-icon" id="jetpack-viewer"></div>
+                                <div><strong>Jetpack</strong><br>Fly above obstacles</div>
+                            </div>
+                            <div class="power-up-item">
+                                <div class="power-up-icon" id="solar-viewer"></div>
+                                <div><strong>Solar Power Boost</strong><br>Speed boost with magnetic collection</div>
+                            </div>
+                            <div class="power-up-item">
+                                <div class="power-up-icon" id="wind-viewer"></div>
+                                <div><strong>Wind Power</strong><br>Double jump ability</div>
+                            </div>
+                            <div class="power-up-item">
+                                <div class="power-up-icon" id="water-pipeline-viewer"></div>
+                                <div><strong>Water Pipeline</strong><br>Safe path that clears obstacles</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Ready to Play -->
+                <div class="onboarding-step" id="step-4">
+                    <div class="onboarding-content">
+                        <h3>You're Ready to Build!</h3>
+                        <p>Now you know everything you need to become a master infrastructure engineer. Remember:</p>
+                        <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
+                            <li>Avoid obstacles like potholes, construction barriers, and power lines</li>
+                            <li>Collect materials to build critical infrastructure</li>
+                            <li>Use power-ups strategically for maximum points</li>
+                            <li>Use gestures on mobile or keyboard controls on desktop</li>
+                            <li>The game gets faster as you progress - stay alert!</li>
+                        </ul>
+                        <p><strong>Good luck building the future!</strong></p>
+                    </div>
                 </div>
             </div>
-            </div>
-            
+
             <div class="onboarding-footer">
                 <div class="step-indicator">
                     <div class="step-dot active"></div>
@@ -1140,9 +1188,10 @@
                     <div class="step-dot"></div>
                     <div class="step-dot"></div>
                 </div>
-                
+
                 <div class="onboarding-navigation">
-                    <button class="onboarding-btn secondary" id="prev-btn" onclick="previousStep()" disabled>Previous</button>
+                    <button class="onboarding-btn secondary" id="prev-btn" onclick="previousStep()"
+                        disabled>Previous</button>
                     <button class="onboarding-btn" id="next-btn" onclick="nextStep()">Next</button>
                 </div>
             </div>
@@ -1153,7 +1202,7 @@
     <link rel="modulepreload" href="https://unpkg.com/three@0.160.0/build/three.module.js">
     <link rel="modulepreload" href="https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js">
     <link rel="modulepreload" href="https://unpkg.com/three@0.160.0/examples/jsm/loaders/DRACOLoader.js">
-    
+
     <!-- Three.js Import Map for Production -->
     <script type="importmap">
         {
@@ -1163,30 +1212,30 @@
             }
         }
     </script>
-    
+
     <!-- Sentry Error Monitoring - 2025 Latest Setup -->
     <script type="module">
         import * as Sentry from '@sentry/browser';
-        
+
         // Initialize Sentry with current 2025 best practices
         Sentry.init({
             dsn: "https://03e35eb71c4309d939f31547cf4e6d4b@o4509651198214144.ingest.us.sentry.io/4509651207454720",
-            
+
             // Environment and release tracking
             environment: window.location.hostname === 'localhost' ? 'development' : 'production',
             release: 'infrastructure-runner@1.0.0',
-            
+
             // Performance monitoring (current 2025 approach)
             tracesSampleRate: window.location.hostname === 'localhost' ? 1.0 : 0.1,
             tracePropagationTargets: ["localhost", window.location.origin],
-            
+
             // Session Replay (2025 feature)
             replaysSessionSampleRate: 0.1, // 10% of sessions
             replaysOnErrorSampleRate: 1.0, // 100% when errors occur
-            
+
             // Debug mode for development
             debug: window.location.hostname === 'localhost',
-            
+
             // Enhanced error filtering for production
             beforeSend(event, hint) {
                 // Skip non-actionable errors
@@ -1199,23 +1248,23 @@
                         'Network request failed',
                         'ResizeObserver loop limit exceeded'
                     ];
-                    
+
                     if (skipPatterns.some(pattern => error.message.includes(pattern))) {
                         return null;
                     }
                 }
-                
+
                 // Skip errors from browser extensions
-                if (event.exception?.values?.[0]?.stacktrace?.frames?.some(frame => 
-                    frame.filename?.includes('extension://') || 
+                if (event.exception?.values?.[0]?.stacktrace?.frames?.some(frame =>
+                    frame.filename?.includes('extension://') ||
                     frame.filename?.includes('moz-extension://'))) {
                     return null;
                 }
-                
+
                 return event;
             }
         });
-        
+
         // Set user context and additional tags
         Sentry.setTag('component', 'infrastructure-runner');
         Sentry.setTag('version', '1.0.0');
@@ -1224,16 +1273,16 @@
             height: window.innerHeight,
             pixelRatio: window.devicePixelRatio
         });
-        
+
         // Set user ID if available
         const userId = localStorage.getItem('infrastructureRunner_userId');
         if (userId) {
             Sentry.setUser({ id: userId });
         }
-        
+
         // Make Sentry available globally
         window.Sentry = Sentry;
-        
+
         // Add initial breadcrumb
         Sentry.addBreadcrumb({
             message: 'Infrastructure Runner app started',
@@ -1246,14 +1295,14 @@
             }
         });
     </script>
-    
+
     <!-- Global Three.js and Model Configurations -->
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
         import { MODEL_CONFIGURATIONS } from './model-configurations.js';
-        
+
         try {
             // Make available globally for production build compatibility
             // Use separate variables to avoid extending frozen objects
@@ -1261,15 +1310,15 @@
             window.GLTFLoader = GLTFLoader;
             window.DRACOLoader = DRACOLoader;
             window.MODEL_CONFIGURATIONS = MODEL_CONFIGURATIONS;
-            
+
             // Ensure all globals are available before proceeding
             window.threeJsReady = true;
-            
+
             // Debug logging for verification
             if (typeof window !== 'undefined' && window.location?.search?.includes('debug')) {
                 window.onboardingDebug = true;
             }
-            
+
             // Log successful Three.js initialization
             if (window.Sentry) {
                 window.Sentry.addBreadcrumb({
@@ -1288,31 +1337,31 @@
             throw error;
         }
     </script>
-    
+
     <!-- Game Modules -->
     <script type="module" src="./game.js"></script>
-    
+
     <script>
         // Global loading progress manager
         window.gameLoadingManager = {
             totalSteps: 5,
             currentStep: 0,
-            
+
             updateProgress(step, message) {
                 this.currentStep = step;
                 const percentage = (step / this.totalSteps) * 100;
-                
+
                 const progressBar = document.getElementById('progress-bar');
                 const progressText = document.getElementById('progress-text');
-                
+
                 if (progressBar) {
                     progressBar.style.width = percentage + '%';
                 }
                 if (progressText) {
                     progressText.textContent = message;
                 }
-                
-                
+
+
                 // Hide loading screen when complete and trigger onboarding
                 if (step >= this.totalSteps) {
                     // Reduce delay for faster mobile experience
@@ -1338,37 +1387,37 @@
                 }
             }
         };
-        
+
         // Global asset preloader
         window.assetPreloader = {
             loadedAssets: new Map(),
             gltfLoader: null,
             dracoLoader: null,
-            
+
             async init() {
                 if (this.gltfLoader) return; // Already initialized
-                
+
                 // Wait for Three.js to be available
                 while (!window.THREE || !window.GLTFLoader || !window.DRACOLoader) {
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
-                
+
                 this.gltfLoader = new window.GLTFLoader();
                 this.dracoLoader = new window.DRACOLoader();
                 this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
                 this.gltfLoader.setDRACOLoader(this.dracoLoader);
             },
-            
+
             async loadAsset(path, key) {
                 if (this.loadedAssets.has(key)) {
                     return this.loadedAssets.get(key);
                 }
-                
+
                 return new Promise((resolve, reject) => {
                     const timeout = setTimeout(() => {
                         reject(new Error(`Asset loading timeout: ${path}`));
                     }, 10000);
-                    
+
                     this.gltfLoader.load(
                         path,
                         (gltf) => {
@@ -1386,12 +1435,12 @@
                     );
                 });
             },
-            
+
             getLoadedAsset(key) {
                 return this.loadedAssets.get(key);
             }
         };
-        
+
         async function ensureGameModuleLoaded() {
             // Wait for game module to be loaded
             return new Promise((resolve) => {
@@ -1399,13 +1448,13 @@
                     resolve();
                     return;
                 }
-                
+
                 let attempts = 0;
                 const maxAttempts = 50; // 5 seconds max
-                
+
                 const checkGame = () => {
                     attempts++;
-                    
+
                     if (window.initializeGame && typeof window.initializeGame === 'function') {
                         resolve();
                     } else if (attempts >= maxAttempts) {
@@ -1415,28 +1464,28 @@
                         setTimeout(checkGame, 100);
                     }
                 };
-                
+
                 checkGame();
             });
         }
-        
+
         async function startAssetPreloading() {
             try {
                 // Initialize the preloader
                 await window.assetPreloader.init();
                 window.gameLoadingManager.updateProgress(1, 'Loading game modules...');
-                
+
                 // Ensure game module is loaded before proceeding
                 await ensureGameModuleLoaded();
-                
+
                 window.gameLoadingManager.updateProgress(1, 'Loading building models...');
-                
+
                 // Load building models
                 const buildingFiles = [
-                    '001.glb', '002.glb', '006.glb', '007.glb', '008.glb', 
+                    '001.glb', '002.glb', '006.glb', '007.glb', '008.glb',
                     '009.glb', '0010.glb', '0011.glb', '0012.glb'
                 ];
-                
+
                 const buildingPromises = buildingFiles.map(async (file, index) => {
                     try {
                         await window.assetPreloader.loadAsset(`./assets/city/model/${file}`, `building_${file}`);
@@ -1445,25 +1494,25 @@
                         console.warn(`Failed to load building ${file}:`, error);
                     }
                 });
-                
+
                 await Promise.allSettled(buildingPromises);
                 window.gameLoadingManager.updateProgress(2, 'Loading collectables...');
-                
+
                 // Load collectable models
                 const collectableFiles = [
                     'Bucket.glb', 'energy-cell.glb'
                 ];
-                
+
                 // Load power-up models  
                 const powerUpFiles = [
                     'Jet-Pack.glb', 'Boots.glb', 'FireHydrant.glb', 'Solar_Panel_Ground.glb'
                 ];
-                
+
                 // Load obstacle models
                 const obstacleFiles = [
                     'Plastic_Barrier.glb', 'Cinder_block.glb'
                 ];
-                
+
                 const collectablePromises = collectableFiles.map(async (file, index) => {
                     try {
                         await window.assetPreloader.loadAsset(`/assets/models/collectables/${file}`, `collectable_${file}`);
@@ -1472,9 +1521,9 @@
                         console.warn(`Failed to load collectable ${file}:`, error);
                     }
                 });
-                
+
                 await Promise.allSettled(collectablePromises);
-                
+
                 // Load power-up models
                 const powerUpPromises = powerUpFiles.map(async (file, index) => {
                     try {
@@ -1484,9 +1533,9 @@
                         console.warn(`Failed to load power-up ${file}:`, error);
                     }
                 });
-                
+
                 await Promise.allSettled(powerUpPromises);
-                
+
                 // Load obstacle models
                 const obstaclePromises = obstacleFiles.map(async (file, index) => {
                     try {
@@ -1496,22 +1545,22 @@
                         console.warn(`Failed to load obstacle ${file}:`, error);
                     }
                 });
-                
+
                 await Promise.allSettled(obstaclePromises);
                 window.gameLoadingManager.updateProgress(4, 'Loading additional assets...');
-                
+
                 // Load tree model
                 try {
-                    await window.assetPreloader.loadAsset('./assets/city/model/lowpolytrees.glb', 'tree_main');
+                    await window.assetPreloader.loadAsset('./assets/city/model/Palm_Tree.glb', 'tree_main');
                 } catch (error) {
                     console.warn('Failed to load tree model:', error);
                 }
-                
+
                 window.gameLoadingManager.updateProgress(5, 'Ready to play!');
-                
+
                 // Mark preloading as complete
                 window.assetsPreloaded = true;
-                
+
             } catch (error) {
                 console.error('Asset preloading failed:', error);
                 // Continue with fake loading as fallback
@@ -1519,31 +1568,31 @@
                 window.assetsPreloaded = true;
             }
         }
-        
+
         // Initialize loading and start the loading process
         window.gameLoadingManager.updateProgress(0, 'Initializing...');
-        
+
         // Start actual asset preloading
         startAssetPreloading();
-        
+
         // Professional Onboarding System
         let currentOnboardingStep = 0;
         const totalSteps = 5;
-        
-        window.nextStep = function() {
+
+        window.nextStep = function () {
             if (currentOnboardingStep < totalSteps - 1) {
                 // Hide current step
                 document.getElementById(`step-${currentOnboardingStep}`).classList.remove('active');
                 document.getElementsByClassName('step-dot')[currentOnboardingStep].classList.remove('active');
-                
+
                 // Show next step
                 currentOnboardingStep++;
                 document.getElementById(`step-${currentOnboardingStep}`).classList.add('active');
                 document.getElementsByClassName('step-dot')[currentOnboardingStep].classList.add('active');
-                
+
                 // Update navigation buttons
                 document.getElementById('prev-btn').disabled = false;
-                
+
                 if (currentOnboardingStep === totalSteps - 1) {
                     document.getElementById('next-btn').textContent = 'Start Playing!';
                 }
@@ -1552,18 +1601,18 @@
                 completeOnboarding();
             }
         };
-        
-        window.previousStep = function() {
+
+        window.previousStep = function () {
             if (currentOnboardingStep > 0) {
                 // Hide current step
                 document.getElementById(`step-${currentOnboardingStep}`).classList.remove('active');
                 document.getElementsByClassName('step-dot')[currentOnboardingStep].classList.remove('active');
-                
+
                 // Show previous step
                 currentOnboardingStep--;
                 document.getElementById(`step-${currentOnboardingStep}`).classList.add('active');
                 document.getElementsByClassName('step-dot')[currentOnboardingStep].classList.add('active');
-                
+
                 // Update navigation buttons
                 if (currentOnboardingStep === 0) {
                     document.getElementById('prev-btn').disabled = true;
@@ -1571,56 +1620,56 @@
                 document.getElementById('next-btn').textContent = 'Next';
             }
         };
-        
-        window.skipOnboarding = function() {
+
+        window.skipOnboarding = function () {
             completeOnboarding();
         };
-        
+
         function completeOnboarding() {
             // Store preference to not show onboarding again
             localStorage.setItem('infrastructureRunner_onboardingCompleted', 'true');
-            
+
             // Cleanup 3D model viewers first
             cleanupModelViewers();
-            
+
             // Hide onboarding overlay
             const overlay = document.getElementById('onboarding-overlay');
             overlay.classList.remove('active');
-            
+
             // Add delay to allow cleanup to complete before showing registration
             setTimeout(() => {
                 checkPlayerRegistrationAndStart();
             }, 200);
         }
-        
+
         function cleanupModelViewers() {
             try {
                 if (window.onboardingModelViewer) {
                     window.onboardingModelViewer.cleanup();
                     window.onboardingModelViewer = null;
                 }
-                
+
                 // More aggressive cleanup for any remaining WebGL contexts
                 const canvases = document.querySelectorAll('canvas');
                 canvases.forEach(canvas => {
                     try {
                         // Get both WebGL contexts
-                        const gl = canvas.getContext('webgl') || canvas.getContext('webgl2') || 
-                                  canvas.getContext('experimental-webgl') || canvas.getContext('experimental-webgl2');
-                        
+                        const gl = canvas.getContext('webgl') || canvas.getContext('webgl2') ||
+                            canvas.getContext('experimental-webgl') || canvas.getContext('experimental-webgl2');
+
                         if (gl) {
                             // Force context loss
                             const loseContext = gl.getExtension('WEBGL_lose_context');
                             if (loseContext) {
                                 loseContext.loseContext();
                             }
-                            
+
                             // Clear all WebGL resources
                             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                             gl.flush();
                             gl.finish();
                         }
-                        
+
                         // Remove canvas from DOM if it's not the main game canvas
                         if (canvas.parentNode && !canvas.id.includes('game')) {
                             canvas.parentNode.removeChild(canvas);
@@ -1629,29 +1678,29 @@
                         console.warn('Error cleaning up canvas:', e);
                     }
                 });
-                
+
                 // Force garbage collection if available
                 if (window.gc) {
                     window.gc();
                 }
-                
+
                 // Additional cleanup delay to ensure contexts are released
                 setTimeout(() => {
                     if (window.gc) {
                         window.gc();
                     }
                 }, 100);
-                
+
             } catch (error) {
                 console.warn('Error during model viewer cleanup:', error);
             }
         }
-        
-        
+
+
         function checkPlayerRegistrationAndStart() {
             // Check if player data exists
             const storedPlayerData = localStorage.getItem('playerData');
-            
+
             if (storedPlayerData) {
                 // Player already registered, start the game immediately
                 startGameAfterRegistration();
@@ -1660,16 +1709,16 @@
                 showRegistrationFallback();
             }
         }
-        
+
         function showRegistrationFallback() {
             // Prevent multiple game initializations
             if (window.gameInitialized) {
                 return;
             }
-            
+
             // Mark as initialized
             window.gameInitialized = true;
-            
+
             // Initialize the game first, which will handle player registration
             if (window.initializeGame && typeof window.initializeGame === 'function') {
                 window.initializeGame();
@@ -1678,16 +1727,16 @@
                 alert('Game failed to load properly. Please refresh the page.');
             }
         }
-        
+
         function startGameAfterRegistration() {
             // Prevent multiple game initializations
             if (window.gameInitialized) {
                 return;
             }
-            
+
             // Mark as initialized and start immediately
             window.gameInitialized = true;
-            
+
             // Game module should already be loaded during loading screen
             if (window.initializeGame && typeof window.initializeGame === 'function') {
                 window.initializeGame();
@@ -1697,23 +1746,23 @@
                 alert('Game failed to load properly. Please refresh the page.');
             }
         }
-        
+
         function showOnboarding() {
             // Check if user has already completed onboarding
             const completed = localStorage.getItem('infrastructureRunner_onboardingCompleted');
-            
+
             if (!completed) {
                 const overlay = document.getElementById('onboarding-overlay');
                 overlay.classList.add('active');
-                
+
                 // Initialize 3D model viewers
                 initializeModelViewers();
-                
+
                 // No need to pause game - it hasn't started yet!
             } else {
             }
         }
-        
+
         function waitForThreeJs() {
             return new Promise((resolve) => {
                 if (window.threeJsReady && window.THREE && window.GLTFLoader && window.DRACOLoader && window.MODEL_CONFIGURATIONS) {
@@ -1730,21 +1779,21 @@
                 }
             });
         }
-        
+
         async function initializeModelViewers() {
             try {
                 // Show loading placeholders immediately
                 showLoadingPlaceholders();
-                
+
                 // Load Three.js and onboarding viewer in background
                 const loadPromise = (async () => {
                     await waitForThreeJs();
                     const { OnboardingModelViewer } = await import('./onboarding-viewer.js');
-                    
+
                     if (!window.onboardingModelViewer) {
                         window.onboardingModelViewer = await new OnboardingModelViewer().init();
                     }
-                    
+
                     // Use batch creation for better performance
                     const viewerConfigs = [
                         { containerId: 'blueprint-viewer', modelKey: 'blueprint', description: 'Construction Plans' },
@@ -1756,29 +1805,29 @@
                         { containerId: 'wind-viewer', modelKey: 'windPower', description: 'Wind Power' },
                         { containerId: 'water-pipeline-viewer', modelKey: 'waterPipeline', description: 'Water Infrastructure' }
                     ];
-                    
+
                     // Load models using batch creation
                     await window.onboardingModelViewer.createViewersBatch(viewerConfigs);
                 })();
-                
+
                 // Don't wait for models to load - form is already shown with placeholders
                 loadPromise.catch(() => {
                     showFallbackIcons();
                 });
-                
+
             } catch (error) {
                 showFallbackIcons();
             }
         }
-        
+
         function showLoadingPlaceholders() {
             // Show spinning placeholders for 3D model containers
             const containers = [
-                'blueprint-viewer', 'water-viewer', 'energy-viewer', 
-                'hardhat-viewer', 'jetpack-viewer', 'solar-viewer', 
+                'blueprint-viewer', 'water-viewer', 'energy-viewer',
+                'hardhat-viewer', 'jetpack-viewer', 'solar-viewer',
                 'wind-viewer', 'water-pipeline-viewer'
             ];
-            
+
             containers.forEach(id => {
                 const container = document.getElementById(id);
                 if (container) {
@@ -1806,7 +1855,7 @@
                 }
             });
         }
-        
+
         function showFallbackIcons() {
             // Fallback icons in case 3D models fail to load
             const fallbacks = {
@@ -1819,7 +1868,7 @@
                 'wind-viewer': '<i class="ti ti-wind" style="font-size: 40px; color: #4caf50;"></i>',
                 'water-pipeline-viewer': '<i class="ti ti-pipe" style="font-size: 40px; color: #2196f3;"></i>'
             };
-            
+
             Object.entries(fallbacks).forEach(([id, icon]) => {
                 const element = document.getElementById(id);
                 if (element) {
@@ -1827,9 +1876,10 @@
                 }
             });
         }
-        
+
         // Debug mode - uncomment to reset onboarding for testing
         // localStorage.removeItem('infrastructureRunner_onboardingCompleted');
     </script>
 </body>
+
 </html>
