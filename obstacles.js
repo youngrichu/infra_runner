@@ -74,7 +74,7 @@ export class ObstacleManager {
             this.scene.add(obstacleMesh);
         }
 
-        this.obstacles.push({ mesh: obstacleMesh, type: type });
+        this.obstacles.push({ mesh: obstacleMesh, type: type, boundingBox: new THREE.Box3() });
         this.lastObstacleType = type;
     }
 
@@ -167,7 +167,7 @@ export class ObstacleManager {
         const gameSpeed = this.gameController ? this.gameController.getGameSpeed() : 0;
 
         for (let i = 0; i < this.obstacles.length; i++) {
-            const obstacleBox = new THREE.Box3().setFromObject(this.obstacles[i].mesh);
+            const obstacleBox = this.obstacles[i].boundingBox.setFromObject(this.obstacles[i].mesh);
 
             // Check if player is protected by water slide
             let isProtectedByWaterSlide = false;

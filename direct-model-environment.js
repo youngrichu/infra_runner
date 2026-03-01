@@ -328,14 +328,9 @@ export class DirectModelEnvironment {
 
     selectLODModel(distanceFromCamera) {
         // Select appropriate building category based on distance
-        let category;
-        if (distanceFromCamera < 60) {
-            category = 'detailed';  // Close: use detailed models
-        } else if (distanceFromCamera < 120) {
-            category = 'medium';    // Medium: use medium complexity
-        } else {
-            category = 'simple';    // Far: use simple models
-        }
+        const category = distanceFromCamera < 60 ? 'detailed'
+            : distanceFromCamera < 120 ? 'medium'
+            : 'simple';
 
         const modelsInCategory = this.lodCategories[category];
         const modelIndex = this.currentBuildingIndex % modelsInCategory.length;
@@ -350,9 +345,8 @@ export class DirectModelEnvironment {
                 child.castShadow = true;
                 child.receiveShadow = true;
 
-                // Removed manual color override to allow original model textures/colors to show
                 if (child.material) {
-                    // Ensure material handles light correctly
+                    child.material = child.material.clone();
                     child.material.roughness = 0.8;
                     child.material.metalness = 0.1;
                 }
@@ -482,16 +476,12 @@ export class DirectModelEnvironment {
         }
         this.currentBuildingIndex++;
 
-        // Try to get from pool first
-        let building = this.getBuildingFromPool(buildingKey);
+        // Try to get from pool first, then clone from template
+        const template = this.buildingTemplates[buildingKey];
+        const building = this.getBuildingFromPool(buildingKey) ?? template?.clone();
         if (!building) {
-            const template = this.buildingTemplates[buildingKey];
-            if (!template) {
-                // Template not found, creating fallback building
-                this.createFallbackBuilding(zPosition, forceSide);
-                return;
-            }
-            building = template.clone();
+            this.createFallbackBuilding(zPosition, forceSide);
+            return;
         }
 
         // Slightly larger scale for better visibility while maintaining performance
@@ -504,15 +494,8 @@ export class DirectModelEnvironment {
         const groundY = -bbox.min.y;
 
         const side = forceSide || (Math.random() < 0.5 ? 'left' : 'right');
-        let xOffset;
-
-        if (side === 'left') {
-            // Left side: Start from -6 (road edge) and move further left by building width + safety margin
-            xOffset = -6 - (size.x / 2) - 2; // 2 units safety margin
-        } else {
-            // Right side: Start from +6 (road edge) and move further right by building width + safety margin  
-            xOffset = 6 + (size.x / 2) + 2; // 2 units safety margin
-        }
+        const halfWidth = size.x / 2 + 2; // 2 units safety margin
+        const xOffset = side === 'left' ? -6 - halfWidth : 6 + halfWidth;
 
         building.position.set(xOffset, groundY, zPosition);
         building.rotation.y = (Math.random() - 0.5) * 0.3;
@@ -540,27 +523,17 @@ export class DirectModelEnvironment {
         const tree = this.treeTemplate.clone();
 
         // Scale: 1.4 to 2.4
-        let scale = 1.4 + Math.random() * 1.0;
+        const scale = 1.4 + Math.random() * 1.0;
         tree.scale.setScalar(scale);
 
-        // Calculate bounding box to check dimensions
-        let bbox = new THREE.Box3().setFromObject(tree);
+        const bbox = new THREE.Box3().setFromObject(tree);
         const groundY = -bbox.min.y;
 
         const isEvenZ = Math.floor(Math.abs(zPosition / 100)) % 2 === 0;
-        const side = isEvenZ ? 'left' : 'right';
-
         // ORIGINAL PLACEMENT: +/- 5.5
         // We are intentionally IGNORING width checks (scale-to-fit disabled)
         // The canopy WILL overhang the road, but it's high enough to run under.
-
-        let xOffset;
-
-        if (side === 'left') {
-            xOffset = -5.5;
-        } else {
-            xOffset = 5.5;
-        }
+        const xOffset = isEvenZ ? -5.5 : 5.5;
 
         tree.position.set(xOffset, groundY, zPosition);
 
@@ -726,7 +699,6 @@ export class DirectModelEnvironment {
         this.activeBuildings = [];
 
         this.streetDecorations.forEach(decoration => this.scene.remove(decoration.object));
-        this.streetDecorations.forEach(decoration => this.scene.remove(decoration.object));
         this.streetDecorations = [];
         this.lastTreeSpawnZ = -100; // Reset spawn tracker
 
@@ -785,31 +757,19 @@ export class DirectModelEnvironment {
             }
             this.currentBuildingIndex++;
 
-            let building = this.getBuildingFromPool(buildingKey);
-            if (!building) {
-                const template = this.buildingTemplates[buildingKey];
-                if (!template) {
-                    // Template not found in batch spawn, skipping
-                    return; // Skip this building
-                }
-                building = template.clone();
-            }
+            const batchTemplate = this.buildingTemplates[buildingKey];
+            const building = this.getBuildingFromPool(buildingKey) ?? batchTemplate?.clone();
+            if (!building) return; // Skip this building
 
             const scale = 0.006 + Math.random() * 0.006;
             building.scale.setScalar(scale);
 
-            // Calculate building width after scaling
-            const tempBuilding = building.clone();
-            tempBuilding.scale.copy(building.scale);
-            const bbox = new THREE.Box3().setFromObject(tempBuilding);
+            // Calculate building width after scaling — measure directly, no clone needed
+            const bbox = new THREE.Box3().setFromObject(building);
             const buildingWidth = bbox.getSize(new THREE.Vector3()).x;
 
-            let xOffset;
-            if (side === 'left') {
-                xOffset = -6 - (buildingWidth / 2) - 2; // Road edge - building width - safety margin
-            } else {
-                xOffset = 6 + (buildingWidth / 2) + 2; // Road edge + building width + safety margin
-            }
+            const halfWidth = buildingWidth / 2 + 2; // 2 units safety margin
+            const xOffset = side === 'left' ? -6 - halfWidth : 6 + halfWidth;
             building.position.set(xOffset, 0.1, z);
             building.rotation.y = (Math.random() - 0.5) * 0.3;
 

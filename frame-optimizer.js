@@ -53,7 +53,7 @@ export class FrameOptimizer {
         const avgFrameTime = this.getAverageFrameTime();
         
         // If we're consistently over budget, reduce quality
-        if (avgFrameTime > 20) { // Over 50fps
+        if (avgFrameTime > 20) { // Under 50fps (frame time > 20ms)
             this.currentQualityLevel = Math.max(0.5, this.currentQualityLevel - 0.1);
         } 
         // If we have headroom, increase quality
