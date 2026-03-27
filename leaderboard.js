@@ -44,7 +44,7 @@ export class LeaderboardManager {
             // Use production URL, fallback to localhost for development
             const socketURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
                 ? 'http://localhost:3001' 
-                : 'https://fortunate-korry-zaraytech-a15c471e.koyeb.app';
+                : 'https://infra-runner-leaderboard-api.onrender.com';
             this.socket = io(socketURL);
             
             this.socket.on('connect', () => {

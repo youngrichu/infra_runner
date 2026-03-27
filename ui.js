@@ -1079,6 +1079,8 @@ export class UIManager {
             return `<div style="color: #FFD700; text-align: center;"><i class="ti ti-upload"></i> Submitting score...</div>`;
         } else if (this.scoreSubmitted) {
             return `<div style="color: #4CAF50; text-align: center;"><i class="ti ti-check"></i> Score submitted successfully!</div>`;
+        } else if (this.submissionError) {
+            return `<div style="color: #ff5252; text-align: center;"><i class="ti ti-alert-triangle"></i> ${this.submissionError}</div>`;
         } else {
             return `<div style="color: #ff9800; text-align: center;"><i class="ti ti-alert-triangle"></i> Score not submitted</div>`;
         }
@@ -1385,9 +1387,10 @@ export class UIManager {
         searchResults.innerHTML = this.getFilteredLeaderboardHTML(results, 'search');
     }
 
-    updateLeaderboardStatus(isSubmitting, submitted) {
+    updateLeaderboardStatus(isSubmitting, submitted, errorMessage = null) {
         this.isSubmittingScore = isSubmitting;
         this.scoreSubmitted = submitted;
+        this.submissionError = errorMessage;
         const statusElement = document.getElementById('leaderboard-status');
         if (statusElement) {
             statusElement.innerHTML = this.getLeaderboardStatusHTML();
@@ -1420,7 +1423,13 @@ export class UIManager {
             
         } catch (error) {
             // Failed to submit score to leaderboard
-            this.updateLeaderboardStatus(false, false);
+            let errorMsg = 'Score not submitted';
+            if (error.message && (error.message.includes('429') || error.message.toLowerCase().includes('rate limit'))) {
+                errorMsg = 'Rate limit exceeded. Please wait a minute.';
+            } else if (error.message) {
+                errorMsg = `Failed to submit: ${error.message}`;
+            }
+            this.updateLeaderboardStatus(false, false, errorMsg);
         }
     }
 
