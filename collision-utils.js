@@ -6,6 +6,12 @@ import { PHYSICS } from './constants.js';
  * Implements continuous collision detection to prevent tunneling at high game speeds
  */
 
+// Shared reusable objects to avoid GC pressure
+const _tempBox = new THREE.Box3();
+const _tempBox2 = new THREE.Box3();
+const _tempVector = new THREE.Vector3();
+const _tempVector2 = new THREE.Vector3();
+
 export class CollisionUtils {
     /**
      * Performs swept collision detection between a moving player and static object
@@ -25,12 +31,12 @@ export class CollisionUtils {
 
         // Method 2: Check if object is in the movement path
         // Create an expanded box that covers the player's movement path
-        const currentPlayerCenter = new THREE.Vector3();
+        const currentPlayerCenter = _tempVector;
         currentPlayerBox.getCenter(currentPlayerCenter);
         
         // Create a swept volume that covers the path from previous to current position
-        const sweptBox = new THREE.Box3();
-        const playerSize = new THREE.Vector3();
+        const sweptBox = _tempBox;
+        const playerSize = _tempVector2;
         currentPlayerBox.getSize(playerSize);
         
         // Expand the box to cover movement path
@@ -51,9 +57,12 @@ export class CollisionUtils {
         // Method 3: Predictive collision (check next frame position)
         // This catches fast-moving objects that might collide in the next frame
         if (gameSpeed > PHYSICS.HIGH_SPEED_THRESHOLD * 1.3) { // Only use predictive collision at very high speeds
-            const predictedPlayerBox = currentPlayerBox.clone();
+            const predictedPlayerBox = _tempBox2.copy(currentPlayerBox);
             // Predict where player will be next frame (objects move toward player)
-            predictedPlayerBox.translate(new THREE.Vector3(0, 0, gameSpeed * 1.5));
+            // Using set and add instead of translate to avoid creating new Vector3
+            const translation = _tempVector.set(0, 0, gameSpeed * 1.5);
+            predictedPlayerBox.min.add(translation);
+            predictedPlayerBox.max.add(translation);
             
             if (predictedPlayerBox.intersectsBox(objectBox)) {
                 return true;
@@ -80,7 +89,7 @@ export class CollisionUtils {
         }
 
         // Expanded collection radius for high-speed gameplay
-        const expandedPlayerBox = playerBox.clone();
+        const expandedPlayerBox = _tempBox.copy(playerBox);
         let expansionFactor = PHYSICS.COLLECTABLE_EXPANSION_BASE;
         
         // Increase collection radius at high speeds
@@ -125,7 +134,7 @@ export class CollisionUtils {
         const speedFactor = Math.min(gameSpeed / (PHYSICS.HIGH_SPEED_THRESHOLD * 2), PHYSICS.MAX_COLLISION_BOX_EXPANSION);
         const adjustment = 1 + (speedFactor * 0.1); // Up to 10% larger
         
-        return baseSize.clone().multiplyScalar(adjustment);
+        return _tempVector.copy(baseSize).multiplyScalar(adjustment);
     }
 }
 

@@ -111,6 +111,11 @@ export class CollectableManager {
         };
         
         this.initializeSmartPooling();
+
+        // Cache reusable objects for performance
+        this._tempBox = new THREE.Box3();
+        this._tempBox2 = new THREE.Box3();
+        this._tempVector = new THREE.Vector3();
     }
 
     // EXPO FIX: Generate smart collectible pattern with good spacing
@@ -871,7 +876,7 @@ export class CollectableManager {
         
         for (let i = this.collectables.length - 1; i >= 0; i--) {
             const collectable = this.collectables[i];
-            const collectableBox = new THREE.Box3().setFromObject(collectable.mesh);
+            const collectableBox = this._tempBox.setFromObject(collectable.mesh);
             
             // Skip aerial stars if not flying
             if (collectable.type === 'aerialStar') {
