@@ -33,7 +33,60 @@ export class CollectableManager {
         this.loadingPromises = new Map();
         this.priorityModelsLoaded = false;
 
+        // Pre-create and cache geometries and materials for fallback meshes
+        this.cacheFallbackResources();
+
         // Model loading will be initialized explicitly by game.js during setup
+    }
+
+    cacheFallbackResources() {
+        this.cachedGeometries = {
+            'blueprint': new THREE.BoxGeometry(0.3, 0.3, 0.05),
+            'waterDrop': new THREE.SphereGeometry(0.2, 16, 16),
+            'energyCell': new THREE.CylinderGeometry(0.15, 0.15, 0.4, 32),
+            'hardHat': new THREE.ConeGeometry(0.2, 0.4, 32),
+            'waterPipeline': new THREE.TorusGeometry(0.2, 0.05, 16, 16),
+            'helicopterMain': new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8),
+            'helicopterRotor': new THREE.BoxGeometry(0.5, 0.05, 0.1),
+            'solarPower': new THREE.CircleGeometry(0.25, 16),
+            'windPowerMain': new THREE.SphereGeometry(0.2, 16, 16),
+            'windPowerParticle': new THREE.SphereGeometry(0.05, 8, 8),
+            'aerialStar': new THREE.OctahedronGeometry(0.3, 0),
+            'solarOrbMain': new THREE.SphereGeometry(0.25, 16, 16),
+            'solarOrbCore': new THREE.SphereGeometry(0.15, 8, 8),
+            'solarOrbRay': new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8)
+        };
+
+        this.cachedMaterials = {
+            'blueprint': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.BLUEPRINT }),
+            'waterDrop': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.WATER_DROP }),
+            'energyCell': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.ENERGY_CELL }),
+            'hardHat': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.HARD_HAT }),
+            'waterPipeline': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.WATER_PIPELINE }),
+            'helicopter': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.HELICOPTER }),
+            'solarPower': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.SOLAR_POWER, side: THREE.DoubleSide }),
+            'windPowerMain': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.WIND_POWER, transparent: true, opacity: 0.7 }),
+            'windPowerParticle': new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }),
+            'aerialStar': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.AERIAL_STAR, emissive: 0xffaa00, metalness: 0.7, roughness: 0.3 }),
+            'solarOrbMain': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.SOLAR_ORB, emissive: 0xffaa00, emissiveIntensity: 0.4, metalness: 0.3, roughness: 0.1, transparent: true, opacity: 0.9 }),
+            'solarOrbCore': new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffff88, emissiveIntensity: 0.8, transparent: true, opacity: 0.7 }),
+            'solarOrbRay': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.SOLAR_ORB, emissive: 0xffcc00, emissiveIntensity: 0.3, transparent: true, opacity: 0.6 })
+        };
+
+        // Cache geometries for collection effects
+        this.cachedEffectGeometries = {
+            'powerUpParticle': new THREE.SphereGeometry(0.08, 8, 8),
+            'regularParticle': new THREE.SphereGeometry(0.04, 8, 8),
+            'powerUpRing': new THREE.RingGeometry(0.1, 0.2, 16)
+        };
+
+        // Cache magical glow geometries
+        this.cachedGlowGeometries = {
+            'rays': new THREE.PlaneGeometry(4, 4),
+            'bottom': new THREE.PlaneGeometry(2.5, 2.5),
+            'inner': new THREE.SphereGeometry(0.6, 32, 32),
+            'particle': new THREE.SphereGeometry(0.05, 8, 8)
+        };
     }
 
     shufflePowerUpDeck() {
@@ -221,24 +274,16 @@ export class CollectableManager {
         }
 
         // Fallback to original geometry system
-        let geometry, material, color;
+        let geometry, material;
 
         switch (type) {
             case 'blueprint':
-                geometry = new THREE.BoxGeometry(0.3, 0.3, 0.05);
-                color = COLORS.COLLECTABLES.BLUEPRINT;
-                break;
             case 'waterDrop':
-                geometry = new THREE.SphereGeometry(0.2, 16, 16);
-                color = COLORS.COLLECTABLES.WATER_DROP;
-                break;
             case 'energyCell':
-                geometry = new THREE.CylinderGeometry(0.15, 0.15, 0.4, 32);
-                color = COLORS.COLLECTABLES.ENERGY_CELL;
-                break;
             case 'hardHat':
-                geometry = new THREE.ConeGeometry(0.2, 0.4, 32);
-                color = COLORS.COLLECTABLES.HARD_HAT;
+            case 'waterPipeline':
+                geometry = this.cachedGeometries[type];
+                material = this.cachedMaterials[type];
                 break;
             case 'helicopter':
                 return this.createHelicopterMesh(spawnPosition);
@@ -246,15 +291,10 @@ export class CollectableManager {
                 return this.createSolarPowerMesh(spawnPosition);
             case 'windPower':
                 return this.createWindPowerMesh(spawnPosition);
-            case 'waterPipeline':
-                geometry = new THREE.TorusGeometry(0.2, 0.05, 16, 16);
-                color = COLORS.COLLECTABLES.WATER_PIPELINE;
-                break;
             default:
                 return null;
         }
 
-        material = new THREE.MeshStandardMaterial({ color: color });
         const collectableMesh = new THREE.Mesh(geometry, material);
         collectableMesh.position.copy(spawnPosition);
 
@@ -392,9 +432,9 @@ export class CollectableManager {
         }
 
         // Fallback to original helicopter geometry
-        const geometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8);
-        const rotorGeometry = new THREE.BoxGeometry(0.5, 0.05, 0.1);
-        const material = new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.HELICOPTER });
+        const geometry = this.cachedGeometries['helicopterMain'];
+        const rotorGeometry = this.cachedGeometries['helicopterRotor'];
+        const material = this.cachedMaterials['helicopter'];
 
         const collectableMesh = new THREE.Mesh(geometry, material);
         const rotor = new THREE.Mesh(rotorGeometry, material);
@@ -419,11 +459,8 @@ export class CollectableManager {
         }
 
         // Fallback to original solar panel geometry
-        const geometry = new THREE.CircleGeometry(0.25, 16);
-        const material = new THREE.MeshStandardMaterial({
-            color: COLORS.COLLECTABLES.SOLAR_POWER,
-            side: THREE.DoubleSide
-        });
+        const geometry = this.cachedGeometries['solarPower'];
+        const material = this.cachedMaterials['solarPower'];
         const solarMesh = new THREE.Mesh(geometry, material);
         solarMesh.rotation.x = -Math.PI / 2;
 
@@ -445,21 +482,13 @@ export class CollectableManager {
         }
 
         // Fallback to original wind power geometry with particles
-        const geometry = new THREE.SphereGeometry(0.2, 16, 16);
-        const material = new THREE.MeshStandardMaterial({
-            color: COLORS.COLLECTABLES.WIND_POWER,
-            transparent: true,
-            opacity: 0.7
-        });
+        const geometry = this.cachedGeometries['windPowerMain'];
+        const material = this.cachedMaterials['windPowerMain'];
         const windMesh = new THREE.Mesh(geometry, material);
 
         // Add particle effects
-        const particleGeometry = new THREE.SphereGeometry(0.05, 8, 8);
-        const particleMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.5
-        });
+        const particleGeometry = this.cachedGeometries['windPowerParticle'];
+        const particleMaterial = this.cachedMaterials['windPowerParticle'];
 
         for (let i = 0; i < 5; i++) {
             const particle = new THREE.Mesh(particleGeometry, particleMaterial);
@@ -500,13 +529,8 @@ export class CollectableManager {
         }
 
         // Fallback to original octahedron geometry
-        const geometry = new THREE.OctahedronGeometry(0.3, 0);
-        const material = new THREE.MeshStandardMaterial({
-            color: COLORS.COLLECTABLES.AERIAL_STAR,
-            emissive: 0xffaa00,
-            metalness: 0.7,
-            roughness: 0.3
-        });
+        const geometry = this.cachedGeometries['aerialStar'];
+        const material = this.cachedMaterials['aerialStar'];
 
         const collectableMesh = new THREE.Mesh(geometry, material);
         collectableMesh.position.copy(spawnPosition);
@@ -522,41 +546,21 @@ export class CollectableManager {
 
     createSolarOrb(playerPosition) {
         // Create a light bulb/solar energy orb that appears during solar boost
-        const geometry = new THREE.SphereGeometry(0.25, 16, 16);
-        const material = new THREE.MeshStandardMaterial({
-            color: COLORS.COLLECTABLES.SOLAR_ORB,
-            emissive: 0xffaa00,
-            emissiveIntensity: 0.4,
-            metalness: 0.3,
-            roughness: 0.1,
-            transparent: true,
-            opacity: 0.9
-        });
+        const geometry = this.cachedGeometries['solarOrbMain'];
+        const material = this.cachedMaterials['solarOrbMain'];
 
         const collectableMesh = new THREE.Mesh(geometry, material);
 
         // Add a glowing inner core
-        const coreGeometry = new THREE.SphereGeometry(0.15, 8, 8);
-        const coreMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            emissive: 0xffff88,
-            emissiveIntensity: 0.8,
-            transparent: true,
-            opacity: 0.7
-        });
+        const coreGeometry = this.cachedGeometries['solarOrbCore'];
+        const coreMaterial = this.cachedMaterials['solarOrbCore'];
         const core = new THREE.Mesh(coreGeometry, coreMaterial);
         collectableMesh.add(core);
 
         // Add light rays (4 extending lines)
+        const rayGeometry = this.cachedGeometries['solarOrbRay'];
+        const rayMaterial = this.cachedMaterials['solarOrbRay'];
         for (let i = 0; i < 4; i++) {
-            const rayGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8);
-            const rayMaterial = new THREE.MeshStandardMaterial({
-                color: COLORS.COLLECTABLES.SOLAR_ORB,
-                emissive: 0xffcc00,
-                emissiveIntensity: 0.3,
-                transparent: true,
-                opacity: 0.6
-            });
             const ray = new THREE.Mesh(rayGeometry, rayMaterial);
 
             // Position rays in cross pattern
@@ -685,7 +689,7 @@ export class CollectableManager {
         // 1. Rotating Sunburst Rays (Behind)
         if (!this.rayTexture) this.rayTexture = this.createRayTexture();
 
-        const raysGeometry = new THREE.PlaneGeometry(4, 4);
+        const raysGeometry = this.cachedGlowGeometries['rays'];
         const raysMaterial = new THREE.MeshBasicMaterial({
             color: glowColor,
             map: this.rayTexture,
@@ -702,7 +706,7 @@ export class CollectableManager {
         // 2. Bottom Glow (Ground illumination)
         if (!this.glowTexture) this.glowTexture = this.createGlowTexture();
 
-        const bottomGlowGeometry = new THREE.PlaneGeometry(2.5, 2.5);
+        const bottomGlowGeometry = this.cachedGlowGeometries['bottom'];
         const bottomGlowMaterial = new THREE.MeshBasicMaterial({
             color: glowColor,
             map: this.glowTexture,
@@ -718,7 +722,7 @@ export class CollectableManager {
         glowGroup.add(bottomGlow);
 
         // 3. Inner bright core glow (Intense)
-        const innerGlowGeometry = new THREE.SphereGeometry(0.6, 32, 32);
+        const innerGlowGeometry = this.cachedGlowGeometries['inner'];
         const innerGlowMaterial = new THREE.MeshBasicMaterial({
             color: glowColor,
             transparent: true,
@@ -734,7 +738,7 @@ export class CollectableManager {
         const particleCount = 12;
         const particles = [];
 
-        const particleGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+        const particleGeometry = this.cachedGlowGeometries['particle'];
         const particleMaterial = new THREE.MeshBasicMaterial({
             color: 0xffffff,
             transparent: true,
@@ -1013,19 +1017,23 @@ export class CollectableManager {
 
         // Create particle burst effect
         const particleCount = isPowerUp ? 12 : 6;
-        const particleSize = isPowerUp ? 0.08 : 0.04;
+        const particleGeometry = isPowerUp ? this.cachedEffectGeometries['powerUpParticle'] : this.cachedEffectGeometries['regularParticle'];
+
+        // Cache particle materials
+        if (!this.cachedEffectMaterials) this.cachedEffectMaterials = {};
+        if (!this.cachedEffectMaterials[type]) {
+            this.cachedEffectMaterials[type] = new THREE.MeshStandardMaterial({
+                color: this.getCollectableColor(type),
+                emissive: this.getCollectableColor(type),
+                emissiveIntensity: 0.3,
+                transparent: true,
+                opacity: 0.8
+            });
+        }
+        const particleMaterial = this.cachedEffectMaterials[type];
 
         for (let i = 0; i < particleCount; i++) {
-            const particle = new THREE.Mesh(
-                new THREE.SphereGeometry(particleSize, 8, 8),
-                new THREE.MeshStandardMaterial({
-                    color: this.getCollectableColor(type),
-                    emissive: this.getCollectableColor(type),
-                    emissiveIntensity: 0.3,
-                    transparent: true,
-                    opacity: 0.8
-                })
-            );
+            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
 
             particle.position.copy(position);
 
@@ -1052,15 +1060,21 @@ export class CollectableManager {
         // Create extra effects for power-ups
         if (isPowerUp) {
             // Create a expanding ring effect
-            const ringGeometry = new THREE.RingGeometry(0.1, 0.2, 16);
-            const ringMaterial = new THREE.MeshStandardMaterial({
-                color: this.getCollectableColor(type),
-                emissive: this.getCollectableColor(type),
-                emissiveIntensity: 0.5,
-                transparent: true,
-                opacity: 0.6,
-                side: THREE.DoubleSide
-            });
+            const ringGeometry = this.cachedEffectGeometries['powerUpRing'];
+
+            // Cache ring materials
+            if (!this.cachedRingMaterials) this.cachedRingMaterials = {};
+            if (!this.cachedRingMaterials[type]) {
+                this.cachedRingMaterials[type] = new THREE.MeshStandardMaterial({
+                    color: this.getCollectableColor(type),
+                    emissive: this.getCollectableColor(type),
+                    emissiveIntensity: 0.5,
+                    transparent: true,
+                    opacity: 0.6,
+                    side: THREE.DoubleSide
+                });
+            }
+            const ringMaterial = this.cachedRingMaterials[type];
 
             const ring = new THREE.Mesh(ringGeometry, ringMaterial);
             ring.position.copy(position);
