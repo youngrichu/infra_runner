@@ -9,6 +9,8 @@ export class CollectableManager {
         this.scene = scene;
         this.collectables = [];
         this.gameController = null;
+        this.obstacleManager = null;
+        this.lastSpawnZ = 0;
         
         // Fair power-up spawning system
         this.lastPowerUpTime = 0;
@@ -204,15 +206,15 @@ export class CollectableManager {
         
         // Simple obstacle avoidance - if obstacle too close, try different lane
         let finalLane = collectibleData.lane;
-        let positionClear = this.isPositionClearOfObstacles(spawnPosition, obstacles);
+        let positionClear = this.isPositionClear(spawnPosition.x, spawnPosition.z);
         
         if (!positionClear) {
             // Try other lanes
             for (let laneTest = 0; laneTest < 3; laneTest++) {
-                const testPosition = new THREE.Vector3(lanePositions[laneTest], 0.7, spawnZ);
-                if (this.isPositionClearOfObstacles(testPosition, obstacles)) {
+                const testX = lanePositions[laneTest];
+                if (this.isPositionClear(testX, spawnZ)) {
                     finalLane = laneTest;
-                    spawnPosition.x = lanePositions[laneTest];
+                    spawnPosition.x = testX;
                     positionClear = true;
                     break;
                 }
@@ -225,8 +227,11 @@ export class CollectableManager {
             return;
         }
         
+        // Update last spawn position
+        this.lastSpawnZ = spawnZ;
+
         // Create the collectible mesh
-        const collectableMesh = this.createCollectableMesh(collectibleData.type, spawnPosition, obstacles);
+        const collectableMesh = this.createCollectableMesh(collectibleData.type, spawnPosition, obstacles || (this.obstacleManager ? this.obstacleManager.obstacles : []));
         if (!collectableMesh) {
             console.warn(`Failed to create collectible mesh for type: ${collectibleData.type}`);
             return;
@@ -244,18 +249,49 @@ export class CollectableManager {
     }
 
     // EXPO FIX: Check if position is clear of obstacles
-    isPositionClearOfObstacles(position, obstacles) {
+    isPositionClear(x, z) {
+        // Default to true if obstacleManager isn't available
+        if (!this.obstacleManager || !this.obstacleManager.obstacles) return true;
+
         const checkRadius = 2.5; // Safe distance from obstacles
+        const obstacles = this.obstacleManager.obstacles;
         
         for (const obstacle of obstacles) {
-            const obstaclePos = obstacle.mesh.position;
-            const distance = Math.sqrt(
-                Math.pow(position.x - obstaclePos.x, 2) + 
-                Math.pow(position.z - obstaclePos.z, 2)
-            );
-            
-            if (distance < checkRadius) {
-                return false; // Too close to obstacle
+            // Guard for instanced obstacles which have position directly on the object instead of mesh.position
+            const obstaclePos = obstacle.mesh ? obstacle.mesh.position : obstacle.position;
+
+            if (!obstaclePos) continue;
+
+            // Fast distance check (XZ plane)
+            const dx = x - obstaclePos.x;
+            const dz = z - obstaclePos.z;
+            const distanceSq = dx * dx + dz * dz;
+
+            if (distanceSq < checkRadius * checkRadius) {
+                // More precise bounding box check if distance is close
+                try {
+                    // Instanced obstacles should have a boundingBox property
+                    const obstacleBox = obstacle.mesh ?
+                        new THREE.Box3().setFromObject(obstacle.mesh) :
+                        (obstacle.boundingBox ? obstacle.boundingBox : null);
+
+                    if (!obstacleBox) {
+                        // If no bounding box available, fallback to the distance check result
+                        return false;
+                    }
+                    // Create a small box for the proposed collectible position
+                    const collectableBox = new THREE.Box3(
+                        new THREE.Vector3(x - 0.4, 0.2, z - 0.4),
+                        new THREE.Vector3(x + 0.4, 1.2, z + 0.4)
+                    );
+
+                    if (collectableBox.intersectsBox(obstacleBox)) {
+                        return false;
+                    }
+                } catch (e) {
+                    // Fallback to distance check if box check fails
+                    return false;
+                }
             }
         }
         
@@ -446,6 +482,9 @@ export class CollectableManager {
 
     setGameController(gameController) {
         this.gameController = gameController;
+        if (gameController && gameController.obstacleManager) {
+            this.obstacleManager = gameController.obstacleManager;
+        }
     }
 
     createCollectable(playerZ, obstacles) {
@@ -466,32 +505,22 @@ export class CollectableManager {
         let positionClear = false;
         let attempts = 0;
         const maxAttempts = 10;
-        const currentObstacles = obstacles || (this.gameController ? this.gameController.getObstacles() : []);
 
         while (!positionClear && attempts < maxAttempts) {
             const laneIndex = Math.floor(Math.random() * LANES.COUNT);
             const zPos = playerZ - 60 - (Math.random() * 20);
-            spawnPosition = new THREE.Vector3(LANES.POSITIONS[laneIndex], 0.7, zPos);
+            const xPos = LANES.POSITIONS[laneIndex];
 
-            positionClear = true;
-            if (currentObstacles && currentObstacles.length > 0) {
-                for (const obstacle of currentObstacles) {
-                    const obstacleBox = this._tempBox.setFromObject(obstacle.mesh);
-                    const collectiblePreviewBox = this._tempBox2.set(
-                        this._tempVector.set(spawnPosition.x - 0.5, spawnPosition.y - 0.5, spawnPosition.z - 0.5),
-                        this._tempBox2.max.set(spawnPosition.x + 0.5, spawnPosition.y + 0.5, spawnPosition.z + 0.5)
-                    );
-                    if (collectiblePreviewBox.intersectsBox(obstacleBox)) {
-                        positionClear = false;
-                        break;
-                    }
-                }
+            if (this.isPositionClear(xPos, zPos)) {
+                spawnPosition = new THREE.Vector3(xPos, 0.7, zPos);
+                positionClear = true;
             }
             attempts++;
         }
 
         if (!positionClear) return;
 
+        const currentObstacles = obstacles || (this.obstacleManager ? this.obstacleManager.obstacles : []);
         const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
         if (collectableMesh) {
             this.collectables.push({ mesh: collectableMesh, type: type });
@@ -521,26 +550,15 @@ export class CollectableManager {
         let positionClear = false;
         let attempts = 0;
         const maxAttempts = 10;
-        const currentObstacles = obstacles || (this.gameController ? this.gameController.getObstacles() : []);
 
         while (!positionClear && attempts < maxAttempts) {
             const laneIndex = Math.floor(Math.random() * LANES.COUNT);
             const zPos = playerZ - 40;
-            spawnPosition = new THREE.Vector3(LANES.POSITIONS[laneIndex], 0.7, zPos);
+            const xPos = LANES.POSITIONS[laneIndex];
 
-            positionClear = true;
-            if (currentObstacles && currentObstacles.length > 0) {
-                for (const obstacle of currentObstacles) {
-                    const obstacleBox = this._tempBox.setFromObject(obstacle.mesh);
-                    const collectiblePreviewBox = this._tempBox2.set(
-                        this._tempVector.set(spawnPosition.x - 0.5, spawnPosition.y - 0.5, spawnPosition.z - 0.5),
-                        this._tempBox2.max.set(spawnPosition.x + 0.5, spawnPosition.y + 0.5, spawnPosition.z + 0.5)
-                    );
-                    if (collectiblePreviewBox.intersectsBox(obstacleBox)) {
-                        positionClear = false;
-                        break;
-                    }
-                }
+            if (this.isPositionClear(xPos, zPos)) {
+                spawnPosition = new THREE.Vector3(xPos, 0.7, zPos);
+                positionClear = true;
             }
             attempts++;
         }
@@ -549,6 +567,7 @@ export class CollectableManager {
             spawnPosition = new THREE.Vector3(LANES.POSITIONS[LANES.CENTER], 0.7, playerZ - 40); // Fixed: ground level, not floating
         }
 
+        const currentObstacles = obstacles || (this.obstacleManager ? this.obstacleManager.obstacles : []);
         const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
         if (collectableMesh) {
             this.collectables.push({ mesh: collectableMesh, type: type });
@@ -948,6 +967,7 @@ export class CollectableManager {
         // Reset fair spawning system
         this.lastPowerUpTime = Date.now();
         this.regularCollectionsCount = 0;
+        this.lastSpawnZ = 0;
         
         // EXPO FIX: Reset smart spawning system
         this.collectiblePatternIndex = 0;
