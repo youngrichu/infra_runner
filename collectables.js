@@ -109,6 +109,11 @@ export class CollectableManager {
         };
         
         this.initializeSmartPooling();
+
+        // Cache reusable objects for performance
+        this._tempBox = new THREE.Box3();
+        this._tempBox2 = new THREE.Box3();
+        this._tempVector = new THREE.Vector3();
     }
 
     // EXPO FIX: Generate smart collectible pattern with good spacing
@@ -471,10 +476,10 @@ export class CollectableManager {
             positionClear = true;
             if (currentObstacles && currentObstacles.length > 0) {
                 for (const obstacle of currentObstacles) {
-                    const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
-                    const collectiblePreviewBox = new THREE.Box3(
-                        new THREE.Vector3(spawnPosition.x - 0.5, spawnPosition.y - 0.5, spawnPosition.z - 0.5),
-                        new THREE.Vector3(spawnPosition.x + 0.5, spawnPosition.y + 0.5, spawnPosition.z + 0.5)
+                    const obstacleBox = this._tempBox.setFromObject(obstacle.mesh);
+                    const collectiblePreviewBox = this._tempBox2.set(
+                        this._tempVector.set(spawnPosition.x - 0.5, spawnPosition.y - 0.5, spawnPosition.z - 0.5),
+                        this._tempBox2.max.set(spawnPosition.x + 0.5, spawnPosition.y + 0.5, spawnPosition.z + 0.5)
                     );
                     if (collectiblePreviewBox.intersectsBox(obstacleBox)) {
                         positionClear = false;
@@ -526,10 +531,10 @@ export class CollectableManager {
             positionClear = true;
             if (currentObstacles && currentObstacles.length > 0) {
                 for (const obstacle of currentObstacles) {
-                    const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
-                    const collectiblePreviewBox = new THREE.Box3(
-                        new THREE.Vector3(spawnPosition.x - 0.5, spawnPosition.y - 0.5, spawnPosition.z - 0.5),
-                        new THREE.Vector3(spawnPosition.x + 0.5, spawnPosition.y + 0.5, spawnPosition.z + 0.5)
+                    const obstacleBox = this._tempBox.setFromObject(obstacle.mesh);
+                    const collectiblePreviewBox = this._tempBox2.set(
+                        this._tempVector.set(spawnPosition.x - 0.5, spawnPosition.y - 0.5, spawnPosition.z - 0.5),
+                        this._tempBox2.max.set(spawnPosition.x + 0.5, spawnPosition.y + 0.5, spawnPosition.z + 0.5)
                     );
                     if (collectiblePreviewBox.intersectsBox(obstacleBox)) {
                         positionClear = false;
@@ -852,7 +857,7 @@ export class CollectableManager {
         
         for (let i = this.collectables.length - 1; i >= 0; i--) {
             const collectable = this.collectables[i];
-            const collectableBox = new THREE.Box3().setFromObject(collectable.mesh);
+            const collectableBox = this._tempBox.setFromObject(collectable.mesh);
             
             // Skip aerial stars if not flying
             if (collectable.type === 'aerialStar') {
