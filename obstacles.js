@@ -93,6 +93,9 @@ export class ObstacleManager {
         
         this.initializeSmartPooling();
         
+        // Cache reusable objects for performance
+        this._tempBox = new THREE.Box3();
+
         // EXPO FIX: Start memory monitoring
         this.startMemoryMonitoring();
     }
@@ -476,7 +479,7 @@ export class ObstacleManager {
                 continue; // Water slide clears this obstacle
             }
             
-            const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
+            const obstacleBox = this._tempBox.setFromObject(obstacle.mesh);
             
             // Use swept collision detection for high-speed gameplay
             const collision = CollisionUtils.checkSweptCollision(
