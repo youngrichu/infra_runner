@@ -29,15 +29,24 @@ export class CollisionUtils {
             return true;
         }
 
+        // Determine if we're in a lane change
+        const currentPlayerCenter = new THREE.Vector3();
+        currentPlayerBox.getCenter(currentPlayerCenter);
+        const xMovement = Math.abs(currentPlayerCenter.x - playerPrevPos.x);
+        const isLaneChange = xMovement > 0.05;
+
         // Method 2: Check if object is in the movement path
         // Create an expanded box that covers the player's movement path
-        const currentPlayerCenter = _tempVector;
-        currentPlayerBox.getCenter(currentPlayerCenter);
         
         // Create a swept volume that covers the path from previous to current position
         const sweptBox = _tempBox;
         const playerSize = _tempVector2;
         currentPlayerBox.getSize(playerSize);
+        
+        // During lane changes, reduce the width of the swept box
+        if (isLaneChange) {
+            playerSize.x *= 0.6; // Make the swept volume 40% narrower during lane changes
+        }
         
         // Expand the box to cover movement path
         const minX = Math.min(playerPrevPos.x, currentPlayerCenter.x) - playerSize.x / 2;
@@ -92,9 +101,11 @@ export class CollisionUtils {
         const expandedPlayerBox = _tempBox.copy(playerBox);
         let expansionFactor = PHYSICS.COLLECTABLE_EXPANSION_BASE;
         
-        // Increase collection radius at high speeds
+        // Increase collection radius at high speeds, but cap it to prevent lane bleeding
         if (gameSpeed > PHYSICS.HIGH_SPEED_THRESHOLD) {
-            expansionFactor += (gameSpeed - PHYSICS.HIGH_SPEED_THRESHOLD) * PHYSICS.COLLECTABLE_SPEED_EXPANSION;
+            const speedFactor = (gameSpeed - PHYSICS.HIGH_SPEED_THRESHOLD) * PHYSICS.COLLECTABLE_SPEED_EXPANSION;
+            // Cap expansion to 1.0 (full lane width) to prevent collecting from adjacent lanes
+            expansionFactor += Math.min(speedFactor, 1.0);
         }
         
         // Magnet effect provides even larger collection radius

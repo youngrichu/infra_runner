@@ -6,9 +6,10 @@ import { CollectableManager } from './collectables.js';
 import { PowerUpManager } from './powerups.js';
 import { UIManager } from './ui.js';
 import { InputManager } from './input.js';
-import { GAME_CONFIG, SCORING, SPAWN_CONFIG, PHYSICS } from './constants.js';
+import { GAME_CONFIG, SCORING, SPAWN_CONFIG, PHYSICS, COUNTDOWN_CONFIG } from './constants.js';
 import { GameStateManager, STATES } from './game-state.js';
 import { LeaderboardManager } from './leaderboard.js';
+import { PlayerRegistration } from './player-registration.js';
 
 export class Game {
     constructor() {
@@ -35,31 +36,29 @@ export class Game {
         
         // Game state
         this.gameActive = true;
+        this.gamePaused = false; // Add pause state
         this.gameSpeed = { value: GAME_CONFIG.INITIAL_SPEED }; // Using object for reference
         
-        // CRITICAL FIX: Improved spawning system to handle dual tracking
-        this.improvedSpawningFix = {
-            reset: () => {
-                // Reset any additional spawning state if needed
-                if (this.collectableManager && this.collectableManager.spawnHistory) {
-                    this.collectableManager.spawnHistory.lastPowerUpDistance = -100;
-                }
-            }
-        };
+        // State management
+        this.stateManager = new GameStateManager();
+        this.leaderboardManager = new LeaderboardManager();
+        this.playerRegistration = null;
         
-        this.init();
+        // Countdown state
+        this.countdownActive = false;
+        this.countdownTimeoutId = null;
+        this.animationId = null;
+        
+        this.initPromise = this.init();
     }
 
     async init() { // Make init async
         this.setupThreeJS();
         await this.createManagers(); // Await manager creation
         this.setupInputManager();
-        this.setupStateHandlers();
-        this.startSpawning();
-        this.animate();
-
-        // Kick off splash -> menu flow
-        this.stateManager.startSplashScreen();
+        
+        // Check player registration BEFORE starting game
+        this.checkPlayerRegistration();
     }
 
     setupThreeJS() {
@@ -72,11 +71,35 @@ export class Game {
         this.camera.position.y = 2;
         this.camera.lookAt(0, 0, 0);
 
-        // Renderer setup
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        // Enhanced renderer setup with mobile optimization
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const rendererOptions = {
+            antialias: !isMobile, // Disable antialiasing on mobile for better performance
+            alpha: false,
+            stencil: false,
+            powerPreference: isMobile ? 'low-power' : 'high-performance'
+        };
+        
+        this.renderer = new THREE.WebGLRenderer(rendererOptions);
+        
+        // Set proper pixel ratio for crisp rendering on high-DPI displays
+        const pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 2 : 3); // Limit to 2 on mobile
+        this.renderer.setPixelRatio(pixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = true;
+        
+        this.renderer.shadowMap.enabled = false;
+        
+        // Set output color space for better color accuracy
+        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+        
+        // Add canvas styles for proper mobile display
+        this.renderer.domElement.style.display = 'block';
+        this.renderer.domElement.style.touchAction = 'none'; // Prevent scrolling on touch
+        
         document.getElementById('game-container').appendChild(this.renderer.domElement);
+        
+        // Store mobile flag for later use
+        this.isMobile = isMobile;
     }
 
     async createManagers() { // Make createManagers async
@@ -87,22 +110,35 @@ export class Game {
 
         this.obstacleManager = new ObstacleManager(this.scene);
         this.collectableManager = new CollectableManager(this.scene);
+        await this.collectableManager.initializeModelLoading(); // Await model loading before game starts
         this.powerUpManager = new PowerUpManager(this.scene, this.player);
-        this.uiManager = new UIManager();
+        this.uiManager = new UIManager(this);
         
         // Set game controller references so managers can access current game state
         this.environment.setGameController(this);
         this.obstacleManager.setGameController(this);
         this.collectableManager.setGameController(this);
+        this.uiManager.setGameController(this);
         
         // Set game speed reference for power-ups
         this.powerUpManager.setGameSpeedReference(this.gameSpeed);
         
         // Set collectable manager reference for power-ups (to remove aerial stars)
         this.powerUpManager.setCollectableManager(this.collectableManager);
+        
+        // Set obstacle manager reference for power-ups (for water pipe targeting)
+        this.powerUpManager.setObstacleManager(this.obstacleManager);
+        
+        // Setup resize handling
+        this.setupResizeHandling();
     }
 
     setupInputManager() {
+        // Cleanup existing input manager if it exists
+        if (this.inputManager && typeof this.inputManager.destroy === 'function') {
+            this.inputManager.destroy();
+        }
+        
         this.inputManager = new InputManager(this.player, this);
         // Optional: Enable mobile controls
         this.inputManager.setupMobileControls();
@@ -185,8 +221,7 @@ export class Game {
     }
 
     updateGameLogic() {
-        // Performance optimization: Use cached playing state instead of checking every frame
-        if (!this.isCurrentlyPlaying || !this.gameActive) return;
+        if (!this.gameActive || this.gamePaused) return;
         
         // Pause most game logic if player is stumbling
         if (this.player.isStumbling) {
@@ -240,8 +275,8 @@ export class Game {
         const frameTime = 1000 / 60; // Assuming 60 FPS
         this.powerUpManager.updateTimers(frameTime);
         
-        // Update UI timers
-        this.uiManager.updatePowerUpTimers();
+        // Update UI timers with same deltaTime
+        this.uiManager.updatePowerUpTimers(frameTime);
 
         // Apply magnet effect if solar boost is active
         if (this.powerUpManager.getSolarBoostStatus()) {
@@ -287,14 +322,23 @@ export class Game {
             );
             
             if (collision) {
+                // Collision detected with obstacle
+                // Player stumbling state checked
+                
                 // Try to trigger stumble animation with game over callback
+                // Attempting to trigger stumble animation
                 const stumbleTriggered = this.player.triggerStumble(() => this.gameOver());
+                // Stumble trigger result processed
                 
                 if (!stumbleTriggered) {
                     // If stumble animation not available, immediate game over
+                    // Stumble animation not available - Game Over
                     this.gameOver();
                     return;
                 }
+                
+                // Stumble was successfully triggered, continue playing
+                // Player stumbled but continues playing
                 return;
             }
         }
@@ -306,6 +350,8 @@ export class Game {
 
     handleCollectedItems(collectedItems) {
         for (const itemType of collectedItems) {
+            // Item collected successfully
+            
             switch (itemType) {
                 // Regular collectibles
                 case 'blueprint':
@@ -319,9 +365,11 @@ export class Game {
                     break;
                 case 'aerialStar':
                     this.uiManager.updateScore(SCORING.AERIAL_STAR);
+                    // Collected aerial star bonus
                     break;
                 case 'solarOrb':
                     this.uiManager.updateScore(SCORING.SOLAR_ORB);
+                    // Collected solar orb bonus
                     break;
                     
                 // Power-ups
@@ -334,7 +382,7 @@ export class Game {
                 case 'helicopter':
                     this.uiManager.updateScore(SCORING.POWER_UP);
                     this.powerUpManager.activateHelicopter();
-                    this.uiManager.addPowerUpToUI('🚁 Helicopter Ride', 10);
+                    this.uiManager.addPowerUpToUI('Jetpack', 10);
                     this.collectableManager.markPowerUpSpawned(); // Reset fair spawning timer
                     break;
                 case 'solarPower':
@@ -352,7 +400,7 @@ export class Game {
                 case 'waterPipeline':
                     this.uiManager.updateScore(SCORING.POWER_UP);
                     this.powerUpManager.activateWaterSlide();
-                    this.uiManager.addPowerUpToUI('🚰 Water Pipeline', 12);
+                    this.uiManager.addPowerUpToUI('fire-hydrant', 12);
                     this.collectableManager.markPowerUpSpawned(); // Reset fair spawning timer
                     break;
             }
@@ -386,9 +434,17 @@ export class Game {
     }
 
     updateGameSpeed() {
-        // Increase game speed gradually
-        this.gameSpeed.value += GAME_CONFIG.SPEED_INCREMENT;
-
+        // Time-based speed increment to prevent frame rate affecting game speed
+        const now = performance.now();
+        if (!this.lastSpeedUpdate) {
+            this.lastSpeedUpdate = now;
+        }
+        
+        const deltaTime = now - this.lastSpeedUpdate;
+        if (deltaTime >= 16.67) { // ~60fps equivalent (1000ms / 60fps = 16.67ms)
+            this.gameSpeed.value += GAME_CONFIG.SPEED_INCREMENT;
+            this.lastSpeedUpdate = now;
+        }
         
         // Update score based on solar boost status
         if (this.powerUpManager.getSolarBoostStatus()) {
@@ -400,25 +456,82 @@ export class Game {
 
     gameOver() {
         this.gameActive = false;
-        // Capture stats & hand off to state manager
         const finalScore = this.uiManager.getScore();
         const stats = this.uiManager.getCollectableStats();
-        this.stateManager.endGame(finalScore, stats);
-        // Directly transition to user info capture
-        this.stateManager.showUserInfoScreen();
+        
+        // Update game state manager with final game stats
+        this.stateManager.setState(STATES.GAME_OVER);
+        this.stateManager.updateGameStats({
+            score: finalScore,
+            blueprints: stats.blueprints,
+            waterDrops: stats.waterDrops,
+            energyCells: stats.energyCells
+        });
+        
+        // Show game over UI
+        this.uiManager.showGameOver();
+        // Game Over with final score
+        // Final game statistics recorded
     }
 
     restartGame() {
-        // Reset game state
+        // STOP the existing animation loop to prevent multiple loops
+        this.stopAnimation();
+        
+        // Reset game state completely
         this.gameActive = true;
         this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
+        this.lastSpeedUpdate = null; // Reset speed update timer
+        this.stateManager.resetGame();
         
         // Reset camera position
         this.camera.position.z = 5;
         this.camera.position.x = 0;
         this.camera.position.y = 2;
         
-        // Reset all managers
+        // Reset all managers completely
+        this.player.reset();
+        this.environment.reset();
+        this.obstacleManager.reset();
+        this.collectableManager.reset();
+        this.powerUpManager.reset();
+        this.uiManager.reset();
+        
+        // Recreate input manager properly
+        this.setupInputManager();
+        
+        // Start game immediately - no countdown on restart
+        this.stateManager.setState(STATES.PLAYING);
+        this.startSpawning();
+        
+        // Only start animation if not already running
+        if (!this.animationId) {
+            this.animate();
+        }
+        
+        // Game restarted completely
+    }
+
+    startNewGame() {
+        // Starting new game with user registration
+        
+        // STOP the existing animation loop to prevent multiple loops
+        this.stopAnimation();
+        
+        // Clear stored player data to force new registration
+        PlayerRegistration.clearStoredPlayerData();
+        
+        // Reset game state completely
+        this.gameActive = false;
+        this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
+        this.stateManager.resetGame();
+        
+        // Reset camera position
+        this.camera.position.z = 5;
+        this.camera.position.x = 0;
+        this.camera.position.y = 2;
+        
+        // Reset all managers completely
         this.player.reset();
         this.environment.reset();
         this.obstacleManager.reset();
@@ -427,27 +540,57 @@ export class Game {
         this.uiManager.reset();
         this.inputManager.reset();
         
-        // CRITICAL FIX: Reset improved spawning system that was blocking power-ups
-        if (this.improvedSpawningFix) {
-            this.improvedSpawningFix.reset();
-        }
+        // Clear leaderboard data and state
+        this.leaderboardManager.clearPlayerData();
+        this.stateManager.clearPlayerData();
         
-        // Restart spawning
-        this.startSpawning();
-
-        // Ensure score counters start at zero
-        this.uiManager.updateScoreDisplay && this.uiManager.updateScoreDisplay();
+        // Start the registration process
+        this.stateManager.setState(STATES.PLAYER_REGISTRATION);
+        this.showPlayerRegistration();
+        
+        // New game started - showing registration form
     }
 
+    setupResizeHandling() {
+        // Add event listeners for resize
+        window.addEventListener('resize', () => this.handleWindowResize());
+        window.addEventListener('orientationchange', () => {
+            // Add delay to handle orientation change properly
+            setTimeout(() => this.handleWindowResize(), 100);
+        });
+    }
+    
     handleWindowResize() {
+        // Update camera aspect ratio
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
+        
+        // Update renderer size with proper pixel ratio
+        const pixelRatio = Math.min(window.devicePixelRatio, this.isMobile ? 2 : 3);
+        this.renderer.setPixelRatio(pixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        // Force canvas to fill container properly
+        this.renderer.domElement.style.width = '100%';
+        this.renderer.domElement.style.height = '100%';
+        
+        // Screen resized with new dimensions and pixel ratio
+    }
+
+    // Game pause/resume functionality
+    pauseGame() {
+        this.gamePaused = true;
+        // Game paused for onboarding
+    }
+
+    resumeGame() {
+        this.gamePaused = false;
+        // Game resumed after onboarding
     }
 
     // Public methods for managers to access current game state
     isGameActive() {
-        return this.gameActive;
+        return this.gameActive && !this.gamePaused;
     }
 
     getPlayerPosition() {
@@ -458,15 +601,262 @@ export class Game {
         return this.obstacleManager.getObstacles();
     }
 
+    // Player registration methods
+    checkPlayerRegistration() {
+        // Checking player registration
+        
+        try {
+            // Check if player data exists
+            const storedData = PlayerRegistration.getStoredPlayerData();
+            // Stored player data checked
+            
+            if (storedData) {
+                // Player already registered, show countdown then start the game
+                // Player already registered, showing countdown
+                this.registerPlayer(storedData.playerName, storedData.email, storedData.organizationName);
+                this.showCountdown();
+            } else {
+                // Show registration form first
+                // No player data found, showing registration form
+                this.stateManager.setState(STATES.PLAYER_REGISTRATION);
+                this.showPlayerRegistration();
+            }
+        } catch (error) {
+            // Error in checkPlayerRegistration, using fallback
+            // Fallback: just show countdown and start the game
+            // Fallback: showing countdown without registration
+            this.showCountdown();
+        }
+    }
+    
+    startGame() {
+        // Starting game directly (bypassing countdown)
+        try {
+            this.stateManager.setState(STATES.PLAYING);
+            this.gameActive = true;
+            this.startSpawning();
+            this.animate();
+            // Game started successfully
+        } catch (error) {
+            // Error starting game
+        }
+    }
+
+    showPlayerRegistration() {
+        // Showing player registration form
+        try {
+            // Disable input manager during registration
+            if (this.inputManager) {
+                this.inputManager.disable();
+            }
+            
+            if (!this.playerRegistration) {
+                // Creating new PlayerRegistration instance
+                this.playerRegistration = new PlayerRegistration((name, email, organization) => {
+                    // Player registration completed
+                    this.registerPlayer(name, email, organization);
+                    // Re-enable input manager
+                    if (this.inputManager) {
+                        this.inputManager.enable();
+                    }
+                    // NOW show countdown before starting the game
+                    this.showCountdown();
+                });
+            }
+            // Showing registration form
+            this.playerRegistration.show();
+        } catch (error) {
+            // Error showing player registration
+        }
+    }
+
+    registerPlayer(name, email, organization) {
+        // Set player data in state manager
+        this.stateManager.setPlayerData(name, email, organization);
+        
+        // Set player data in leaderboard manager
+        this.leaderboardManager.setPlayerData(name, email, organization);
+        
+        // Player registered successfully
+    }
+
+    showCountdown() {
+        // Starting countdown
+        
+        // Set state to getting ready
+        this.stateManager.setState(STATES.GETTING_READY);
+        this.countdownActive = true;
+        
+        // Show countdown in UI
+        this.uiManager.showCountdown((skipped) => {
+            // Countdown completed or skipped
+            this.onCountdownComplete();
+        });
+        
+        // Set up character ready animation
+        if (this.player && this.player.setReadyState) {
+            this.player.setReadyState(true);
+        }
+    }
+
+    onCountdownComplete() {
+        // Countdown complete, starting game
+        
+        // Clear countdown state
+        this.countdownActive = false;
+        if (this.countdownTimeoutId) {
+            clearTimeout(this.countdownTimeoutId);
+            this.countdownTimeoutId = null;
+        }
+        
+        // Reset character ready state
+        if (this.player && this.player.setReadyState) {
+            this.player.setReadyState(false);
+        }
+        
+        // IMPORTANT: Reset environment again to ensure clean state
+        // This ensures all buildings and decorations are cleared and regenerated
+        this.environment.reset();
+        this.collectableManager.reset();
+        this.powerUpManager.reset();
+        
+        // Reset game speed to initial value
+        this.gameSpeed.value = GAME_CONFIG.INITIAL_SPEED;
+        
+        // Now actually start the game
+        this.stateManager.setState(STATES.PLAYING);
+        this.gameActive = true;
+        this.startSpawning();
+        
+        // Only start animation if not already running
+        if (!this.animationId) {
+            this.animate();
+        }
+        
+        // Game started after countdown
+    }
+
     animate() {
-        requestAnimationFrame(() => this.animate());
+        // Make sure we don't have multiple animation loops running
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+        }
+        
+        this.animationId = requestAnimationFrame(() => {
+            // Clear the animation ID to avoid recursive issues
+            this.animationId = null;
+            this.animate();
+        });
 
         this.updateGameLogic();
         this.renderer.render(this.scene, this.camera);
     }
+
+    stopAnimation() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+    }
+    
+    cleanup() {
+        console.log('Starting comprehensive game cleanup');
+        
+        // Stop the game
+        this.gameActive = false;
+        
+        // Stop animation loop
+        this.stopAnimation();
+        
+        // Cleanup input manager
+        if (this.inputManager && typeof this.inputManager.destroy === 'function') {
+            this.inputManager.destroy();
+            this.inputManager = null;
+        }
+        
+        // Cleanup UI manager
+        if (this.uiManager && typeof this.uiManager.cleanup === 'function') {
+            this.uiManager.cleanup();
+        }
+        
+        // Cleanup player registration
+        if (this.playerRegistration && typeof this.playerRegistration.destroy === 'function') {
+            this.playerRegistration.destroy();
+            this.playerRegistration = null;
+        }
+        
+        // Cleanup WebGL renderer
+        if (this.renderer) {
+            try {
+                this.renderer.dispose();
+                this.renderer.forceContextLoss();
+                
+                // Remove canvas if it exists
+                if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                    this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                }
+                this.renderer = null;
+            } catch (error) {
+                console.warn('Error cleaning up renderer:', error);
+            }
+        }
+        
+        // Clear scene
+        if (this.scene) {
+            this.scene.clear();
+            this.scene = null;
+        }
+        
+        // Clear camera
+        this.camera = null;
+        
+        console.log('Game cleanup completed');
+    }
 }
 
-// Initialize the game when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    window.game = new Game(); // Make game globally accessible for debugging
-});
+// Game will be initialized by the loading manager or onboarding system
+// No auto-initialization here
+
+// Function to initialize game after onboarding
+window.initializeGame = function() {
+    // Prevent multiple game instances - clean up any existing instance
+    if (window.gameInstance) {
+        console.log('Cleaning up existing game instance to prevent WebGL context leak');
+        
+        // Call comprehensive cleanup method
+        if (typeof window.gameInstance.cleanup === 'function') {
+            window.gameInstance.cleanup();
+        } else {
+            // Fallback cleanup
+            window.gameInstance.gameActive = false;
+            
+            // Clean up WebGL renderer if it exists
+            if (window.gameInstance.renderer) {
+                try {
+                    window.gameInstance.renderer.dispose();
+                    window.gameInstance.renderer.forceContextLoss();
+                    
+                    // Remove canvas if it exists
+                    if (window.gameInstance.renderer.domElement && window.gameInstance.renderer.domElement.parentNode) {
+                        window.gameInstance.renderer.domElement.parentNode.removeChild(window.gameInstance.renderer.domElement);
+                    }
+                } catch (error) {
+                    console.warn('Error cleaning up renderer:', error);
+                }
+            }
+        }
+        
+        // Clear the instance
+        window.gameInstance = null;
+        
+        // Force garbage collection if available
+        if (window.gc) {
+            window.gc();
+        }
+    }
+    
+    // Initializing new game instance after onboarding completion
+    console.log('Creating new game instance');
+    window.gameInstance = new Game();
+    return window.gameInstance;
+};

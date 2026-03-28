@@ -1,18 +1,25 @@
-// Updated Version 2 - Added new obstacle types and colors for GLB models
 import * as THREE from 'three';
 
 // Game Constants
 export const GAME_CONFIG = {
     INITIAL_SPEED: 0.13,
     SPEED_INCREMENT: 0.000050,
-    GRAVITY: -0.02,
-    INITIAL_JUMP_VELOCITY: 0.35,
-    DOUBLE_JUMP_VELOCITY: 0.3,
+    GRAVITY: -0.025,
+    INITIAL_JUMP_VELOCITY: 0.28,
+    DOUBLE_JUMP_VELOCITY: 0.45,
     GROUND_HEIGHT: 0.5,
     PLAYER_VISUAL_OFFSET: -0.35, // Offset to align GLB model visual center with collision box
     CAMERA_FOLLOW_SPEED: 0.1,
     LANE_SWITCH_SPEED: 0.35,
     DEBUG_COLLISIONS: false // Set to true to visualize player collision box
+};
+
+export const COUNTDOWN_CONFIG = {
+    DURATION: 3000, // 3 seconds
+    NUMBERS: [3, 2, 1, 'GO!'],
+    ANIMATION_DURATION: 800, // Duration for each number animation
+    READY_ANIMATION_DURATION: 1500, // Duration for character ready animation
+    SKIP_ENABLED: true
 };
 
 export const LANES = {
@@ -37,8 +44,7 @@ export const COLORS = {
         CONSTRUCTION_BARRIER: 0xff4444,
         CONE: 0xff8800,
         RUBBLE: 0x808080,
-        TRAFFIC_BARRIER: 0xff6600,
-        FLOOR_HOLE: 0x111111
+        ELECTRIC_LINE: 0xffff00
     },
     COLLECTABLES: {
         BLUEPRINT: 0x0000ff,
@@ -82,22 +88,22 @@ export const COLORS = {
 };
 
 export const SPAWN_CONFIG = {
-    OBSTACLE_MIN_DISTANCE: 6, // EXPO FIX: Moderately denser obstacles
+    OBSTACLE_MIN_DISTANCE: 12,
     OBSTACLE_SAFE_DISTANCE_MULTIPLIER: 1.5,
-    BUILDING_INTERVAL: { MIN: 8000, MAX: 15000 }, // Much longer intervals for minimal spawning
+    BUILDING_INTERVAL: { MIN: 8000, MAX: 15000 }, // Restored building density
     BUILDING_OFFSET_FROM_ROAD: 20,
     BUILDING_SPAWN_DISTANCE_AHEAD: 100,
     BUILDING_CLUSTER_SIZE: { MIN: 1, MAX: 1 },
     BUILDING_CLUSTER_SPREAD: 0,
-    STREET_DECORATION_INTERVAL: { MIN: 2000, MAX: 4000 }, // Slower tree spawning
-    STREET_DECORATION_CHANCE: 0.3, // Much lower chance
+    STREET_DECORATION_INTERVAL: { MIN: 2000, MAX: 4000 }, // Restored tree spawning
+    STREET_DECORATION_CHANCE: 0.3, // Restored tree chance
     STREET_DECORATION_OFFSET: 2.5,
     SIDE_AREA_LENGTH: 25,
     SIDE_AREA_WIDTH: 30,
     SIDE_AREA_SPAWN_TRIGGER_OFFSET: 180,
     SIDE_AREA_DESPAWN_OFFSET: 25,
-    COLLECTABLE_INTERVAL: { MIN: 1500, MAX: 3000 }, // EXPO FIX: Moderately faster collectible spawning
-    OBSTACLE_INTERVAL: { MIN: 1000, MAX: 2000 }, // EXPO FIX: Moderately faster obstacle spawning
+    COLLECTABLE_INTERVAL: { MIN: 2000, MAX: 5000 }, // Restored collectable frequency
+    OBSTACLE_INTERVAL: { MIN: 1800, MAX: 3500 }, // Restored obstacle frequency
     AERIAL_SPAWN_CHANCE: 0.02,
     SOLAR_ORB_SPAWN_CHANCE: 0.03, // Slightly higher chance than aerial stars
     OBSTACLE_DYNAMIC_INTERVAL: {
@@ -172,23 +178,118 @@ export const OBSTACLE_TYPES = {
         yPos: 0.2,
         description: 'Construction debris'
     },
-    'trafficBarrier': {
-        geometry: () => new THREE.BoxGeometry(1.8, 0.8, 0.3),
-        color: COLORS.OBSTACLES.TRAFFIC_BARRIER,
-        yPos: 0.4,
-        description: 'Heavy traffic barrier'
-    },
-    'floorHole': {
-        geometry: () => new THREE.CylinderGeometry(0.6, 0.6, 0.05, 32),
-        color: COLORS.OBSTACLES.FLOOR_HOLE,
-        yPos: 0.05,
-        description: 'Dangerous floor opening'
+    'electricLine': {
+        geometry: () => {
+            // Create a group to hold the poles and wire
+            const group = new THREE.Group();
+            
+            // Helper function to create a realistic power pole
+            const createPowerPole = (xPosition) => {
+                const poleGroup = new THREE.Group();
+                
+                // Main pole (concrete/wood texture)
+                const mainPole = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.08, 0.12, 3.0, 8),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x696969, // Dark gray for concrete
+                        roughness: 0.8
+                    })
+                );
+                mainPole.position.set(0, 1.5, 0);
+                poleGroup.add(mainPole);
+                
+                // Crossbeam (horizontal support)
+                const crossbeam = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.2, 0.08, 0.08),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x8B4513, // Brown wood
+                        roughness: 0.9
+                    })
+                );
+                crossbeam.position.set(0, 1.9, 0);
+                poleGroup.add(crossbeam);
+                
+                // Insulators (ceramic-like)
+                for (let i = -0.4; i <= 0.4; i += 0.4) {
+                    const insulator = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.03, 0.05, 0.15, 6),
+                        new THREE.MeshStandardMaterial({ 
+                            color: 0xF5F5DC, // Beige ceramic
+                            roughness: 0.3
+                        })
+                    );
+                    insulator.position.set(i, 2.0, 0);
+                    poleGroup.add(insulator);
+                }
+                
+                // Position the entire pole
+                poleGroup.position.set(xPosition, 0, 0);
+                return poleGroup;
+            };
+            
+            // Create left and right power poles
+            const leftPole = createPowerPole(-4.5);
+            const rightPole = createPowerPole(4.5);
+            group.add(leftPole);
+            group.add(rightPole);
+            
+            // Create sagging power line using curve
+            const curve = new THREE.QuadraticBezierCurve3(
+                new THREE.Vector3(-4.5, 2.0, 0), // Start at left pole attachment
+                new THREE.Vector3(0, 1.0, 0),     // Sag point in middle (slightly below player height)
+                new THREE.Vector3(4.5, 2.0, 0)   // End at right pole attachment
+            );
+            
+            // Create wire geometry from curve
+            const wireGeometry = new THREE.TubeGeometry(curve, 20, 0.015, 8, false);
+            const wire = new THREE.Mesh(
+                wireGeometry,
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x2F2F2F, // Dark metallic wire
+                    metalness: 0.8,
+                    roughness: 0.2
+                })
+            );
+            group.add(wire);
+            
+            // Add warning signs on poles
+            const createWarningSign = (xPos) => {
+                const sign = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.3, 0.2, 0.02),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0xFFFF00, // Yellow warning
+                        roughness: 0.1
+                    })
+                );
+                sign.position.set(xPos, 1.0, 0.1);
+                return sign;
+            };
+            
+            group.add(createWarningSign(-4.5));
+            group.add(createWarningSign(4.5));
+            
+            return group;
+        },
+        color: COLORS.OBSTACLES.ELECTRIC_LINE,
+        yPos: 0, // Group positioning handled in geometry
+        description: 'Loose electric line - slide or jump to avoid'
     }
 };
 
 export const COLLECTABLE_SPAWN_WEIGHTS = {
     REGULAR: ['blueprint', 'waterDrop', 'energyCell'],
-    POWER_UPS: ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'],
-    REGULAR_WEIGHT: 6, // Reduced from 15 to make power-ups more frequent
+    // New weighted array for power-ups to control rarity. This will be used
+    // as a "deck" to ensure all power-ups spawn.
+    // Common: windPower (4 instances)
+    // Uncommon: hardHat (2), waterPipeline (2)
+    // Rare: helicopter (1), solarPower (1)
+    POWER_UPS: [
+        'windPower', 'windPower', 'windPower', 'windPower',
+        'hardHat', 'hardHat',
+        'waterPipeline', 'waterPipeline',
+        'helicopter',
+        'solarPower'
+    ],
+    REGULAR_WEIGHT: 6,
     POWER_UP_WEIGHT: 1
 };

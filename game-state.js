@@ -1,138 +1,163 @@
-// game-state.js
-// Manages different game states and transitions between them
-
-// Game state constants
 export const STATES = {
-    SPLASH: 'splash',         // Initial loading/splash screen
-    START_MENU: 'startMenu',  // Main menu screen
-    PLAYING: 'playing',       // Active gameplay
-    GAME_OVER: 'gameOver',    // Game over screen with score display
-    USER_INFO: 'userInfo',    // Collecting user info for leaderboard
-    LEADERBOARD: 'leaderboard' // Leaderboard display
+    LOADING: 'loading',
+    MENU: 'menu',
+    PLAYER_REGISTRATION: 'player_registration',
+    GETTING_READY: 'getting_ready',
+    PLAYING: 'playing',
+    PAUSED: 'paused',
+    GAME_OVER: 'game_over',
+    LEADERBOARD: 'leaderboard'
 };
 
 export class GameStateManager {
     constructor() {
-        // Initialize with splash screen state
-        this.currentState = STATES.SPLASH;
+        this.currentState = STATES.LOADING;
         this.previousState = null;
-        
-        // State change callbacks
-        this.onStateChangeCallbacks = [];
-        
-        // Player data for leaderboard
-        this.playerData = {
-            name: '',
+        this.gameStartTime = null;
+        this.gameEndTime = null;
+        this.playerData = null;
+        this.gameStats = {
             score: 0,
             blueprints: 0,
             waterDrops: 0,
             energyCells: 0,
-            date: null
+            duration: 0
         };
-        
-        // Timer for splash screen auto-transition
-        this.splashTimer = null;
+        this.listeners = new Map();
     }
-    
-    // Change to a new state
-    changeState(newState) {
-        if (newState === this.currentState) return;
-        
+
+    setState(newState) {
+        if (newState === this.currentState) {
+            return;
+        }
+
         this.previousState = this.currentState;
         this.currentState = newState;
-        
-        // Notify all listeners about state change
-        this.notifyStateChange();
-        
-        // Performance: Only log state changes in debug mode
-        if (window.gameDebug || this.currentState === 'playing') {
-            console.log(`Game state changed: ${this.previousState} -> ${this.currentState}`);
+
+        // Handle state-specific logic
+        switch (newState) {
+            case STATES.PLAYING:
+                this.gameStartTime = Date.now();
+                break;
+            case STATES.GAME_OVER:
+                this.gameEndTime = Date.now();
+                if (this.gameStartTime) {
+                    this.gameStats.duration = Math.floor((this.gameEndTime - this.gameStartTime) / 1000);
+                }
+                break;
         }
+
+        this.emit('stateChanged', {
+            currentState: this.currentState,
+            previousState: this.previousState
+        });
     }
-    
-    // Get current state
-    getCurrentState() {
+
+    getState() {
         return this.currentState;
     }
-    
-    // Check if a specific state is active
-    isState(state) {
-        return this.currentState === state;
+
+    getPreviousState() {
+        return this.previousState;
     }
-    
-    // Register callback for state changes
-    onStateChange(callback) {
-        if (typeof callback === 'function') {
-            this.onStateChangeCallbacks.push(callback);
-        }
+
+    setPlayerData(playerName, email, organizationName) {
+        this.playerData = {
+            playerName,
+            email,
+            organizationName
+        };
+        this.emit('playerDataSet', this.playerData);
     }
-    
-    // Notify all listeners about state change
-    notifyStateChange() {
-        for (const callback of this.onStateChangeCallbacks) {
-            callback(this.currentState, this.previousState);
-        }
-    }
-    
-    // Start splash screen with auto-transition to start menu
-    startSplashScreen(duration = 3000) {
-        this.changeState(STATES.SPLASH);
-        
-        // Auto-transition to start menu after duration
-        this.splashTimer = setTimeout(() => {
-            this.changeState(STATES.START_MENU);
-        }, duration);
-    }
-    
-    // Start the game
-    startGame() {
-        this.changeState(STATES.PLAYING);
-    }
-    
-    // End the game and show game over screen
-    endGame(score, collectableStats) {
-        // Store score data
-        this.playerData.score = score;
-        this.playerData.blueprints = collectableStats.blueprints;
-        this.playerData.waterDrops = collectableStats.waterDrops;
-        this.playerData.energyCells = collectableStats.energyCells;
-        this.playerData.date = new Date();
-        
-        this.changeState(STATES.GAME_OVER);
-    }
-    
-    // Show user info collection screen
-    showUserInfoScreen() {
-        this.changeState(STATES.USER_INFO);
-    }
-    
-    // Save user info and show leaderboard
-    saveUserInfo(name) {
-        this.playerData.name = name;
-        this.changeState(STATES.LEADERBOARD);
-    }
-    
-    // Show leaderboard screen
-    showLeaderboard() {
-        this.changeState(STATES.LEADERBOARD);
-    }
-    
-    // Return to start menu
-    returnToMenu() {
-        this.changeState(STATES.START_MENU);
-    }
-    
-    // Get player data
+
     getPlayerData() {
-        return { ...this.playerData };
+        return this.playerData;
     }
-    
-    // Clean up resources
-    destroy() {
-        if (this.splashTimer) {
-            clearTimeout(this.splashTimer);
-            this.splashTimer = null;
+
+    clearPlayerData() {
+        this.playerData = null;
+        this.emit('playerDataCleared');
+    }
+
+    updateGameStats(stats) {
+        this.gameStats = { ...this.gameStats, ...stats };
+        this.emit('gameStatsUpdated', this.gameStats);
+    }
+
+    getGameStats() {
+        return { ...this.gameStats };
+    }
+
+    getGameDuration() {
+        if (!this.gameStartTime) {
+            return 0;
         }
-        this.onStateChangeCallbacks = [];
+        
+        const endTime = this.gameEndTime || Date.now();
+        return Math.floor((endTime - this.gameStartTime) / 1000);
+    }
+
+    resetGame() {
+        this.gameStartTime = null;
+        this.gameEndTime = null;
+        this.gameStats = {
+            score: 0,
+            blueprints: 0,
+            waterDrops: 0,
+            energyCells: 0,
+            duration: 0
+        };
+        this.emit('gameReset');
+    }
+
+    // Event system
+    on(event, callback) {
+        if (!this.listeners.has(event)) {
+            this.listeners.set(event, []);
+        }
+        this.listeners.get(event).push(callback);
+    }
+
+    off(event, callback) {
+        if (this.listeners.has(event)) {
+            const callbacks = this.listeners.get(event);
+            const index = callbacks.indexOf(callback);
+            if (index > -1) {
+                callbacks.splice(index, 1);
+            }
+        }
+    }
+
+    emit(event, data) {
+        if (this.listeners.has(event)) {
+            this.listeners.get(event).forEach(callback => {
+                try {
+                    callback(data);
+                } catch (error) {
+                    // Error in game state event listener
+                }
+            });
+        }
+    }
+
+    // Utility methods
+    isPlaying() {
+        return this.currentState === STATES.PLAYING;
+    }
+
+    isGameOver() {
+        return this.currentState === STATES.GAME_OVER;
+    }
+
+    isInMenu() {
+        return this.currentState === STATES.MENU;
+    }
+
+    needsPlayerRegistration() {
+        return !this.playerData;
+    }
+
+    isGettingReady() {
+        return this.currentState === STATES.GETTING_READY;
     }
 }

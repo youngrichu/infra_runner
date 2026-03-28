@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Runner - Performance Optimized</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .version-selector {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        
+        .version-selector h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+        }
+        
+        .version-selector button {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .version-selector .original {
+            background: #ff6b35;
+            color: white;
+        }
+        
+        .version-selector .optimized {
+            background: #00ff88;
+            color: black;
+        }
+        
+        .version-selector button:hover {
+            transform: scale(1.05);
+        }
+        
+        .performance-overlay {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            min-width: 200px;
+            display: none;
+        }
+        
+        .performance-overlay.visible {
+            display: block;
+        }
+        
+        .perf-metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 2px 0;
+        }
+        
+        .perf-value {
+            font-weight: bold;
+        }
+        
+        .fps-good { color: #00ff88; }
+        .fps-ok { color: #ffaa00; }
+        .fps-bad { color: #ff4444; }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading Optimized Version...</div>
+    <div id="game-container"></div>
+    
+    <!-- Version Selector -->
+    <div class="version-selector">
+        <h3>🎮 Game Version</h3>
+        <button class="original" onclick="loadOriginal()">📊 Original Version</button>
+        <button class="optimized" onclick="loadOptimized()">🚀 Optimized Version</button>
+        <button style="background: #333; color: white; margin-top: 10px;" onclick="togglePerformanceOverlay()">
+            📈 Performance Monitor
+        </button>
+    </div>
+    
+    <!-- Performance Overlay -->
+    <div id="performance-overlay" class="performance-overlay">
+        <div style="font-weight: bold; margin-bottom: 8px;">⚡ Performance Metrics</div>
+        <div class="perf-metric">
+            <span>FPS:</span>
+            <span id="fps-value" class="perf-value fps-good">--</span>
+        </div>
+        <div class="perf-metric">
+            <span>Frame Time:</span>
+            <span id="frametime-value" class="perf-value">-- ms</span>
+        </div>
+        <div class="perf-metric">
+            <span>Memory:</span>
+            <span id="memory-value" class="perf-value">-- MB</span>
+        </div>
+        <div class="perf-metric">
+            <span>Draw Calls:</span>
+            <span id="drawcalls-value" class="perf-value">--</span>
+        </div>
+        <div class="perf-metric">
+            <span>Triangles:</span>
+            <span id="triangles-value" class="perf-value">--</span>
+        </div>
+        <div class="perf-metric">
+            <span>Obstacles:</span>
+            <span id="obstacles-value" class="perf-value">--</span>
+        </div>
+        <div class="perf-metric">
+            <span>Quality:</span>
+            <span id="quality-value" class="perf-value">--</span>
+        </div>
+        <div class="perf-metric">
+            <span>Gamepads:</span>
+            <span id="gamepads-value" class="perf-value">--</span>
+        </div>
+    </div>
+    
+    <div id="instructions">
+        <h3>🏗️ Infrastructure Runner - Performance Optimized Edition</h3>
+        <p><strong>🎮 Enhanced Controls:</strong></p>
+        <ul>
+            <li>←/→ or A/D or Left Stick: Move left/right</li>
+            <li>↑ or Space or W or A Button: Jump</li>
+            <li>R or Select Button: Restart (when game over)</li>
+            <li>🎮 Full gamepad support with haptic feedback!</li>
+        </ul>
+        <p><strong>🚀 Performance Features:</strong></p>
+        <ul>
+            <li>⚡ Object pooling for 60+ FPS performance</li>
+            <li>🎭 Instanced rendering for repeated objects</li>
+            <li>🔍 Frustum culling for efficient rendering</li>
+            <li>📊 Adaptive quality based on device performance</li>
+            <li>🎮 Cross-platform gamepad support (Xbox, PS, Switch Pro)</li>
+            <li>📱 Optimized for mobile, tablet, and desktop</li>
+        </ul>
+        <p><strong>Collect:</strong> Blueprints (50pts), Water Drops (20pts), Energy Cells (30pts)</p>
+        <p><strong>Power-ups:</strong> Hard Hat (shield), Helicopter (fly + stars), Solar (speed + energy orbs), Wind (double jump), Water Pipeline (safe path)</p>
+        <p><em>Experience butter-smooth performance across all platforms!</em></p>
+    </div>
+
+    <!-- Three.js Library -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <!-- Game Version Loader -->
+    <script type="module">
+        let currentGame = null;
+        let performanceOverlayVisible = false;
+        let performanceInterval = null;
+
+        // Load optimized version by default
+        window.addEventListener('load', () => {
+            loadOptimized();
+        });
+
+        window.loadOriginal = async function() {
+            
+            if (currentGame && currentGame.destroy) {
+                currentGame.destroy();
+            }
+            
+            document.getElementById('game-container').innerHTML = '';
+            
+            try {
+                const { Game } = await import('./game.js');
+                currentGame = new Game();
+                
+                updateVersionIndicator('original');
+            } catch (error) {
+                alert('Failed to load original version. Check console for details.');
+            }
+        };
+
+        window.loadOptimized = async function() {
+            
+            if (currentGame && currentGame.destroy) {
+                currentGame.destroy();
+            }
+            
+            document.getElementById('game-container').innerHTML = '';
+            
+            try {
+                const { OptimizedGame } = await import('./optimized-game.js');
+                currentGame = new OptimizedGame();
+                
+                updateVersionIndicator('optimized');
+                setupPerformanceMonitoring();
+            } catch (error) {
+                alert('Failed to load optimized version. Check console for details.');
+            }
+        };
+
+        function updateVersionIndicator(version) {
+            const buttons = document.querySelectorAll('.version-selector button');
+            buttons.forEach(btn => {
+                btn.style.opacity = '0.6';
+                btn.style.transform = 'scale(1)';
+            });
+            
+            const activeButton = document.querySelector(`.${version}`);
+            if (activeButton) {
+                activeButton.style.opacity = '1';
+                activeButton.style.transform = 'scale(1.1)';
+            }
+        }
+
+        window.togglePerformanceOverlay = function() {
+            performanceOverlayVisible = !performanceOverlayVisible;
+            const overlay = document.getElementById('performance-overlay');
+            
+            if (performanceOverlayVisible) {
+                overlay.classList.add('visible');
+                startPerformanceMonitoring();
+            } else {
+                overlay.classList.remove('visible');
+                stopPerformanceMonitoring();
+            }
+        };
+
+        function setupPerformanceMonitoring() {
+            if (!currentGame || !currentGame.performanceMonitor) return;
+            
+            currentGame.performanceMonitor.onMetricsUpdate((metrics) => {
+                updatePerformanceDisplay(metrics);
+            });
+        }
+
+        function startPerformanceMonitoring() {
+            if (performanceInterval) clearInterval(performanceInterval);
+            
+            performanceInterval = setInterval(() => {
+                if (currentGame && performanceOverlayVisible) {
+                    updatePerformanceDisplay();
+                }
+            }, 1000);
+        }
+
+        function stopPerformanceMonitoring() {
+            if (performanceInterval) {
+                clearInterval(performanceInterval);
+                performanceInterval = null;
+            }
+        }
+
+        function updatePerformanceDisplay(metrics = null) {
+            if (!performanceOverlayVisible) return;
+            
+            // Get metrics from current game
+            if (!metrics && currentGame) {
+                if (currentGame.performanceMonitor) {
+                    metrics = currentGame.performanceMonitor.getMetrics();
+                } else {
+                    // Fallback for original version
+                    metrics = {
+                        fps: 'N/A',
+                        frameTime: 'N/A',
+                        memoryUsage: performance.memory ? (performance.memory.usedJSHeapSize / 1024 / 1024) : 'N/A',
+                        drawCalls: 'N/A',
+                        triangles: 'N/A'
+                    };
+                }
+            }
+            
+            if (!metrics) return;
+            
+            // Update FPS with color coding
+            const fpsElement = document.getElementById('fps-value');
+            fpsElement.textContent = metrics.fps !== 'N/A' ? metrics.fps : '--';
+            fpsElement.className = 'perf-value ' + 
+                (metrics.fps >= 45 ? 'fps-good' : metrics.fps >= 30 ? 'fps-ok' : 'fps-bad');
+            
+            // Update other metrics
+            document.getElementById('frametime-value').textContent = 
+                metrics.frameTime !== 'N/A' ? `${metrics.frameTime.toFixed(1)}ms` : '--';
+            document.getElementById('memory-value').textContent = 
+                metrics.memoryUsage !== 'N/A' ? `${metrics.memoryUsage.toFixed(1)}MB` : '--';
+            document.getElementById('drawcalls-value').textContent = 
+                metrics.drawCalls !== 'N/A' ? metrics.drawCalls : '--';
+            document.getElementById('triangles-value').textContent = 
+                metrics.triangles !== 'N/A' ? metrics.triangles : '--';
+            
+            // Update game-specific metrics if available
+            if (currentGame && currentGame.obstacleManager && currentGame.obstacleManager.getPerformanceStats) {
+                const obstacleStats = currentGame.obstacleManager.getPerformanceStats();
+                document.getElementById('obstacles-value').textContent = 
+                    `${obstacleStats.obstacles.total} (${obstacleStats.obstacles.instanced}i)`;
+            } else {
+                document.getElementById('obstacles-value').textContent = '--';
+            }
+            
+            // Update quality info
+            if (currentGame && currentGame.adaptiveQuality) {
+                const qualityStats = currentGame.adaptiveQuality.getStats();
+                document.getElementById('quality-value').textContent = qualityStats.quality;
+            } else {
+                document.getElementById('quality-value').textContent = '--';
+            }
+            
+            // Update gamepad info
+            if (currentGame && currentGame.gamepadIntegration) {
+                const gamepadStats = currentGame.gamepadIntegration.getStats();
+                document.getElementById('gamepads-value').textContent = gamepadStats.connected;
+            } else {
+                document.getElementById('gamepads-value').textContent = '--';
+            }
+        }
+
+        // Hide loading screen
+        document.getElementById('loading').style.display = 'none';
+        
+        // Hide instructions after 12 seconds
+        setTimeout(() => {
+            const instructions = document.getElementById('instructions');
+            instructions.style.transition = 'opacity 2s';
+            instructions.style.opacity = '0';
+            setTimeout(() => {
+                instructions.style.display = 'none';
+            }, 2000);
+        }, 12000);
+    </script>
+</body>
+</html>

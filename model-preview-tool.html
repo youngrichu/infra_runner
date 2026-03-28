@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Game Preview Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .model-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .model-viewer {
+            width: 100%;
+            height: 250px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .model-info {
+            font-size: 12px;
+            color: #666;
+        }
+        .model-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .control-row {
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .control-row label {
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .control-row input {
+            width: 80px;
+            padding: 4px;
+            font-size: 12px;
+        }
+        .rotation-input {
+            width: 60px;
+        }
+        .update-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .update-btn:hover {
+            background: #0056b3;
+        }
+        .toggle-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .toggle-btn.active {
+            background: #dc3545;
+        }
+        .category {
+            margin-top: 30px;
+        }
+        .category-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 50px;
+        }
+        .rotation-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 5px;
+            margin: 5px 0;
+        }
+        .axis-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .axis-control label {
+            width: 20px;
+            font-weight: bold;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Model Game Preview Tool</h1>
+        <p>This tool shows models exactly as they appear in the game with rotation animations and current scales.</p>
+        
+        <div class="controls">
+            <h3>Global Controls</h3>
+            <button onclick="loadAllModels()">Load All Models</button>
+            <button onclick="exportCurrentConfigs()">Export Current Configs</button>
+            <button onclick="toggleAllAnimations()">Toggle All Animations</button>
+        </div>
+
+        <div id="loading" class="loading">
+            Click "Load All Models" to start previewing models...
+        </div>
+
+        <div class="category">
+            <div class="category-title">Collectables</div>
+            <div class="model-grid" id="collectables-grid"></div>
+        </div>
+
+        <div class="category">
+            <div class="category-title">Power-ups</div>
+            <div class="model-grid" id="powerups-grid"></div>
+        </div>
+
+        <div class="category">
+            <div class="category-title">Obstacles</div>
+            <div class="model-grid" id="obstacles-grid"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+        import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+        import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+        // Current model configurations from the game (updated with latest values)
+        const currentConfigs = {
+            // Collectables  
+            'waterDrop': {
+                scale: [0.010, 0.010, 0.010],
+                rotation: [0, 0, 0],
+                animate: false
+            },
+            'blueprint': {
+                scale: [0.800, 0.800, 0.800],
+                rotation: [0, 0, 0],
+                animate: false
+            },
+            'energyCell': {
+                scale: [0.350, 0.350, 0.350],
+                rotation: [0, 0, 0],
+                animate: false
+            },
+            'aerialStar': {
+                scale: [0.003, 0.003, 0.003],
+                rotation: [0, 0, Math.PI / 4], // Current game rotation
+                animate: true // Rotates in game
+            },
+            
+            // Power-ups
+            'hardHat': {
+                scale: [0.002, 0.002, 0.002],
+                rotation: [0, 0, 0],
+                animate: false
+            },
+            'helicopter': {
+                scale: [0.300, 0.300, 0.300],
+                rotation: [0, 0, 0],
+                animate: false
+            },
+            'solarPower': {
+                scale: [0.350, 0.350, 0.350],
+                rotation: [0, 0, 0],
+                animate: false
+            },
+            'windPower': {
+                scale: [0.600, 0.600, 0.600],
+                rotation: [0, 0, 0],
+                animate: false
+            },
+            'waterPipeline': {
+                scale: [0.800, 0.800, 0.800],
+                rotation: [0, 0, 0],
+                animate: false
+            },
+            
+            // Obstacles
+            'pothole': {
+                scale: [0.833, 0.833, 0.833],
+                rotation: [0, 0, 0],
+                animate: false
+            },
+            'constructionBarrier': {
+                scale: [0.898, 0.898, 0.898],
+                rotation: [0, 0, 0],
+                animate: false
+            },
+            'cone': {
+                scale: [0.886, 0.886, 0.886],
+                rotation: [0, 0, 0],
+                animate: false
+            },
+            'rubble': {
+                scale: [0.000002, 0.000002, 0.000002],
+                rotation: [0, 0, 0],
+                animate: false
+            }
+        };
+
+        const modelPaths = {
+            // Collectables
+            'waterDrop': '/assets/models/collectables/Bucket.glb',
+            'blueprint': '/assets/models/collectables/blue_print.glb',
+            'energyCell': '/assets/models/collectables/energy-cell.glb',
+            'aerialStar': '/assets/models/collectables/Star.glb',
+            
+            // Power-ups
+            'hardHat': '/assets/models/power-ups/hard_hat.glb',
+            'helicopter': '/assets/models/power-ups/Jet-Pack.glb',
+            'solarPower': '/assets/models/power-ups/Solar Panel Ground.glb',
+            'windPower': '/assets/models/power-ups/Boots.glb',
+            'waterPipeline': '/assets/models/power-ups/FireHydrant.glb',
+            
+            // Obstacles
+            'pothole': '/assets/models/obstacles/Floor Hole.glb',
+            'constructionBarrier': '/assets/models/obstacles/Plastic Barrier.glb',
+            'cone': '/assets/models/obstacles/Cone.glb',
+            'rubble': '/assets/models/obstacles/Cinder block.glb'
+        };
+
+        const categories = {
+            'collectables': ['waterDrop', 'blueprint', 'energyCell', 'aerialStar'],
+            'powerups': ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'],
+            'obstacles': ['pothole', 'constructionBarrier', 'cone', 'rubble']
+        };
+
+        let loader, dracoLoader;
+        let loadedModels = new Map();
+        let viewers = new Map();
+        let animationEnabled = true;
+
+        function initializeLoaders() {
+            loader = new GLTFLoader();
+            dracoLoader = new DRACOLoader();
+            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+            loader.setDRACOLoader(dracoLoader);
+        }
+
+        function createModelViewer(modelType, container) {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'model-viewer';
+            
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); // Game sky color
+            
+            const camera = new THREE.PerspectiveCamera(75, canvas.width / canvas.height, 0.1, 1000);
+            camera.position.set(2, 2, 2);
+            
+            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setSize(320, 250);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            
+            // Game-like lighting
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 5, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+            
+            // Add road-like ground
+            const groundGeometry = new THREE.PlaneGeometry(6, 6);
+            const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x404040 });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -0.1;
+            ground.receiveShadow = true;
+            scene.add(ground);
+            
+            // Add lane markings
+            const lineGeometry = new THREE.PlaneGeometry(0.1, 6);
+            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+            for (let i = -1; i <= 1; i++) {
+                const line = new THREE.Mesh(lineGeometry, lineMaterial);
+                line.rotation.x = -Math.PI / 2;
+                line.position.set(i, -0.09, 0);
+                scene.add(line);
+            }
+            
+            // Add controls
+            const controls = new OrbitControls(camera, canvas);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            container.appendChild(canvas);
+            
+            let animationId;
+            function animate() {
+                animationId = requestAnimationFrame(animate);
+                controls.update();
+                
+                // Game-like rotation for aerial stars
+                if (animationEnabled && currentConfigs[modelType] && currentConfigs[modelType].animate) {
+                    const existingModel = scene.children.find(child => child.userData.isModel);
+                    if (existingModel) {
+                        existingModel.rotation.y += 0.05; // Game rotation speed
+                    }
+                }
+                
+                renderer.render(scene, camera);
+            }
+            animate();
+            
+            return { scene, camera, renderer, controls, animationId };
+        }
+
+        function createModelCard(modelType, category) {
+            const config = currentConfigs[modelType];
+            const card = document.createElement('div');
+            card.className = 'model-card';
+            card.innerHTML = `
+                <div class="model-title">${modelType}</div>
+                <div class="model-viewer-container"></div>
+                <div class="model-info">
+                    <div class="control-row">
+                        <label>Scale:</label>
+                        <input type="number" step="0.001" value="${config.scale[0]}" 
+                               id="${modelType}-scale" onchange="updateModelConfig('${modelType}')">
+                        <button class="update-btn" onclick="updateModelConfig('${modelType}')">Update</button>
+                    </div>
+                    <div class="control-row">
+                        <label>Rotation (rad):</label>
+                        <div class="rotation-controls">
+                            <div class="axis-control">
+                                <label>X:</label>
+                                <input type="number" step="0.1" value="${config.rotation[0]}" 
+                                       class="rotation-input" id="${modelType}-rot-x" onchange="updateModelConfig('${modelType}')">
+                            </div>
+                            <div class="axis-control">
+                                <label>Y:</label>
+                                <input type="number" step="0.1" value="${config.rotation[1]}" 
+                                       class="rotation-input" id="${modelType}-rot-y" onchange="updateModelConfig('${modelType}')">
+                            </div>
+                            <div class="axis-control">
+                                <label>Z:</label>
+                                <input type="number" step="0.1" value="${config.rotation[2]}" 
+                                       class="rotation-input" id="${modelType}-rot-z" onchange="updateModelConfig('${modelType}')">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <button class="toggle-btn ${config.animate ? 'active' : ''}" 
+                                id="${modelType}-animate" onclick="toggleAnimation('${modelType}')">
+                            ${config.animate ? 'Stop Animation' : 'Start Animation'}
+                        </button>
+                    </div>
+                    <div id="${modelType}-info">Loading...</div>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        async function loadModel(modelType) {
+            try {
+                const gltf = await loader.loadAsync(modelPaths[modelType]);
+                loadedModels.set(modelType, gltf);
+                
+                // Get model bounds
+                const box = new THREE.Box3().setFromObject(gltf.scene);
+                const size = box.getSize(new THREE.Vector3());
+                
+                // Update info display
+                const infoDiv = document.getElementById(`${modelType}-info`);
+                if (infoDiv) {
+                    const config = currentConfigs[modelType];
+                    infoDiv.innerHTML = `
+                        Original: ${size.x.toFixed(3)} × ${size.y.toFixed(3)} × ${size.z.toFixed(3)}<br>
+                        Current Scale: ${config.scale[0]}<br>
+                        Rotation: [${config.rotation.map(r => r.toFixed(2)).join(', ')}]<br>
+                        Final: ${(size.x * config.scale[0]).toFixed(3)} × ${(size.y * config.scale[1]).toFixed(3)} × ${(size.z * config.scale[2]).toFixed(3)}
+                    `;
+                }
+                
+                return gltf;
+            } catch (error) {
+                const infoDiv = document.getElementById(`${modelType}-info`);
+                if (infoDiv) {
+                    infoDiv.innerHTML = `❌ Failed to load`;
+                }
+                return null;
+            }
+        }
+
+        function displayModel(modelType, viewer) {
+            const gltf = loadedModels.get(modelType);
+            if (!gltf) return;
+            
+            // Remove existing models
+            const existingModels = viewer.scene.children.filter(child => child.userData.isModel);
+            existingModels.forEach(model => viewer.scene.remove(model));
+            
+            // Clone and configure model exactly like in game
+            const model = gltf.scene.clone();
+            const config = currentConfigs[modelType];
+            
+            // Apply scale
+            model.scale.set(config.scale[0], config.scale[1], config.scale[2]);
+            
+            // Apply rotation (same as game)
+            model.rotation.set(config.rotation[0], config.rotation[1], config.rotation[2]);
+            
+            model.userData.isModel = true;
+            
+            // Apply game-like material enhancements
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    
+                    if (child.material) {
+                        child.material = child.material.clone();
+                        child.material.roughness = Math.min(child.material.roughness || 0.7, 0.8);
+                        child.material.metalness = Math.max(child.material.metalness || 0.0, 0.1);
+                        
+                        if (!child.material.emissive || child.material.emissive.isColor) {
+                            child.material.emissive = child.material.emissive || new THREE.Color(0x000000);
+                            child.material.emissiveIntensity = 0.05;
+                        }
+                        
+                        if (child.material.color && child.material.color.isColor) {
+                            const brightness = (child.material.color.r + child.material.color.g + child.material.color.b) / 3;
+                            if (brightness < 0.3) {
+                                child.material.color.multiplyScalar(1.5);
+                            }
+                        }
+                    }
+                }
+            });
+            
+            viewer.scene.add(model);
+            
+            // Auto-fit camera
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const distance = Math.max(maxDim * 3, 2);
+            
+            viewer.camera.position.set(distance, distance, distance);
+            viewer.camera.lookAt(center);
+            viewer.controls.target.copy(center);
+        }
+
+        window.loadAllModels = async function() {
+            initializeLoaders();
+            document.getElementById('loading').style.display = 'none';
+            
+            // Create UI for all categories
+            for (const [categoryName, modelTypes] of Object.entries(categories)) {
+                const grid = document.getElementById(`${categoryName}-grid`);
+                
+                for (const modelType of modelTypes) {
+                    const card = createModelCard(modelType, categoryName);
+                    grid.appendChild(card);
+                    
+                    // Create viewer
+                    const viewerContainer = card.querySelector('.model-viewer-container');
+                    const viewer = createModelViewer(modelType, viewerContainer);
+                    viewers.set(modelType, viewer);
+                    
+                    // Load and display model
+                    await loadModel(modelType);
+                    displayModel(modelType, viewer);
+                }
+            }
+        };
+
+        window.updateModelConfig = function(modelType) {
+            const scaleInput = document.getElementById(`${modelType}-scale`);
+            const rotXInput = document.getElementById(`${modelType}-rot-x`);
+            const rotYInput = document.getElementById(`${modelType}-rot-y`);
+            const rotZInput = document.getElementById(`${modelType}-rot-z`);
+            
+            const scale = parseFloat(scaleInput.value);
+            const rotX = parseFloat(rotXInput.value) || 0;
+            const rotY = parseFloat(rotYInput.value) || 0;
+            const rotZ = parseFloat(rotZInput.value) || 0;
+            
+            if (isNaN(scale)) return;
+            
+            currentConfigs[modelType].scale = [scale, scale, scale];
+            currentConfigs[modelType].rotation = [rotX, rotY, rotZ];
+            
+            const viewer = viewers.get(modelType);
+            if (viewer) {
+                displayModel(modelType, viewer);
+            }
+            
+            // Update info
+            const gltf = loadedModels.get(modelType);
+            if (gltf) {
+                const box = new THREE.Box3().setFromObject(gltf.scene);
+                const size = box.getSize(new THREE.Vector3());
+                const infoDiv = document.getElementById(`${modelType}-info`);
+                if (infoDiv) {
+                    infoDiv.innerHTML = `
+                        Original: ${size.x.toFixed(3)} × ${size.y.toFixed(3)} × ${size.z.toFixed(3)}<br>
+                        Current Scale: ${scale}<br>
+                        Rotation: [${[rotX, rotY, rotZ].map(r => r.toFixed(2)).join(', ')}]<br>
+                        Final: ${(size.x * scale).toFixed(3)} × ${(size.y * scale).toFixed(3)} × ${(size.z * scale).toFixed(3)}
+                    `;
+                }
+            }
+        };
+
+        window.toggleAnimation = function(modelType) {
+            const config = currentConfigs[modelType];
+            config.animate = !config.animate;
+            
+            const btn = document.getElementById(`${modelType}-animate`);
+            btn.textContent = config.animate ? 'Stop Animation' : 'Start Animation';
+            btn.className = `toggle-btn ${config.animate ? 'active' : ''}`;
+        };
+
+        window.toggleAllAnimations = function() {
+            animationEnabled = !animationEnabled;
+        };
+
+        window.exportCurrentConfigs = function() {
+            
+            let scaleOutput = '\n// SCALES for model-configurations.js:\n';
+            let rotationOutput = '\n// ROTATIONS for collectables.js:\n';
+            
+            for (const [modelType, config] of Object.entries(currentConfigs)) {
+                scaleOutput += `"${modelType}": [${config.scale.join(', ')}],\n`;
+                if (config.rotation.some(r => r !== 0)) {
+                    rotationOutput += `// ${modelType}: rotation [${config.rotation.map(r => r.toFixed(3)).join(', ')}]\n`;
+                }
+            }
+            
+            
+            alert(scaleOutput + rotationOutput);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Size Analysis Tool</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .analysis-section {
+            background: #2a2a2a;
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .model-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 10px;
+        }
+        
+        .model-name {
+            font-weight: bold;
+            color: #ffff00;
+        }
+        
+        .size-info {
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        
+        .status.success {
+            background: #004400;
+            color: #00ff00;
+        }
+        
+        .status.error {
+            background: #440000;
+            color: #ff6666;
+        }
+        
+        .status.loading {
+            background: #444400;
+            color: #ffff00;
+        }
+        
+        .results {
+            white-space: pre-wrap;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        button {
+            background: #004400;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            margin: 10px 5px;
+        }
+        
+        button:hover {
+            background: #006600;
+        }
+        
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Model Size Analysis Tool</h1>
+            <p>Analyze and calculate optimal scale factors for 3D models</p>
+        </div>
+        
+        <div class="analysis-section">
+            <h2>Controls</h2>
+            <button onclick="startAnalysis()" id="analyzeBtn">🚀 Start Full Analysis</button>
+            <button onclick="testSingleModel()" id="testBtn">🎯 Test Single Model</button>
+            <button onclick="clearResults()" id="clearBtn">🗑️ Clear Results</button>
+            
+            <div class="progress" style="display: none;" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div id="progressText"></div>
+        </div>
+        
+        <div class="analysis-section">
+            <h2>Model Status</h2>
+            <div id="modelStatus">
+                <p>Click "Start Full Analysis" to begin...</p>
+            </div>
+        </div>
+        
+        <div class="analysis-section">
+            <h2>Analysis Results</h2>
+            <div class="results" id="results">
+                Ready to analyze models...
+            </div>
+        </div>
+        
+        <div class="analysis-section">
+            <h2>Generated Configuration</h2>
+            <div class="results" id="configOutput">
+                Configuration will appear here after analysis...
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { ModelSizingTool } from './model-sizing-tool.js';
+        
+        let sizingTool;
+        let analysisResults = [];
+        
+        // Initialize the tool
+        window.addEventListener('DOMContentLoaded', () => {
+            sizingTool = new ModelSizingTool();
+            updateModelStatus('Initialized', 'Ready to start analysis');
+        });
+        
+        // Start full analysis
+        window.startAnalysis = async function() {
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const results = document.getElementById('results');
+            
+            try {
+                analyzeBtn.disabled = true;
+                analyzeBtn.textContent = '🔄 Analyzing...';
+                progressContainer.style.display = 'block';
+                
+                results.textContent = '🚀 Starting comprehensive model analysis...\n\n';
+                
+                const modelTypes = Object.keys(sizingTool.modelMappings);
+                let completed = 0;
+                
+                analysisResults = [];
+                
+                for (const [index, modelType] of modelTypes.entries()) {
+                    updateProgress((index / modelTypes.length) * 100, `Analyzing ${modelType}...`);
+                    updateModelStatus(modelType, 'loading');
+                    
+                    try {
+                        const analysis = await sizingTool.verifyAndResizeModel(modelType);
+                        if (analysis) {
+                            analysisResults.push(analysis);
+                            updateModelStatus(modelType, 'success', analysis);
+                            results.textContent += `✅ ${modelType}: Analysis complete\n`;
+                        } else {
+                            updateModelStatus(modelType, 'error', 'Analysis failed');
+                            results.textContent += `❌ ${modelType}: Analysis failed\n`;
+                        }
+                    } catch (error) {
+                        updateModelStatus(modelType, 'error', error.message);
+                        results.textContent += `❌ ${modelType}: ${error.message}\n`;
+                    }
+                    
+                    completed++;
+                    updateProgress((completed / modelTypes.length) * 100);
+                    
+                    // Small delay to prevent overwhelming
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+                
+                // Generate final report
+                generateFinalReport();
+                
+                updateProgress(100, 'Analysis Complete!');
+                
+            } catch (error) {
+                results.textContent += `\n❌ Analysis failed: ${error.message}\n`;
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = '🚀 Start Full Analysis';
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
+            }
+        };
+        
+        // Test single model (for debugging)
+        window.testSingleModel = async function() {
+            const modelType = prompt('Enter model type to test:', 'waterDrop');
+            if (!modelType) return;
+            
+            const results = document.getElementById('results');
+            results.textContent += `\n🎯 Testing single model: ${modelType}\n`;
+            
+            try {
+                const analysis = await sizingTool.verifyAndResizeModel(modelType);
+                if (analysis) {
+                    results.textContent += `✅ Success!\n`;
+                    results.textContent += JSON.stringify(analysis, null, 2) + '\n';
+                } else {
+                    results.textContent += `❌ Failed to analyze ${modelType}\n`;
+                }
+            } catch (error) {
+                results.textContent += `❌ Error: ${error.message}\n`;
+            }
+        };
+        
+        // Clear results
+        window.clearResults = function() {
+            document.getElementById('results').textContent = 'Results cleared...';
+            document.getElementById('configOutput').textContent = 'Configuration will appear here after analysis...';
+            document.getElementById('modelStatus').innerHTML = '<p>Ready for new analysis...</p>';
+            analysisResults = [];
+        };
+        
+        function updateProgress(percent, text = '') {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            progressBar.style.width = `${percent}%`;
+            progressText.textContent = text || `Progress: ${Math.round(percent)}%`;
+        }
+        
+        function updateModelStatus(modelType, status, data = null) {
+            const statusContainer = document.getElementById('modelStatus');
+            
+            if (modelType === 'Initialized') {
+                statusContainer.innerHTML = `<p class="status success">${status}</p>`;
+                return;
+            }
+            
+            let existingItem = document.getElementById(`model-${modelType}`);
+            if (!existingItem) {
+                existingItem = document.createElement('div');
+                existingItem.id = `model-${modelType}`;
+                existingItem.className = 'model-item';
+                statusContainer.appendChild(existingItem);
+            }
+            
+            const statusClass = status === 'success' ? 'success' : status === 'error' ? 'error' : 'loading';
+            const statusText = status === 'success' ? '✅ Ready' : status === 'error' ? '❌ Failed' : '🔄 Loading';
+            
+            let sizeInfo = '';
+            if (data && typeof data === 'object' && data.recommendedScale) {
+                sizeInfo = `Scale: [${data.recommendedScale.join(', ')}]`;
+            } else if (typeof data === 'string') {
+                sizeInfo = data;
+            }
+            
+            existingItem.innerHTML = `
+                <div class="model-name">${modelType}</div>
+                <div class="size-info">${sizeInfo}</div>
+                <div class="status ${statusClass}">${statusText}</div>
+            `;
+        }
+        
+        function generateFinalReport() {
+            const results = document.getElementById('results');
+            const configOutput = document.getElementById('configOutput');
+            
+            if (analysisResults.length === 0) {
+                results.textContent += '\n❌ No successful analyses to report.\n';
+                return;
+            }
+            
+            // Generate summary report
+            results.textContent += '\n\n📊 MODEL SIZING ANALYSIS REPORT\n';
+            results.textContent += '=====================================\n';
+            
+            const categories = {
+                'Collectables': ['waterDrop', 'blueprint', 'energyCell', 'aerialStar'],
+                'Power-ups': ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'],
+                'Obstacles': ['pothole', 'constructionBarrier', 'cone', 'rubble']
+            };
+            
+            for (const [category, types] of Object.entries(categories)) {
+                results.textContent += `\n🎯 ${category.toUpperCase()}:\n`;
+                
+                types.forEach(type => {
+                    const result = analysisResults.find(r => r.placeholderType === type);
+                    if (result) {
+                        results.textContent += `  ${type}:\n`;
+                        results.textContent += `    Current: ${result.currentSize.x} x ${result.currentSize.y} x ${result.currentSize.z}\n`;
+                        results.textContent += `    Target:  ${result.targetSize.x} x ${result.targetSize.y} x ${result.targetSize.z}\n`;
+                        results.textContent += `    Scale:   [${result.recommendedScale.join(', ')}]\n`;
+                        results.textContent += `    Final:   ${result.finalSize.x} x ${result.finalSize.y} x ${result.finalSize.z}\n`;
+                    } else {
+                        results.textContent += `  ${type}: ❌ Analysis failed\n`;
+                    }
+                });
+            }
+            
+            // Generate configuration object
+            const config = {};
+            analysisResults.forEach(result => {
+                if (result) {
+                    config[result.placeholderType] = {
+                        path: result.modelPath,
+                        scale: result.recommendedScale.map(s => parseFloat(s)),
+                        originalSize: result.currentSize,
+                        targetSize: result.targetSize
+                    };
+                }
+            });
+            
+            configOutput.textContent = '// Generated Model Configuration\n';
+            configOutput.textContent += 'export const MODEL_CONFIGURATIONS = \n';
+            configOutput.textContent += JSON.stringify(config, null, 2);
+            configOutput.textContent += ';\n\n';
+            configOutput.textContent += '// Copy this configuration into your model integration code';
+            
+            results.textContent += '\n📝 CONFIGURATION READY FOR IMPLEMENTATION\n';
+            results.textContent += 'Copy the scale values from the Configuration section above.\n';
+        }
+    </script>
+</body>
+</html>

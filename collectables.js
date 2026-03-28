@@ -1,483 +1,168 @@
 // Enhanced Version 9 - Smart Pooling + Progressive Enhancement
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { LANES, COLORS, SPAWN_CONFIG, SCORING, COLLECTABLE_SPAWN_WEIGHTS, PHYSICS } from './constants.js';
 import { CollisionUtils } from './collision-utils.js';
+import { MODEL_CONFIGURATIONS, getModelConfig, shouldLoadModel, PRIORITY_LOADING_ORDER } from './model-configurations.js';
+
+// Expose MODEL_CONFIGURATIONS globally for onboarding viewer
+window.MODEL_CONFIGURATIONS = MODEL_CONFIGURATIONS;
 
 export class CollectableManager {
     constructor(scene) {
         this.scene = scene;
         this.collectables = [];
-        this.gameController = null;
-        this.obstacleManager = null;
-        this.lastSpawnZ = 0;
-        
-        // Fair power-up spawning system
-        this.lastPowerUpTime = 0;
-        this.powerUpInterval = 25000;
+        this.gameController = null; // Will be set by game.js
+
+        // "Shuffle bag" system for fair power-up spawning
+        this.powerUpDeck = [];
+        this.shufflePowerUpDeck();
+
+        // Fair power-up spawning system (like Subway Surfers)
+        this.lastPowerUpTime = Date.now(); // Initialize with current time
+        this.powerUpInterval = 10000; // Guarantee power-up every 10 seconds
         this.regularCollectionsCount = 0;
-        this.powerUpAfterCollections = 8;
-        
-        // EXPO FIX: Smart collectible spawning system (like obstacles)
-        this.COLLECTIBLE_SPAWN_HORIZON = 45; // Spawn 45 units ahead (beyond camera view)
-        this.COLLECTIBLE_DESPAWN_DISTANCE = 20; // Remove collectibles 20 units behind player
-        this.MIN_COLLECTIBLE_SPACING = 6; // Minimum distance between collectibles
-        this.MAX_COLLECTIBLE_SPACING = 12; // Maximum distance between collectibles
-        this.COLLECTIBLE_DENSITY = 0.6; // 60% of possible positions have collectibles
-        this.POWER_UP_DENSITY = 0.15; // 15% of collectibles are power-ups
-        this.collectiblePattern = this.generateCollectiblePattern(60); // Pre-generate pattern
-        this.collectiblePatternIndex = 0;
-        
-        // Smart Pooling System
+        this.powerUpAfterCollections = 3; // Or after collecting 3 regular items
+
+        // GLB Model loading system with Draco support (maintaining performance optimizations)
         this.loader = new GLTFLoader();
+        this.dracoLoader = new DRACOLoader();
+        this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        this.loader.setDRACOLoader(this.dracoLoader);
         this.loadedModels = new Map();
         this.loadingPromises = new Map();
-        this.fallbackObjects = new Map();
-        
-        // Phase-based loading
         this.priorityModelsLoaded = false;
-        this.allModelsLoaded = false;
-        
-        // PRIORITY MODELS: Most frequently collected (load these first)
-        this.priorityModels = ['blueprint', 'waterDrop', 'energyCell'];
-        this.backgroundModels = ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'];
-        
-        // GLB Model Configuration
-        this.modelConfig = {
-            'blueprint': {
-                path: './assets/Collectibles/Blueprint.glb',
-                scale: [0.6, 0.6, 0.6],
-                yPos: 0.7,
-                rotation: [0, 0, 0],
-                animation: 'float',
-                fallback: () => new THREE.BoxGeometry(0.3, 0.3, 0.05)
-            },
-            'waterDrop': {
-                path: './assets/Collectibles/A_simple_water_droplet.glb',  // Your new model
-                scale: [0.3, 0.3, 0.3],        // Start with this, adjust if needed
-                yPos: 0.7,                     // Standard collectible height
-                rotation: [0, 0, 0],
-                animation: 'float',
-                fallback: () => new THREE.SphereGeometry(0.2, 16, 16)
-            },
-            'energyCell': {
-                path: './assets/Collectibles/Power Box.glb',
-                scale: [0.4, 0.4, 0.4],
-                yPos: 0.7,
-                rotation: [0, 0, 0],
-                animation: 'pulse',
-                fallback: () => new THREE.CylinderGeometry(0.15, 0.15, 0.4, 32)
-            },
-            'hardHat': {
-                path: './assets/Collectibles/Hardhat.glb',
-                scale: [0.003, 0.003, 0.003], // SUPER TINY - practically invisible for testing
-                yPos: 0.6,
-                rotation: [0, 0, 0],
-                animation: 'float',
-                fallback: () => new THREE.ConeGeometry(0.02, 0.04, 32) // Also tiny fallback
-            },
-            'helicopter': {
-                path: './assets/Collectibles/Jetpack.glb',
-                scale: [0.4, 0.4, 0.4],
-                yPos: 0.6,
-                rotation: [0, 0, 0],
-                animation: 'helicopter',
-                fallback: () => new THREE.CylinderGeometry(0.1, 0.1, 0.05, 8)
-            },
-            'solarPower': {
-                path: './assets/Collectibles/Flat Solar Panel.glb',
-                scale: [0.4, 0.4, 0.],
-                yPos: 0.7,
-                rotation: [0, 0, 0], // Flat orientation to show solar cells from the front
-                animation: 'pulse',
-                fallback: () => new THREE.CircleGeometry(0.25, 16)
-            },
-            'windPower': {
-                path: './assets/Collectibles/Spring.glb',
-                scale: [0.4, 0.4, 0.4], // Balanced size - visible but not overwhelming
-                yPos: 0.1,
-                rotation: [0, 0, 0],
-                animation: 'float',
-                fallback: () => new THREE.SphereGeometry(0.1, 16, 16)
-            },
-            'waterPipeline': {
-                path: './assets/Collectibles/Pipes.glb',
-                scale: [0.25, 0.25, 0.25], // Further reduced size for better proportions
-                yPos: 0.7,
-                rotation: [0, 0, 0],
-                animation: 'spin',
-                fallback: () => new THREE.TorusGeometry(0.2, 0.05, 16, 16)
-            }
+
+        // Pre-create and cache geometries and materials for fallback meshes
+        this.cacheFallbackResources();
+
+        // Model loading will be initialized explicitly by game.js during setup
+    }
+
+    cacheFallbackResources() {
+        this.cachedGeometries = {
+            'blueprint': new THREE.BoxGeometry(0.3, 0.3, 0.05),
+            'waterDrop': new THREE.SphereGeometry(0.2, 16, 16),
+            'energyCell': new THREE.CylinderGeometry(0.15, 0.15, 0.4, 32),
+            'hardHat': new THREE.ConeGeometry(0.2, 0.4, 32),
+            'waterPipeline': new THREE.TorusGeometry(0.2, 0.05, 16, 16),
+            'helicopterMain': new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8),
+            'helicopterRotor': new THREE.BoxGeometry(0.5, 0.05, 0.1),
+            'solarPower': new THREE.CircleGeometry(0.25, 16),
+            'windPowerMain': new THREE.SphereGeometry(0.2, 16, 16),
+            'windPowerParticle': new THREE.SphereGeometry(0.05, 8, 8),
+            'aerialStar': new THREE.OctahedronGeometry(0.3, 0),
+            'solarOrbMain': new THREE.SphereGeometry(0.25, 16, 16),
+            'solarOrbCore': new THREE.SphereGeometry(0.15, 8, 8),
+            'solarOrbRay': new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8)
         };
-        
-        this.initializeSmartPooling();
 
-        // Cache reusable objects for performance
-        this._tempBox = new THREE.Box3();
-        this._tempBox2 = new THREE.Box3();
-        this._tempVector = new THREE.Vector3();
+        this.cachedMaterials = {
+            'blueprint': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.BLUEPRINT }),
+            'waterDrop': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.WATER_DROP }),
+            'energyCell': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.ENERGY_CELL }),
+            'hardHat': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.HARD_HAT }),
+            'waterPipeline': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.WATER_PIPELINE }),
+            'helicopter': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.HELICOPTER }),
+            'solarPower': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.SOLAR_POWER, side: THREE.DoubleSide }),
+            'windPowerMain': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.WIND_POWER, transparent: true, opacity: 0.7 }),
+            'windPowerParticle': new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }),
+            'aerialStar': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.AERIAL_STAR, emissive: 0xffaa00, metalness: 0.7, roughness: 0.3 }),
+            'solarOrbMain': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.SOLAR_ORB, emissive: 0xffaa00, emissiveIntensity: 0.4, metalness: 0.3, roughness: 0.1, transparent: true, opacity: 0.9 }),
+            'solarOrbCore': new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffff88, emissiveIntensity: 0.8, transparent: true, opacity: 0.7 }),
+            'solarOrbRay': new THREE.MeshStandardMaterial({ color: COLORS.COLLECTABLES.SOLAR_ORB, emissive: 0xffcc00, emissiveIntensity: 0.3, transparent: true, opacity: 0.6 })
+        };
+
+        // Cache geometries for collection effects
+        this.cachedEffectGeometries = {
+            'powerUpParticle': new THREE.SphereGeometry(0.08, 8, 8),
+            'regularParticle': new THREE.SphereGeometry(0.04, 8, 8),
+            'powerUpRing': new THREE.RingGeometry(0.1, 0.2, 16)
+        };
+
+        // Cache magical glow geometries
+        this.cachedGlowGeometries = {
+            'rays': new THREE.PlaneGeometry(4, 4),
+            'bottom': new THREE.PlaneGeometry(2.5, 2.5),
+            'inner': new THREE.SphereGeometry(0.6, 32, 32),
+            'particle': new THREE.SphereGeometry(0.05, 8, 8)
+        };
     }
 
-    // EXPO FIX: Generate smart collectible pattern with good spacing
-    generateCollectiblePattern(length) {
-        const pattern = [];
-        let currentPosition = 0;
-        const regularTypes = ['blueprint', 'waterDrop', 'energyCell'];
-        const powerUpTypes = ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'];
-        
-        for (let i = 0; i < length; i++) {
-            // Random spacing within our range
-            const spacing = this.MIN_COLLECTIBLE_SPACING + 
-                          Math.random() * (this.MAX_COLLECTIBLE_SPACING - this.MIN_COLLECTIBLE_SPACING);
-            
-            currentPosition += spacing;
-            
-            // Randomly decide whether to place a collectible
-            if (Math.random() < this.COLLECTIBLE_DENSITY) {
-                // Decide if this should be a power-up (less frequent)
-                const isPowerUp = Math.random() < this.POWER_UP_DENSITY;
-                const availableTypes = isPowerUp ? powerUpTypes : regularTypes;
-                const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-                
-                pattern.push({
-                    position: currentPosition,
-                    type: type,
-                    isPowerUp: isPowerUp,
-                    lane: Math.floor(Math.random() * 3) // 0, 1, or 2
-                });
-            }
-        }
-        
-
-        return pattern;
-    }
-
-    // EXPO FIX: Smart collectible spawning ahead of player
-    spawnAheadCollectibles(playerZ) {
-        const spawnThreshold = playerZ - this.COLLECTIBLE_SPAWN_HORIZON; // Spawn horizon ahead
-        
-        // Check if we need to spawn more collectibles
-        while (this.needsMoreCollectibles(spawnThreshold)) {
-            this.spawnNextPatternCollectible();
+    shufflePowerUpDeck() {
+        this.powerUpDeck = [...COLLECTABLE_SPAWN_WEIGHTS.POWER_UPS];
+        // Fisher-Yates shuffle algorithm
+        for (let i = this.powerUpDeck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.powerUpDeck[i], this.powerUpDeck[j]] = [this.powerUpDeck[j], this.powerUpDeck[i]];
         }
     }
 
-    // EXPO FIX: Check if we need more collectibles in the spawn horizon
-    needsMoreCollectibles(spawnThreshold) {
-        // Check if we have any collectibles within the spawn horizon
-        const collectiblesInRange = this.collectables.filter(col => 
-            col.mesh.position.z <= spawnThreshold
-        );
-        
-        // If we have fewer than 4 collectibles in the horizon, spawn more
-        return collectiblesInRange.length < 4;
-    }
+    async initializeModelLoading() {
+        // Loading models (collectables, power-ups, obstacles)
 
-    // EXPO FIX: Spawn next collectible from pattern
-    spawnNextPatternCollectible() {
-        // Get next collectible from pattern
-        if (this.collectiblePatternIndex >= this.collectiblePattern.length) {
-            // Regenerate pattern if we've used it all
-            this.collectiblePattern = this.generateCollectiblePattern(60);
-            this.collectiblePatternIndex = 0;
+        // Load priority models first (collectables, power-ups, and obstacles)
+        const priorityTypes = PRIORITY_LOADING_ORDER;
 
-        }
-        
-        const collectibleData = this.collectiblePattern[this.collectiblePatternIndex];
-        this.collectiblePatternIndex++;
-        
-        if (!this.gameController) {
-            console.warn('⚠️ No game controller - cannot spawn collectible');
-            return;
-        }
-        
-        // Calculate spawn position
-        const playerZ = this.gameController.getPlayerPosition().z;
-        const spawnZ = playerZ - this.COLLECTIBLE_SPAWN_HORIZON - collectibleData.position;
-        
-        // Check if this position conflicts with obstacles
-        const obstacles = this.gameController.getObstacles();
-        const lanePositions = [-2, 0, 2]; // LANES.POSITIONS
-        const spawnPosition = new THREE.Vector3(
-            lanePositions[collectibleData.lane], 
-            0.7, 
-            spawnZ
-        );
-        
-        // Simple obstacle avoidance - if obstacle too close, try different lane
-        let finalLane = collectibleData.lane;
-        let positionClear = this.isPositionClear(spawnPosition.x, spawnPosition.z);
-        
-        if (!positionClear) {
-            // Try other lanes
-            for (let laneTest = 0; laneTest < 3; laneTest++) {
-                const testX = lanePositions[laneTest];
-                if (this.isPositionClear(testX, spawnZ)) {
-                    finalLane = laneTest;
-                    spawnPosition.x = testX;
-                    positionClear = true;
-                    break;
-                }
-            }
-        }
-        
-        // If still no clear position, skip this collectible
-        if (!positionClear) {
-            console.log(`⚠️ Skipping collectible at Z=${spawnZ.toFixed(1)} - too close to obstacles`);
-            return;
-        }
-        
-        // Update last spawn position
-        this.lastSpawnZ = spawnZ;
-
-        // Create the collectible mesh
-        const collectableMesh = this.createCollectableMesh(collectibleData.type, spawnPosition, obstacles || (this.obstacleManager ? this.obstacleManager.obstacles : []));
-        if (!collectableMesh) {
-            console.warn(`Failed to create collectible mesh for type: ${collectibleData.type}`);
-            return;
-        }
-        
-        // Add to tracking
-        this.collectables.push({ 
-            mesh: collectableMesh, 
-            type: collectibleData.type, 
-            isPowerUp: collectibleData.isPowerUp,
-            lane: finalLane
-        });
-        
-
-    }
-
-    // EXPO FIX: Check if position is clear of obstacles
-    isPositionClear(x, z) {
-        // Default to true if obstacleManager isn't available
-        if (!this.obstacleManager || !this.obstacleManager.obstacles) return true;
-
-        const checkRadius = 2.5; // Safe distance from obstacles
-        const obstacles = this.obstacleManager.obstacles;
-        
-        for (const obstacle of obstacles) {
-            // Guard for instanced obstacles which have position directly on the object instead of mesh.position
-            const obstaclePos = obstacle.mesh ? obstacle.mesh.position : obstacle.position;
-
-            if (!obstaclePos) continue;
-
-            // Fast distance check (XZ plane)
-            const dx = x - obstaclePos.x;
-            const dz = z - obstaclePos.z;
-            const distanceSq = dx * dx + dz * dz;
-
-            if (distanceSq < checkRadius * checkRadius) {
-                // More precise bounding box check if distance is close
-                try {
-                    // Instanced obstacles should have a boundingBox property
-                    const obstacleBox = obstacle.mesh ?
-                        new THREE.Box3().setFromObject(obstacle.mesh) :
-                        (obstacle.boundingBox ? obstacle.boundingBox : null);
-
-                    if (!obstacleBox) {
-                        // If no bounding box available, fallback to the distance check result
-                        return false;
-                    }
-                    // Create a small box for the proposed collectible position
-                    const collectableBox = new THREE.Box3(
-                        new THREE.Vector3(x - 0.4, 0.2, z - 0.4),
-                        new THREE.Vector3(x + 0.4, 1.2, z + 0.4)
-                    );
-
-                    if (collectableBox.intersectsBox(obstacleBox)) {
-                        return false;
-                    }
-                } catch (e) {
-                    // Fallback to distance check if box check fails
-                    return false;
-                }
-            }
-        }
-        
-        return true; // Position is clear
-    }
-
-    // EXPO FIX: Enhanced cleanup of collectibles behind player
-    removeCollectiblesBehindPlayer(playerZ) {
-        const removalThreshold = playerZ + this.COLLECTIBLE_DESPAWN_DISTANCE; // Remove collectibles behind player
-        let removedCount = 0;
-        
-        for (let i = this.collectables.length - 1; i >= 0; i--) {
-            const collectable = this.collectables[i];
-            
-            if (collectable.mesh.position.z > removalThreshold) { // Remove collectibles in positive Z (behind player)
-                // Remove from scene
-                this.scene.remove(collectable.mesh);
-                
-                // Remove from array
-                this.collectables.splice(i, 1);
-                removedCount++;
-            }
-        }
-        
-        if (removedCount > 0) {
-
-        }
-    }
-
-    async initializeSmartPooling() {
-
-        
-        // PHASE 1: Load priority models first (instant game start)
-        await this.loadPriorityModels();
-        
-        // PHASE 2: Background load remaining models + special models
-        this.loadBackgroundModels();
-    }
-
-    async loadPriorityModels() {
-
-        
-        const priorityPromises = this.priorityModels.map(async (type) => {
-            const config = this.modelConfig[type];
-            if (!config) return null;
-            
-            try {
-                const gltf = await this.loadModel(config.path);
-                if (gltf && gltf.scene) {
-                    this.loadedModels.set(type, gltf.scene);
-
-                    
-                    // PROGRESSIVE ENHANCEMENT: Upgrade existing fallbacks
-                    this.upgradeExistingFallbacks(type);
-                    
-                    return type;
-                } else {
-                    throw new Error(`Invalid GLB structure for ${type}`);
-                }
-            } catch (error) {
-                console.warn(`⚠️ Failed to load priority collectible ${type}: ${error.message}`);
-                this.loadedModels.set(type, null);
-                return null;
-            }
-        });
-
-        await Promise.allSettled(priorityPromises);
+        await this.loadPriorityModels(priorityTypes);
         this.priorityModelsLoaded = true;
-
+        // Models ready (collectables, power-ups, obstacles)
     }
 
-    async loadBackgroundModels() {
+    async loadPriorityModels(modelTypes) {
+        const loadPromises = modelTypes
+            .filter(type => shouldLoadModel(type))
+            .map(type => this.loadModel(type));
 
-        
-        // Load power-up models + lightning bolt for solar orbs
-        const allBackgroundModels = [
-            ...this.backgroundModels,
-            { type: 'lightning', path: './assets/Collectibles/Lightning Bolt.glb' }
-        ];
-        
-        const backgroundPromises = allBackgroundModels.map(async (item) => {
-            const type = typeof item === 'string' ? item : item.type;
-            const path = typeof item === 'string' ? this.modelConfig[type]?.path : item.path;
-            
-            if (!path) return null;
-            
-            try {
-                const gltf = await this.loadModel(path);
-                if (gltf && gltf.scene) {
-                    this.loadedModels.set(type, gltf.scene);
+        const results = await Promise.allSettled(loadPromises);
 
-                    
-                    // PROGRESSIVE ENHANCEMENT: Upgrade existing fallbacks
-                    this.upgradeExistingFallbacks(type);
-                    
-                    return type;
-                } else {
-                    throw new Error(`Invalid GLB structure for ${type}`);
-                }
-            } catch (error) {
-                console.warn(`⚠️ Failed to load background model ${type}: ${error.message}`);
-                this.loadedModels.set(type, null);
+        // Log results
+        results.forEach((result, index) => {
+            const type = modelTypes.filter(t => shouldLoadModel(t))[index];
+            if (result.status === 'fulfilled' && result.value) {
+                // Model loaded successfully
+            } else {
+                // Model failed to load
+            }
+        });
+    }
+
+    async loadModel(type) {
+        if (this.loadedModels.has(type) || this.loadingPromises.has(type)) {
+            return this.loadingPromises.get(type);
+        }
+
+        const config = getModelConfig(type);
+        if (!config || !shouldLoadModel(type)) {
+            return null;
+        }
+
+        // Check if asset is preloaded first
+        const fileName = config.path.split('/').pop(); // Extract filename from path
+        const preloadedKey = `collectable_${fileName}`;
+
+        if (window.assetPreloader && window.assetPreloader.getLoadedAsset(preloadedKey)) {
+            const gltf = window.assetPreloader.getLoadedAsset(preloadedKey);
+            this.loadedModels.set(type, gltf);
+            // Using preloaded collectable model
+            return Promise.resolve(gltf);
+        }
+
+        // Fallback to loading if not preloaded
+        const loadPromise = this.loader.loadAsync(config.path)
+            .then(gltf => {
+                this.loadedModels.set(type, gltf);
+                // Model loaded successfully
+                return gltf;
+            })
+            .catch(error => {
+                // Model failed to load, using fallback
                 return null;
-            }
-        });
+            });
 
-        await Promise.allSettled(backgroundPromises);
-        this.allModelsLoaded = true;
-
-    }
-
-    upgradeExistingFallbacks(modelType) {
-
-        
-        // Find all existing collectibles of this type that use fallback geometry
-        for (let i = 0; i < this.collectables.length; i++) {
-            const collectable = this.collectables[i];
-            
-            if (collectable.type === modelType && collectable.mesh.userData.isFallback) {
-                // Store current animation state
-                const currentAnimationData = collectable.mesh.userData;
-                const position = collectable.mesh.position.clone();
-                const rotation = collectable.mesh.rotation.clone();
-                
-                this.scene.remove(collectable.mesh);
-                
-                // Create new GLB-based mesh
-                const newMesh = this.createGLBCollectableMesh(
-                    modelType, 
-                    this.modelConfig[modelType], 
-                    position, 
-                    []
-                );
-                
-                if (newMesh) {
-                    // Restore animation state
-                    newMesh.userData = {
-                        ...newMesh.userData,
-                        animationTime: currentAnimationData.animationTime || 0
-                    };
-                    
-                    // Update collectable reference
-                    collectable.mesh = newMesh;
-                    
-
-                }
-            }
-        }
-    }
-
-    loadModel(path) {
-        return new Promise((resolve, reject) => {
-            this.loader.load(
-                path,
-                (gltf) => {
-                    gltf.scene.traverse((child) => {
-                        if (child.isMesh) {
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                            
-                            if (child.material) {
-                                if (Array.isArray(child.material)) {
-                                    child.material.forEach(mat => this.enhanceCollectibleMaterial(mat));
-                                } else {
-                                    this.enhanceCollectibleMaterial(child.material);
-                                }
-                            }
-                        }
-                    });
-                    resolve(gltf);
-                },
-                undefined,
-                (error) => reject(error)
-            );
-        });
-    }
-
-    enhanceCollectibleMaterial(material) {
-        if (material.isMeshStandardMaterial) {
-            material.metalness = Math.min(material.metalness + 0.3, 1.0);
-            material.roughness = Math.max(material.roughness - 0.2, 0.1);
-            
-            if (!material.emissive || material.emissive.r === 0) {
-                material.emissive = new THREE.Color(material.color).multiplyScalar(0.1);
-            }
-        }
+        this.loadingPromises.set(type, loadPromise);
+        return loadPromise;
     }
 
     setGameController(gameController) {
@@ -528,22 +213,12 @@ export class CollectableManager {
     }
 
     createPowerUp(playerZ, obstacles) {
-        // SMART POWER-UP SPAWNING: Prefer loaded models
-        const powerUps = COLLECTABLE_SPAWN_WEIGHTS.POWER_UPS;
-        let type;
-        
-        if (this.allModelsLoaded) {
-            // Use any power-up when all loaded
-            type = powerUps[Math.floor(Math.random() * powerUps.length)];
-        } else {
-            // Prefer loaded power-ups if available
-            const loadedPowerUps = powerUps.filter(t => this.loadedModels.has(t) && this.loadedModels.get(t) !== null);
-            if (loadedPowerUps.length > 0) {
-                type = loadedPowerUps[Math.floor(Math.random() * loadedPowerUps.length)];
-            } else {
-                type = powerUps[Math.floor(Math.random() * powerUps.length)];
-            }
+        if (this.powerUpDeck.length === 0) {
+            this.shufflePowerUpDeck();
         }
+
+        const type = this.powerUpDeck.pop();
+        // Spawning power-up from deck
 
         // Find clear position
         let spawnPosition;
@@ -571,243 +246,328 @@ export class CollectableManager {
         const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
         if (collectableMesh) {
             this.collectables.push({ mesh: collectableMesh, type: type });
-
+            // Guaranteed power-up spawned
         }
     }
 
     createCollectableMesh(type, spawnPosition, obstacles) {
-        const config = this.modelConfig[type];
-        
-        if (config) {
-            return this.createGLBCollectableMesh(type, config, spawnPosition, obstacles);
-        } else {
-            console.warn(`No config found for collectible type: ${type}`);
-            return this.createFallbackCollectableMesh(type, spawnPosition, obstacles);
-        }
-    }
-
-    createGLBCollectableMesh(type, config, spawnPosition, obstacles) {
-        let collectableMesh;
-
-        // PROGRESSIVE ENHANCEMENT: Try GLB first, fallback if not loaded
-        const loadedModel = this.loadedModels.get(type);
-        if (loadedModel && loadedModel !== null) {
-            // Use GLB model
-            collectableMesh = loadedModel.clone();
-            
-            if (config.scale) {
-                collectableMesh.scale.set(...config.scale);
-            }
-            
-            if (config.rotation) {
-                collectableMesh.rotation.set(...config.rotation);
-            }
-            
-            collectableMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z); // Use actual spawn position, not config.yPos
-            
-            // DEBUG: Log hard hat spawning details
-            if (type === 'hardHat') {
-                console.log(`🎩 HARD HAT SPAWNED: Scale=${config.scale}, Position=(${spawnPosition.x.toFixed(2)}, ${spawnPosition.y.toFixed(2)}, ${spawnPosition.z.toFixed(2)})`);
-            }
-            
-            collectableMesh.userData = {
-                animationType: config.animation,
-                originalY: spawnPosition.y, // Use actual spawn Y position for animation
-                animationTime: 0,
-                rotationSpeed: 0.02 + Math.random() * 0.03,
-                isFallback: false,
-                modelType: type
-            };
-        } else {
-            // Use fallback geometry (will be upgraded when GLB loads)
-
-            
-            const geometry = config.fallback();
-            const material = new THREE.MeshStandardMaterial({ 
-                color: this.getCollectibleColor(type),
-                metalness: 0.6,
-                roughness: 0.3,
-                emissive: new THREE.Color(this.getCollectibleColor(type)).multiplyScalar(0.1)
-            });
-            
-            collectableMesh = new THREE.Mesh(geometry, material);
-            collectableMesh.position.copy(spawnPosition);
-            
-            collectableMesh.userData = {
-                animationType: 'float',
-                originalY: spawnPosition.y,
-                animationTime: 0,
-                rotationSpeed: 0.02,
-                isFallback: true,
-                modelType: type
-            };
+        // Try to create GLB model first, fallback to original geometry
+        const glbMesh = this.tryCreateGLBMesh(type, spawnPosition);
+        if (glbMesh) {
+            this.adjustHeightForObstacles(glbMesh, obstacles);
+            // Add spinning animation to GLB models
+            this.addSpinningAnimation(glbMesh, type);
+            return glbMesh;
         }
 
-        // Adjust height for obstacles
-        this.adjustHeightForObstacles(collectableMesh, obstacles);
-        
-        // Ensure shadow support
-        collectableMesh.traverse((child) => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-            }
-        });
+        // Fallback to original geometry system
+        let geometry, material;
 
-        this.scene.add(collectableMesh);
-        return collectableMesh;
-    }
+        switch (type) {
+            case 'blueprint':
+            case 'waterDrop':
+            case 'energyCell':
+            case 'hardHat':
+            case 'waterPipeline':
+                geometry = this.cachedGeometries[type];
+                material = this.cachedMaterials[type];
+                break;
+            case 'helicopter':
+                return this.createHelicopterMesh(spawnPosition);
+            case 'solarPower':
+                return this.createSolarPowerMesh(spawnPosition);
+            case 'windPower':
+                return this.createWindPowerMesh(spawnPosition);
+            default:
+                return null;
+        }
 
-    createFallbackCollectableMesh(type, spawnPosition, obstacles) {
-        const geometry = new THREE.SphereGeometry(0.2, 16, 16);
-        const material = new THREE.MeshStandardMaterial({ 
-            color: this.getCollectibleColor(type),
-            metalness: 0.5,
-            roughness: 0.4
-        });
         const collectableMesh = new THREE.Mesh(geometry, material);
         collectableMesh.position.copy(spawnPosition);
-        
+
+        // Adjust height if above obstacles
         this.adjustHeightForObstacles(collectableMesh, obstacles);
-        
-        collectableMesh.userData = {
-            animationType: 'float',
-            originalY: spawnPosition.y,
-            animationTime: 0,
-            rotationSpeed: 0.02,
-            isFallback: true,
-            modelType: type
-        };
-        
+
+        // Add spinning animation to fallback geometry
+        this.addSpinningAnimation(collectableMesh, type);
+
         collectableMesh.castShadow = true;
         this.scene.add(collectableMesh);
         return collectableMesh;
     }
 
-    getCollectibleColor(type) {
-        const colorMap = {
-            'blueprint': COLORS.COLLECTABLES.BLUEPRINT,
-            'waterDrop': COLORS.COLLECTABLES.WATER_DROP,
-            'energyCell': COLORS.COLLECTABLES.ENERGY_CELL,
-            'hardHat': COLORS.COLLECTABLES.HARD_HAT,
-            'helicopter': COLORS.COLLECTABLES.HELICOPTER,
-            'solarPower': COLORS.COLLECTABLES.SOLAR_POWER,
-            'windPower': COLORS.COLLECTABLES.WIND_POWER,
-            'waterPipeline': COLORS.COLLECTABLES.WATER_PIPELINE
-        };
-        return colorMap[type] || 0x888888;
-    }
+    tryCreateGLBMesh(type, spawnPosition) {
+        const config = getModelConfig(type);
+        if (!config || !shouldLoadModel(type)) {
+            // No config available or model skipped
+            return null;
+        }
 
-    animateCollectable(collectable) {
-        if (!collectable.mesh.userData) return;
+        const gltf = this.loadedModels.get(type);
+        if (!gltf) {
+            // Model not loaded yet, trigger loading for next time
+            // Model not loaded yet, using fallback
+            this.loadModel(type);
+            return null;
+        }
 
-        const userData = collectable.mesh.userData;
-        userData.animationTime += 0.016;
+        try {
+            // Clone the GLB scene
+            const modelScene = gltf.scene.clone();
 
-        switch (userData.animationType) {
-            case 'float':
-                const floatOffset = Math.sin(userData.animationTime * 3) * 0.15;
-                collectable.mesh.position.y = userData.originalY + floatOffset;
-                collectable.mesh.rotation.y += userData.rotationSpeed;
-                break;
-                
-            case 'spin':
-                collectable.mesh.rotation.y += userData.rotationSpeed * 2;
-                collectable.mesh.rotation.z += userData.rotationSpeed;
-                break;
-                
-            case 'pulse':
-                const pulse = Math.sin(userData.animationTime * 4) * 0.5 + 0.5;
-                collectable.mesh.scale.setScalar(0.8 + pulse * 0.3);
-                collectable.mesh.rotation.y += userData.rotationSpeed;
-                break;
-                
-            case 'helicopter':
-                if (collectable.mesh.children.length > 0) {
-                    collectable.mesh.children[0].rotation.y += userData.rotationSpeed;
+            // Apply the calculated scale from our analysis
+            const scale = config.scale;
+            modelScene.scale.set(scale[0], scale[1], scale[2]);
+
+
+            // Position the model
+            modelScene.position.copy(spawnPosition);
+
+            // Enhanced lighting and visibility for all meshes in the model
+            modelScene.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+
+                    // Enhanced material processing for problem models
+                    if (child.material) {
+                        // Clone material to avoid affecting other instances
+                        child.material = child.material.clone();
+
+                        // Special handling for problematic dark models  
+                        const isDarkModel = ['waterDrop', 'rubble', 'blueprint', 'constructionBarrier', 'windPower', 'pothole', 'waterPipeline', 'solarPower', 'helicopter', 'hardHat'].includes(type);
+
+                        // Ensure materials respond well to lighting
+                        child.material.roughness = Math.min(child.material.roughness || 0.7, 0.8);
+                        child.material.metalness = Math.max(child.material.metalness || 0.0, 0.1);
+
+                        // Add stronger emissive glow for better visibility
+                        if (!child.material.emissive || child.material.emissive.isColor) {
+                            child.material.emissive = child.material.emissive || new THREE.Color(0x222222);
+                            child.material.emissiveIntensity = isDarkModel ? 0.25 : 0.15; // Extra glow for dark models
+                        }
+
+                        // More aggressive brightening for problem models
+                        if (child.material.color && child.material.color.isColor) {
+                            const brightness = (child.material.color.r + child.material.color.g + child.material.color.b) / 3;
+
+                            if (isDarkModel) {
+                                // Force brighten problematic models regardless of current brightness
+                                child.material.color.multiplyScalar(3.0);
+                                // Force brightened material for better visibility
+                            } else {
+                                if (brightness < 0.5) {
+                                    child.material.color.multiplyScalar(2.0);
+                                } else if (brightness < 0.7) {
+                                    child.material.color.multiplyScalar(1.3);
+                                }
+                            }
+                        }
+
+                        // Force material properties for dark models
+                        if (isDarkModel) {
+                            child.material.roughness = 0.6; // Less rough for more reflection
+                            child.material.metalness = 0.2; // Slight metallic for better light response
+
+                            // Add ambient enhancement
+                            if (child.material.emissive) {
+                                child.material.emissive.multiplyScalar(1.5);
+                            }
+
+                            // Special pothole road-blending effect
+                            if (type === 'pothole') {
+                                // Create a gradient effect by adding a darker ring around edges
+                                child.material.transparent = true;
+                                child.material.opacity = 0.9; // Slightly transparent for blending
+
+                                // Add road-like coloring to blend with asphalt
+                                if (child.material.color) {
+                                    // Mix with road color (#404040) for better blending
+                                    const roadColor = new THREE.Color(0x404040);
+                                    child.material.color.lerp(roadColor, 0.3); // 30% road color mix
+                                }
+
+                                // Add subtle emission to make it look like a real hole
+                                child.material.emissive = new THREE.Color(0x1a1a1a); // Very dark emission
+                                child.material.emissiveIntensity = 0.1;
+                            }
+                        }
+                    }
                 }
-                const hoverOffset = Math.sin(userData.animationTime * 2) * 0.1;
-                collectable.mesh.position.y = userData.originalY + hoverOffset;
-                break;
+            });
+
+            // Add animation data to the GLB model
+            this.addSpinningAnimation(modelScene, type);
+
+            // Add to scene
+            this.scene.add(modelScene);
+
+            // Using GLB model for collectable
+            return modelScene;
+
+        } catch (error) {
+            // GLB creation failed, using fallback
+            return null;
         }
     }
 
-    createAerialCollectable(playerPosition) {
-        const geometry = new THREE.OctahedronGeometry(0.3, 0);
-        const material = new THREE.MeshStandardMaterial({ 
-            color: COLORS.COLLECTABLES.AERIAL_STAR,
-            emissive: 0xffaa00,
-            metalness: 0.7,
-            roughness: 0.3
-        });
-        
+    createHelicopterMesh(spawnPosition) {
+        // Try GLB model first (Jet-Pack)
+        const glbMesh = this.tryCreateGLBMesh('helicopter', spawnPosition);
+        if (glbMesh) {
+            return glbMesh;
+        }
+
+        // Fallback to original helicopter geometry
+        const geometry = this.cachedGeometries['helicopterMain'];
+        const rotorGeometry = this.cachedGeometries['helicopterRotor'];
+        const material = this.cachedMaterials['helicopter'];
+
         const collectableMesh = new THREE.Mesh(geometry, material);
-        
+        const rotor = new THREE.Mesh(rotorGeometry, material);
+        rotor.position.y = 0.1;
+        collectableMesh.add(rotor);
+
+        collectableMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
+
+        // Add spinning animation
+        this.addSpinningAnimation(collectableMesh, 'helicopter');
+
+        collectableMesh.castShadow = true;
+        this.scene.add(collectableMesh);
+        return collectableMesh;
+    }
+
+    createSolarPowerMesh(spawnPosition) {
+        // Try GLB model first (Solar Panel Ground)
+        const glbMesh = this.tryCreateGLBMesh('solarPower', spawnPosition);
+        if (glbMesh) {
+            return glbMesh;
+        }
+
+        // Fallback to original solar panel geometry
+        const geometry = this.cachedGeometries['solarPower'];
+        const material = this.cachedMaterials['solarPower'];
+        const solarMesh = new THREE.Mesh(geometry, material);
+        solarMesh.rotation.x = -Math.PI / 2;
+
+        solarMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
+
+        // Add spinning animation
+        this.addSpinningAnimation(solarMesh, 'solarPower');
+
+        solarMesh.castShadow = true;
+        this.scene.add(solarMesh);
+        return solarMesh;
+    }
+
+    createWindPowerMesh(spawnPosition) {
+        // Try GLB model first (Boots)
+        const glbMesh = this.tryCreateGLBMesh('windPower', spawnPosition);
+        if (glbMesh) {
+            return glbMesh;
+        }
+
+        // Fallback to original wind power geometry with particles
+        const geometry = this.cachedGeometries['windPowerMain'];
+        const material = this.cachedMaterials['windPowerMain'];
+        const windMesh = new THREE.Mesh(geometry, material);
+
+        // Add particle effects
+        const particleGeometry = this.cachedGeometries['windPowerParticle'];
+        const particleMaterial = this.cachedMaterials['windPowerParticle'];
+
+        for (let i = 0; i < 5; i++) {
+            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+            particle.position.set(
+                (Math.random() - 0.5) * 0.3,
+                (Math.random() - 0.5) * 0.3,
+                (Math.random() - 0.5) * 0.3
+            );
+            windMesh.add(particle);
+        }
+
+        windMesh.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
+
+        // Add spinning animation
+        this.addSpinningAnimation(windMesh, 'windPower');
+
+        windMesh.castShadow = true;
+        this.scene.add(windMesh);
+        return windMesh;
+    }
+
+    createAerialCollectable(playerPosition) {
         const laneIndex = Math.floor(Math.random() * LANES.COUNT);
-        
-        collectableMesh.position.set(
+        const spawnPosition = new THREE.Vector3(
             LANES.POSITIONS[laneIndex],
-            playerPosition.y + 0.9,
+            2.5, // Fixed height for aerial stars - high enough to be clearly aerial
             playerPosition.z - 30 - (Math.random() * 20)
         );
-        
+
+        // Try GLB model first (Star)
+        const glbMesh = this.tryCreateGLBMesh('aerialStar', spawnPosition);
+        if (glbMesh) {
+            glbMesh.userData = {
+                rotationSpeed: 0.015 + Math.random() * 0.005  // Match the subtle speed
+            };
+            this.collectables.push({ mesh: glbMesh, type: 'aerialStar' });
+            return;
+        }
+
+        // Fallback to original octahedron geometry
+        const geometry = this.cachedGeometries['aerialStar'];
+        const material = this.cachedMaterials['aerialStar'];
+
+        const collectableMesh = new THREE.Mesh(geometry, material);
+        collectableMesh.position.copy(spawnPosition);
+
         collectableMesh.userData = {
-            rotationSpeed: 0.05 + Math.random() * 0.05,
-            animationType: 'spin',
-            originalY: playerPosition.y + 0.9,
-            animationTime: 0,
-            isFallback: false // Special collectible
+            rotationSpeed: 0.015 + Math.random() * 0.005  // Match the subtle speed
         };
-        
+
         collectableMesh.castShadow = true;
         this.scene.add(collectableMesh);
         this.collectables.push({ mesh: collectableMesh, type: 'aerialStar' });
     }
 
     createSolarOrb(playerPosition) {
-        let collectableMesh;
+        // Create a light bulb/solar energy orb that appears during solar boost
+        const geometry = this.cachedGeometries['solarOrbMain'];
+        const material = this.cachedMaterials['solarOrbMain'].clone();
+
+        const collectableMesh = new THREE.Mesh(geometry, material);
+
+        // Add a glowing inner core
+        const coreGeometry = this.cachedGeometries['solarOrbCore'];
+        const coreMaterial = this.cachedMaterials['solarOrbCore'].clone();
+        const core = new THREE.Mesh(coreGeometry, coreMaterial);
+        collectableMesh.add(core);
+
+        // Add light rays (4 extending lines)
+        const rayGeometry = this.cachedGeometries['solarOrbRay'];
+        const rayMaterial = this.cachedMaterials['solarOrbRay'].clone();
+        for (let i = 0; i < 4; i++) {
+            const ray = new THREE.Mesh(rayGeometry, rayMaterial);
+
+            // Position rays in cross pattern
+            if (i < 2) {
+                ray.rotation.z = (i * Math.PI) + (Math.PI / 4); // Diagonal rays
+            } else {
+                ray.rotation.x = ((i - 2) * Math.PI) + (Math.PI / 4); // Other diagonal rays
+            }
+
+            collectableMesh.add(ray);
+        }
+
         const laneIndex = Math.floor(Math.random() * LANES.COUNT);
-        const spawnPosition = new THREE.Vector3(
+
+        collectableMesh.position.set(
             LANES.POSITIONS[laneIndex],
             playerPosition.y + 0.5,
             playerPosition.z - 25 - (Math.random() * 15)
         );
 
-        // Try to use Lightning Bolt GLB model
-        const loadedModel = this.loadedModels.get('lightning');
-        if (loadedModel && loadedModel !== null) {
-            collectableMesh = loadedModel.clone();
-            collectableMesh.scale.set(0.5, 0.5, 0.5);
-            collectableMesh.position.copy(spawnPosition);
-        } else {
-            // Enhanced fallback solar orb
-            const geometry = new THREE.SphereGeometry(0.25, 16, 16);
-            const material = new THREE.MeshStandardMaterial({ 
-                color: COLORS.COLLECTABLES.SOLAR_ORB,
-                emissive: 0xffaa00,
-                emissiveIntensity: 0.4,
-                metalness: 0.3,
-                roughness: 0.1,
-                transparent: true,
-                opacity: 0.9
-            });
-            
-            collectableMesh = new THREE.Mesh(geometry, material);
-            collectableMesh.position.copy(spawnPosition);
-            
-            // Add glowing core for fallback
-            const coreGeometry = new THREE.SphereGeometry(0.15, 8, 8);
-            const coreMaterial = new THREE.MeshStandardMaterial({
-                color: 0xffffff,
-                emissive: 0xffff88,
-                emissiveIntensity: 0.8,
-                transparent: true,
-                opacity: 0.7
-            });
-            const core = new THREE.Mesh(coreGeometry, coreMaterial);
-            collectableMesh.add(core);
-        }
-        
         collectableMesh.userData = {
             animationType: 'pulse',
             originalY: spawnPosition.y,
@@ -816,19 +576,226 @@ export class CollectableManager {
             pulseSpeed: 0.03 + Math.random() * 0.02,
             isFallback: !loadedModel
         };
-        
+
         collectableMesh.castShadow = true;
         this.scene.add(collectableMesh);
         this.collectables.push({ mesh: collectableMesh, type: 'solarOrb' });
     }
 
+    addSpinningAnimation(collectableMesh, type) {
+        collectableMesh.userData = collectableMesh.userData || {};
+
+        const powerUps = ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'];
+
+        if (powerUps.includes(type)) {
+            // Debug logging to track power-up glow effect
+            console.log(`Adding glow effect to power-up: ${type}`);
+
+            // Power-ups get subtle bouncing animation (no rotation to preserve front face)
+            collectableMesh.userData.bounceSpeed = 1.0; // Subtle bounce speed
+            collectableMesh.userData.bounceOffset = Math.random() * Math.PI * 2; // Random phase offset
+            collectableMesh.userData.bounceHeight = 0.12; // Subtle bounce height
+            collectableMesh.userData.baseY = collectableMesh.position.y; // Store original Y position
+            collectableMesh.userData.isPowerUp = true; // Flag to identify power-ups
+
+            // Add magical glow effect for power-ups
+            this.addMagicalGlow(collectableMesh, type);
+        } else {
+            // Regular collectibles get very subtle, consistent spinning
+            collectableMesh.userData.rotationSpeed = 0.015 + (Math.random() * 0.005); // Subtle spinning
+        }
+    }
+
+    createRayTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const context = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = canvas.width / 2;
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw rays
+        const rayCount = 12;
+        context.fillStyle = '#FFFFFF';
+
+        for (let i = 0; i < rayCount; i++) {
+            context.beginPath();
+            context.moveTo(centerX, centerY);
+            const angle = (i / rayCount) * Math.PI * 2;
+            const width = (Math.PI * 2) / (rayCount * 2); // Half width for gaps
+
+            context.arc(centerX, centerY, radius, angle - width / 2, angle + width / 2);
+            context.lineTo(centerX, centerY);
+            context.fill();
+        }
+
+        // Soften edges
+        const gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        context.globalCompositeOperation = 'destination-in';
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        return texture;
+    }
+
+    createGlowTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const context = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = canvas.width / 2;
+
+        const gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.5)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        return texture;
+    }
+
+    addMagicalGlow(collectableMesh, type) {
+        // Create magical glow effect around power-ups
+        const glowGroup = new THREE.Group();
+
+        // Get power-up specific color
+        const glowColor = this.getPowerUpGlowColor(type);
+
+        // Debug logging to track glow creation
+        console.log(`Creating magical glow for ${type} with color:`, glowColor);
+
+        // 1. Rotating Sunburst Rays (Behind)
+        if (!this.rayTexture) this.rayTexture = this.createRayTexture();
+
+        const raysGeometry = this.cachedGlowGeometries['rays'];
+        const raysMaterial = new THREE.MeshBasicMaterial({
+            color: glowColor,
+            map: this.rayTexture,
+            transparent: true,
+            opacity: 0.6,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const rays = new THREE.Mesh(raysGeometry, raysMaterial);
+        rays.position.z = -0.5; // Slightly behind
+        glowGroup.add(rays);
+
+        // 2. Bottom Glow (Ground illumination)
+        if (!this.glowTexture) this.glowTexture = this.createGlowTexture();
+
+        const bottomGlowGeometry = this.cachedGlowGeometries['bottom'];
+        const bottomGlowMaterial = new THREE.MeshBasicMaterial({
+            color: glowColor,
+            map: this.glowTexture,
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const bottomGlow = new THREE.Mesh(bottomGlowGeometry, bottomGlowMaterial);
+        bottomGlow.rotation.x = -Math.PI / 2; // Lay flat
+        bottomGlow.position.y = -0.5; // At feet level
+        glowGroup.add(bottomGlow);
+
+        // 3. Inner bright core glow (Intense)
+        const innerGlowGeometry = this.cachedGlowGeometries['inner'];
+        const innerGlowMaterial = new THREE.MeshBasicMaterial({
+            color: glowColor,
+            transparent: true,
+            opacity: 0.4,
+            side: THREE.BackSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const innerGlow = new THREE.Mesh(innerGlowGeometry, innerGlowMaterial);
+        glowGroup.add(innerGlow);
+
+        // 4. Dynamic Sparkles/Particles
+        const particleCount = 12;
+        const particles = [];
+
+        const particleGeometry = this.cachedGlowGeometries['particle'];
+        const particleMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending
+        });
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+
+            // Position particles in a circle around the power-up
+            const angle = (i / particleCount) * Math.PI * 2;
+            const radius = 1.0 + Math.random() * 0.5;
+            particle.position.set(
+                Math.cos(angle) * radius,
+                (Math.random() - 0.5) * 1.0,
+                Math.sin(angle) * radius
+            );
+
+            particle.userData = {
+                originalAngle: angle,
+                orbitRadius: radius,
+                verticalSpeed: 0.5 + Math.random() * 1.0,
+                orbitSpeed: 1.0 + Math.random() * 1.0,
+                yOffset: Math.random() * Math.PI * 2
+            };
+
+            particles.push(particle);
+            glowGroup.add(particle);
+        }
+
+        // Store glow components for animation
+        collectableMesh.userData.glowGroup = glowGroup;
+        collectableMesh.userData.glowLayers = [innerGlow, rays, bottomGlow];
+        collectableMesh.userData.glowParticles = particles;
+        collectableMesh.userData.glowTime = 0;
+
+        // Add glow group to the collectable
+        collectableMesh.add(glowGroup);
+    }
+
+    getPowerUpGlowColor(type) {
+        // Return appropriate glow colors for each power-up type
+        switch (type) {
+            case 'hardHat':
+                return new THREE.Color(0xffa500); // Orange glow
+            case 'helicopter':
+                return new THREE.Color(0x00ffff); // Cyan glow
+            case 'solarPower':
+                return new THREE.Color(0xffff00); // Yellow glow
+            case 'windPower':
+                return new THREE.Color(0x00ff88); // Green glow
+            case 'waterPipeline':
+                return new THREE.Color(0x0088ff); // Blue glow
+            default:
+                return new THREE.Color(0xffffff); // White glow fallback
+        }
+    }
+
     adjustHeightForObstacles(collectableMesh, obstacles) {
         let yOffset = 0;
         for (const obstacle of obstacles) {
-            if (Math.abs(obstacle.mesh.position.x - collectableMesh.position.x) < 1 && 
+            if (Math.abs(obstacle.mesh.position.x - collectableMesh.position.x) < 1 &&
                 Math.abs(obstacle.mesh.position.z - collectableMesh.position.z) < 1 &&
                 obstacle.mesh.position.y > 0.1) {
-                yOffset = obstacle.mesh.geometry?.parameters?.height ? 
+                yOffset = obstacle.mesh.geometry.parameters.height ?
                     obstacle.mesh.geometry.parameters.height + 0.2 : 0.5;
                 break;
             }
@@ -846,84 +813,330 @@ export class CollectableManager {
 
     // Legacy method - kept for compatibility but no longer used
     spawnCollectable() {
-        // This method is replaced by the smart pattern-based spawning system
-        // All spawning is now handled in spawnAheadCollectibles()
+        if (!this.gameController || !this.gameController.isGameActive()) {
+            return;
+        }
 
+        const playerZ = this.gameController.getPlayerPosition().z;
+        const obstacles = this.gameController.getObstacles();
+        this.createCollectable(playerZ, obstacles);
+
+        setTimeout(() => {
+            this.spawnCollectable(); // Recursive call without parameters
+        }, Math.random() * SPAWN_CONFIG.COLLECTABLE_INTERVAL.MAX + SPAWN_CONFIG.COLLECTABLE_INTERVAL.MIN);
     }
 
     updateCollectables(gameSpeed, cameraZ) {
-        // EXPO FIX: Smart cleanup of collectibles behind player
-        this.removeCollectiblesBehindPlayer(cameraZ);
-        
-        // EXPO FIX: Smart spawning of collectibles ahead of player
-        this.spawnAheadCollectibles(cameraZ);
-        
-        // Update existing collectibles (move and animate)
+        const time = Date.now() * 0.001;
+
         for (let i = this.collectables.length - 1; i >= 0; i--) {
             const collectable = this.collectables[i];
             collectable.mesh.position.z += gameSpeed;
-            
-            this.animateCollectable(collectable);
+
+            // Apply bouncing animation to power-ups (no rotation to preserve front face)
+            if (collectable.mesh.userData.isPowerUp && collectable.mesh.userData.bounceSpeed) {
+                const bounceOffset = Math.sin(time * collectable.mesh.userData.bounceSpeed + collectable.mesh.userData.bounceOffset);
+                const newY = collectable.mesh.userData.baseY + (bounceOffset * collectable.mesh.userData.bounceHeight);
+                collectable.mesh.position.y = newY;
+
+                // Animate magical glow effect
+                this.updateMagicalGlow(collectable.mesh, time);
+            }
+
+            // Apply subtle spinning to regular collectibles
+            if (collectable.mesh.userData.rotationSpeed) {
+                collectable.mesh.rotation.y += collectable.mesh.userData.rotationSpeed;
+            }
+
+            // Special handling for specific types
+            if (collectable.type === 'solarOrb') {
+                // Solar orbs get multi-axis rotation and pulsing
+                if (collectable.mesh.userData.rotationSpeed) {
+                    collectable.mesh.rotation.z += collectable.mesh.userData.rotationSpeed * 0.3;
+                }
+
+                // Pulsing glow effect
+                if (collectable.mesh.userData.pulseSpeed) {
+                    const pulse = Math.sin(time * collectable.mesh.userData.pulseSpeed * 10) * 0.5 + 0.5;
+                    collectable.mesh.material.emissiveIntensity = 0.3 + (pulse * 0.3);
+                }
+            } else if (collectable.type === 'aerialStar') {
+                // Aerial stars get simple Y-axis rotation only (as it was before)
+                if (collectable.mesh.userData.rotationSpeed) {
+                    collectable.mesh.rotation.y += collectable.mesh.userData.rotationSpeed;
+                }
+            }
+
+            if (collectable.mesh.position.z > cameraZ + 5) {
+                this.scene.remove(collectable.mesh);
+                this.collectables.splice(i, 1);
+            } else {
+                // Far culling: Hide collectables that are too far ahead (beyond fog)
+                const distanceAhead = Math.abs(collectable.mesh.position.z - cameraZ);
+                if (distanceAhead > 160) {
+                    collectable.mesh.visible = false;
+                } else {
+                    collectable.mesh.visible = true;
+                }
+            }
+        }
+
+        // Update collection effects
+        this.updateCollectionEffects();
+    }
+
+    updateMagicalGlow(collectableMesh, time) {
+        if (!collectableMesh.userData.glowGroup) return;
+
+        collectableMesh.userData.glowTime = time;
+
+        // Animate glow layers (Inner, Rays, Bottom)
+        if (collectableMesh.userData.glowLayers) {
+            const [inner, rays, bottom] = collectableMesh.userData.glowLayers;
+
+            // Pulse inner core
+            if (inner) {
+                const pulse = Math.sin(time * 3.0) * 0.5 + 0.5;
+                inner.material.opacity = 0.4 + (pulse * 0.2);
+                inner.scale.setScalar(0.9 + (pulse * 0.1));
+            }
+
+            // Rotate rays
+            if (rays) {
+                rays.rotation.z = time * 0.5; // Slow rotation
+                const rayPulse = Math.sin(time * 2.0) * 0.5 + 0.5;
+                rays.material.opacity = 0.4 + (rayPulse * 0.2);
+            }
+
+            // Pulse bottom glow
+            if (bottom) {
+                const bottomPulse = Math.sin(time * 4.0) * 0.5 + 0.5;
+                bottom.material.opacity = 0.6 + (bottomPulse * 0.2);
+                const scale = 1.0 + (bottomPulse * 0.2);
+                bottom.scale.setScalar(scale);
+            }
+        }
+
+        // Animate floating particles
+        if (collectableMesh.userData.glowParticles) {
+            collectableMesh.userData.glowParticles.forEach((particle, index) => {
+                // Orbit
+                const angle = particle.userData.originalAngle + (time * particle.userData.orbitSpeed);
+                const radius = particle.userData.orbitRadius;
+
+                particle.position.x = Math.cos(angle) * radius;
+                particle.position.z = Math.sin(angle) * radius;
+
+                // Vertical bobbing
+                particle.position.y = Math.sin(time * particle.userData.verticalSpeed + particle.userData.yOffset) * 0.5;
+
+                // Twinkle
+                const twinkle = Math.sin(time * 10.0 + index) * 0.5 + 0.5;
+                particle.material.opacity = 0.4 + (twinkle * 0.6);
+                const scale = 0.8 + (twinkle * 0.4);
+                particle.scale.setScalar(scale);
+            });
         }
     }
 
     checkCollisions(playerBox) {
         const collectedItems = [];
-        
+
+        // Get current game speed and magnet status for enhanced collision detection
         const gameSpeed = this.gameController ? this.gameController.getGameSpeed() : 0;
-        const hasMagnetEffect = this.gameController && this.gameController.powerUpManager ? 
-                              this.gameController.powerUpManager.getSolarBoostStatus() : false;
-        
+        const hasMagnetEffect = this.gameController && this.gameController.powerUpManager ?
+            this.gameController.powerUpManager.getSolarBoostStatus() : false;
+
         for (let i = this.collectables.length - 1; i >= 0; i--) {
             const collectable = this.collectables[i];
-            const collectableBox = this._tempBox.setFromObject(collectable.mesh);
-            
-            // Skip aerial stars if not flying
+            const collectableBox = new THREE.Box3().setFromObject(collectable.mesh);
+
+            // Skip aerial stars if player is not flying
             if (collectable.type === 'aerialStar') {
-                const isFlying = this.gameController && this.gameController.powerUpManager && 
-                                this.gameController.powerUpManager.getFlyingStatus();
-                if (!isFlying) continue;
+                const isFlying = this.gameController && this.gameController.powerUpManager &&
+                    this.gameController.powerUpManager.getFlyingStatus();
+                if (!isFlying) {
+                    continue; // Don't collect aerial stars when not flying
+                }
             }
-            
-            // Skip solar orbs if no solar boost
+
+            // Skip solar orbs if player doesn't have solar boost
             if (collectable.type === 'solarOrb') {
-                const hasSolarBoost = this.gameController && this.gameController.powerUpManager && 
-                                     this.gameController.powerUpManager.getSolarBoostStatus();
-                if (!hasSolarBoost) continue;
+                const hasSolarBoost = this.gameController && this.gameController.powerUpManager &&
+                    this.gameController.powerUpManager.getSolarBoostStatus();
+                if (!hasSolarBoost) {
+                    continue; // Don't collect solar orbs when not in solar boost mode
+                }
             }
-            
-            // Enhanced collision detection
+
+            // Use enhanced collision detection for collectibles
             let collisionDetected = false;
-            
+
             if (gameSpeed > PHYSICS.HIGH_SPEED_THRESHOLD) {
                 collisionDetected = CollisionUtils.checkCollectableCollision(
-                    playerBox, 
-                    collectableBox, 
-                    gameSpeed, 
+                    playerBox,
+                    collectableBox,
+                    gameSpeed,
                     hasMagnetEffect
                 );
             } else {
                 collisionDetected = playerBox.intersectsBox(collectableBox);
             }
-            
+
             if (collisionDetected) {
+                // Create collection effect before removing the collectable
+                this.createCollectionEffect(collectable.mesh.position, collectable.type);
+
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
                 collectedItems.push(collectable.type);
-                
-                if (gameSpeed > 0.2) {
-                // Performance tracking for debugging if needed
-                }
-                
-                // Track regular collections for power-up spawning
+
+                // High-speed collection detected
+
+                // Track regular collections for fair power-up spawning
                 const regularTypes = ['blueprint', 'waterDrop', 'energyCell'];
                 if (regularTypes.includes(collectable.type)) {
                     this.regularCollectionsCount++;
+                    // Regular collection counted for power-up spawning
                 }
             }
         }
-        
+
         return collectedItems;
+    }
+
+    createCollectionEffect(position, type) {
+        const powerUps = ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'];
+        const isPowerUp = powerUps.includes(type);
+
+        // Create particle burst effect
+        const particleCount = isPowerUp ? 12 : 6;
+        const particleGeometry = isPowerUp ? this.cachedEffectGeometries['powerUpParticle'] : this.cachedEffectGeometries['regularParticle'];
+
+        // Cache particle materials
+        if (!this.cachedEffectMaterials) this.cachedEffectMaterials = {};
+        if (!this.cachedEffectMaterials[type]) {
+            this.cachedEffectMaterials[type] = new THREE.MeshStandardMaterial({
+                color: this.getCollectableColor(type),
+                emissive: this.getCollectableColor(type),
+                emissiveIntensity: 0.3,
+                transparent: true,
+                opacity: 0.8
+            });
+        }
+        // Clone the material to ensure fading out this burst doesn't fade all other bursts
+        const particleMaterial = this.cachedEffectMaterials[type].clone();
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+
+            particle.position.copy(position);
+
+            // Random burst direction
+            const angle = (i / particleCount) * Math.PI * 2;
+            const radius = 0.3 + Math.random() * 0.2;
+            const height = (Math.random() - 0.5) * 0.3;
+
+            particle.userData = {
+                velocity: new THREE.Vector3(
+                    Math.cos(angle) * radius,
+                    height + 0.1,
+                    Math.sin(angle) * radius
+                ),
+                life: 1.0,
+                decay: 0.02 + Math.random() * 0.01
+            };
+
+            this.scene.add(particle);
+            this.collectionEffects = this.collectionEffects || [];
+            this.collectionEffects.push(particle);
+        }
+
+        // Create extra effects for power-ups
+        if (isPowerUp) {
+            // Create a expanding ring effect
+            const ringGeometry = this.cachedEffectGeometries['powerUpRing'];
+
+            // Cache ring materials
+            if (!this.cachedRingMaterials) this.cachedRingMaterials = {};
+            if (!this.cachedRingMaterials[type]) {
+                this.cachedRingMaterials[type] = new THREE.MeshStandardMaterial({
+                    color: this.getCollectableColor(type),
+                    emissive: this.getCollectableColor(type),
+                    emissiveIntensity: 0.5,
+                    transparent: true,
+                    opacity: 0.6,
+                    side: THREE.DoubleSide
+                });
+            }
+            const ringMaterial = this.cachedRingMaterials[type];
+
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.copy(position);
+            ring.rotation.x = -Math.PI / 2;
+
+            ring.userData = {
+                scale: 1.0,
+                expansion: 0.1,
+                life: 1.0,
+                decay: 0.03
+            };
+
+            this.scene.add(ring);
+            this.collectionEffects = this.collectionEffects || [];
+            this.collectionEffects.push(ring);
+        }
+    }
+
+    getCollectableColor(type) {
+        const colors = {
+            'blueprint': 0x4A90E2,
+            'waterDrop': 0x00CED1,
+            'energyCell': 0xFFD700,
+            'hardHat': 0xFF8C00,
+            'helicopter': 0x808080,
+            'solarPower': 0xFFD700,
+            'windPower': 0x32CD32,
+            'waterPipeline': 0x1E90FF,
+            'aerialStar': 0xFFD700,
+            'solarOrb': 0xFFD700
+        };
+        return colors[type] || 0xFFFFFF;
+    }
+
+    updateCollectionEffects() {
+        if (!this.collectionEffects) return;
+
+        for (let i = this.collectionEffects.length - 1; i >= 0; i--) {
+            const effect = this.collectionEffects[i];
+
+            if (effect.userData.velocity) {
+                // Particle effect
+                effect.position.add(effect.userData.velocity);
+                effect.userData.velocity.y -= 0.01; // Gravity
+                effect.userData.velocity.multiplyScalar(0.95); // Air resistance
+
+                effect.userData.life -= effect.userData.decay;
+                effect.material.opacity = effect.userData.life;
+
+                if (effect.userData.life <= 0) {
+                    this.scene.remove(effect);
+                    this.collectionEffects.splice(i, 1);
+                }
+            } else if (effect.userData.expansion) {
+                // Ring effect
+                effect.userData.scale += effect.userData.expansion;
+                effect.scale.setScalar(effect.userData.scale);
+
+                effect.userData.life -= effect.userData.decay;
+                effect.material.opacity = effect.userData.life * 0.6;
+
+                if (effect.userData.life <= 0) {
+                    this.scene.remove(effect);
+                    this.collectionEffects.splice(i, 1);
+                }
+            }
+        }
     }
 
     applyMagnetEffect(playerPosition, magnetRadius, magnetSpeed) {
@@ -950,20 +1163,37 @@ export class CollectableManager {
     shouldSpawnPowerUp() {
         const currentTime = Date.now();
         const timeSinceLastPowerUp = currentTime - this.lastPowerUpTime;
-        
-        return timeSinceLastPowerUp >= this.powerUpInterval || 
-               this.regularCollectionsCount >= this.powerUpAfterCollections;
+
+        // Power-up should spawn if:
+        // 1. Time interval reached (25 seconds)
+        // 2. OR collected enough regular items (8 items)
+        if (timeSinceLastPowerUp >= this.powerUpInterval ||
+            this.regularCollectionsCount >= this.powerUpAfterCollections) {
+            return true;
+        }
+        return false;
     }
-    
+
+    // NEW: Mark that a power-up was spawned
     markPowerUpSpawned() {
         this.lastPowerUpTime = Date.now();
-        this.regularCollectionsCount = 0;
+        this.regularCollectionsCount = 0; // Reset collection counter
+        // Power-up spawned - timers reset
     }
-    
+
     reset() {
         this.collectables.forEach(collectable => this.scene.remove(collectable.mesh));
         this.collectables = [];
-        
+
+        // Clean up collection effects
+        if (this.collectionEffects) {
+            this.collectionEffects.forEach(effect => this.scene.remove(effect));
+            this.collectionEffects = [];
+        }
+
+        // Reset and reshuffle the power-up deck
+        this.shufflePowerUpDeck();
+
         // Reset fair spawning system
         this.lastPowerUpTime = Date.now();
         this.regularCollectionsCount = 0;
@@ -991,6 +1221,7 @@ export class CollectableManager {
             if (collectable.type === 'aerialStar') {
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
+                // Aerial star removed after helicopter ended
             }
         }
     }
@@ -1001,33 +1232,135 @@ export class CollectableManager {
             if (collectable.type === 'solarOrb') {
                 this.scene.remove(collectable.mesh);
                 this.collectables.splice(i, 1);
+                // Solar orb removed after solar boost ended
             }
         }
     }
 
-    // Performance Monitoring
-    isReady() {
-        return this.priorityModelsLoaded; // Ready when priority models loaded
-    }
+    // NEW: Create obstacle GLB mesh (for use by obstacle manager)
+    createObstacleGLBMesh(type, spawnPosition) {
+        const config = getModelConfig(type);
+        if (!config || !shouldLoadModel(type)) {
+            // No obstacle config available or skipped
+            return null;
+        }
 
-    getLoadingProgress() {
-        const totalModels = Object.keys(this.modelConfig).length + 1; // +1 for lightning
-        const loadedCount = this.loadedModels.size;
-        return Math.min(loadedCount / totalModels, 1.0);
-    }
+        const gltf = this.loadedModels.get(type);
+        if (!gltf) {
+            // Model not loaded yet, trigger loading for next time
+            // Obstacle model not loaded yet, using fallback
+            this.loadModel(type);
+            return null;
+        }
 
-    getPerformanceStats() {
-        const total = this.collectables.length;
-        const glbCount = this.collectables.filter(c => !c.mesh.userData.isFallback).length;
-        const fallbackCount = total - glbCount;
-        
-        return {
-            total,
-            glbCount,
-            fallbackCount,
-            glbPercentage: total > 0 ? (glbCount / total * 100).toFixed(1) : 0,
-            priorityLoaded: this.priorityModelsLoaded,
-            allLoaded: this.allModelsLoaded
-        };
+        try {
+            // Clone the GLB scene
+            const modelScene = gltf.scene.clone();
+
+            // Apply the calculated scale from our analysis
+            const scale = config.scale;
+            modelScene.scale.set(scale[0], scale[1], scale[2]);
+
+            // Position the model
+            modelScene.position.copy(spawnPosition);
+
+            // Fix Y positioning for GLB obstacle models (ground them properly)
+            if (type === 'constructionBarrier') {
+                // Plastic barrier should sit on ground
+                modelScene.position.y = 0.3; // Half the height of the barrier
+            } else if (type === 'rubble') {
+                // Cinder block should sit on ground
+                modelScene.position.y = 0.1; // Lower to ground level
+            } else if (type === 'cone') {
+                // Traffic cone should sit on ground
+                modelScene.position.y = 0.2; // Adjust to ground level
+            } else if (type === 'pothole') {
+                // Pothole should be visible at ground level (not below)
+                modelScene.position.y = 0.05; // Slightly above ground to ensure visibility
+            }
+
+            // Enhanced lighting and visibility for all meshes in the obstacle model
+            modelScene.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+
+                    // Enhanced material processing for problem models
+                    if (child.material) {
+                        // Clone material to avoid affecting other instances
+                        child.material = child.material.clone();
+
+                        // Special handling for problematic dark models  
+                        const isDarkModel = ['waterDrop', 'rubble', 'blueprint', 'constructionBarrier', 'windPower', 'pothole', 'waterPipeline', 'solarPower', 'helicopter', 'hardHat'].includes(type);
+
+                        // Ensure materials respond well to lighting
+                        child.material.roughness = Math.min(child.material.roughness || 0.7, 0.8);
+                        child.material.metalness = Math.max(child.material.metalness || 0.0, 0.1);
+
+                        // Add stronger emissive glow for better visibility
+                        if (!child.material.emissive || child.material.emissive.isColor) {
+                            child.material.emissive = child.material.emissive || new THREE.Color(0x222222);
+                            child.material.emissiveIntensity = isDarkModel ? 0.25 : 0.15; // Extra glow for dark models
+                        }
+
+                        // More aggressive brightening for problem models
+                        if (child.material.color && child.material.color.isColor) {
+                            const brightness = (child.material.color.r + child.material.color.g + child.material.color.b) / 3;
+
+                            if (isDarkModel) {
+                                // Force brighten problematic models regardless of current brightness
+                                child.material.color.multiplyScalar(3.0);
+                                // Force brightened obstacle material for better visibility
+                            } else {
+                                if (brightness < 0.5) {
+                                    child.material.color.multiplyScalar(2.0);
+                                } else if (brightness < 0.7) {
+                                    child.material.color.multiplyScalar(1.3);
+                                }
+                            }
+                        }
+
+                        // Force material properties for dark models
+                        if (isDarkModel) {
+                            child.material.roughness = 0.6; // Less rough for more reflection
+                            child.material.metalness = 0.2; // Slight metallic for better light response
+
+                            // Add ambient enhancement
+                            if (child.material.emissive) {
+                                child.material.emissive.multiplyScalar(1.5);
+                            }
+
+                            // Special pothole road-blending effect
+                            if (type === 'pothole') {
+                                // Create a gradient effect by adding a darker ring around edges
+                                child.material.transparent = true;
+                                child.material.opacity = 0.9; // Slightly transparent for blending
+
+                                // Add road-like coloring to blend with asphalt
+                                if (child.material.color) {
+                                    // Mix with road color (#404040) for better blending
+                                    const roadColor = new THREE.Color(0x404040);
+                                    child.material.color.lerp(roadColor, 0.3); // 30% road color mix
+                                }
+
+                                // Add subtle emission to make it look like a real hole
+                                child.material.emissive = new THREE.Color(0x1a1a1a); // Very dark emission
+                                child.material.emissiveIntensity = 0.1;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Add to scene
+            this.scene.add(modelScene);
+
+            // Using GLB obstacle model
+            return modelScene;
+
+        } catch (error) {
+            // GLB obstacle creation failed, using fallback
+            return null;
+        }
     }
 }
