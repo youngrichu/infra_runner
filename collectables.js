@@ -252,8 +252,11 @@ export class CollectableManager {
         const obstacles = this.obstacleManager.obstacles;
         
         for (const obstacle of obstacles) {
-            const obstaclePos = obstacle.mesh.position;
-            
+            // Guard for instanced obstacles which have position directly on the object instead of mesh.position
+            const obstaclePos = obstacle.mesh ? obstacle.mesh.position : obstacle.position;
+
+            if (!obstaclePos) continue;
+
             // Fast distance check (XZ plane)
             const dx = x - obstaclePos.x;
             const dz = z - obstaclePos.z;
@@ -262,7 +265,15 @@ export class CollectableManager {
             if (distanceSq < checkRadius * checkRadius) {
                 // More precise bounding box check if distance is close
                 try {
-                    const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
+                    // Instanced obstacles should have a boundingBox property
+                    const obstacleBox = obstacle.mesh ?
+                        new THREE.Box3().setFromObject(obstacle.mesh) :
+                        (obstacle.boundingBox ? obstacle.boundingBox : null);
+
+                    if (!obstacleBox) {
+                        // If no bounding box available, fallback to the distance check result
+                        return false;
+                    }
                     // Create a small box for the proposed collectible position
                     const collectableBox = new THREE.Box3(
                         new THREE.Vector3(x - 0.4, 0.2, z - 0.4),
