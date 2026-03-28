@@ -639,7 +639,8 @@ export class InputManager {
         this.keys = {
             left: false,
             right: false,
-            jump: false
+            jump: false,
+            slide: false
         };
     }
     

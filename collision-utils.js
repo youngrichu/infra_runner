@@ -145,7 +145,7 @@ export class CollisionUtils {
         const speedFactor = Math.min(gameSpeed / (PHYSICS.HIGH_SPEED_THRESHOLD * 2), PHYSICS.MAX_COLLISION_BOX_EXPANSION);
         const adjustment = 1 + (speedFactor * 0.1); // Up to 10% larger
         
-        return _tempVector.copy(baseSize).multiplyScalar(adjustment);
+        return baseSize.clone().multiplyScalar(adjustment);
     }
 }
 
