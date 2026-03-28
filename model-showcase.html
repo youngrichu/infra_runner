@@ -448,7 +448,9 @@
                 },
                 (error) => {
                     console.error(`❌ Failed to load ${modelKey}:`, error);
-                    container.innerHTML = `<div class="error">❌ Failed to load<br>${config.path.split('/').pop()}</div>`;
+                    container.innerHTML = '<div class="error">❌ Failed to load<br><span class="error-filename"></span></div>';
+                    const filenameSpan = container.querySelector('.error-filename');
+                    if (filenameSpan) filenameSpan.textContent = config.path.split('/').pop();
                 }
             );
         }
