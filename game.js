@@ -26,6 +26,13 @@ export class Game {
         this.powerUpManager = null;
         this.uiManager = null;
         this.inputManager = null;
+
+        // New managers for state & leaderboard
+        this.stateManager = new GameStateManager();
+        this.leaderboardManager = new LeaderboardManager();
+        
+        // Performance optimization: Cache playing state to avoid checking every frame
+        this.isCurrentlyPlaying = false;
         
         // Game state
         this.gameActive = true;
@@ -135,6 +142,68 @@ export class Game {
         this.inputManager = new InputManager(this.player, this);
         // Optional: Enable mobile controls
         this.inputManager.setupMobileControls();
+    }
+
+    // ------------------------------------------------------------------
+    //                     STATE & UI EVENT HANDLERS
+    // ------------------------------------------------------------------
+
+    setupStateHandlers() {
+        // React to state changes
+        this.stateManager.onStateChange((state) => {
+            // Performance optimization: Cache playing state
+            this.isCurrentlyPlaying = (state === STATES.PLAYING);
+            
+            switch (state) {
+                case STATES.SPLASH:
+                    this.uiManager.showSplash();
+                    break;
+                case STATES.START_MENU:
+                    this.uiManager.hideSplash();
+                    this.uiManager.hideLeaderboard();
+                    this.uiManager.hideUserInfo();
+                    this.uiManager.showStartMenu();
+                    // Pause game logic
+                    this.gameActive = false;
+                    break;
+                case STATES.PLAYING:
+                    this.uiManager.hideStartMenu();
+                    this.uiManager.hideLeaderboard();
+                    this.uiManager.hideUserInfo();
+                    this.restartGame(); // Ensure fresh run
+                    this.gameActive = true;
+                    break;
+                case STATES.USER_INFO:
+                    this.uiManager.showUserInfo();
+                    break;
+                case STATES.LEADERBOARD:
+                    // Update table then show
+                    this.uiManager.updateLeaderboard(this.leaderboardManager.getScores());
+                    this.uiManager.hideUserInfo();
+                    this.uiManager.showLeaderboard();
+                    // Stop gameplay until menu
+                    this.gameActive = false;
+                    break;
+            }
+        });
+
+        // Wire UI events
+        this.uiManager.onStartButtonClicked = () => this.handleStartGame();
+        this.uiManager.onUserInfoSubmitted   = (name) => this.handleUserInfo(name);
+        this.uiManager.onLeaderboardBack     = () => this.stateManager.returnToMenu();
+    }
+
+    handleStartGame() {
+        this.stateManager.startGame(); // Triggers PLAYING state
+    }
+
+    handleUserInfo(name) {
+        // Save info into state manager
+        this.stateManager.saveUserInfo(name);
+        // Persist to leaderboard
+        this.leaderboardManager.addScore(this.stateManager.getPlayerData());
+        // Show leaderboard
+        this.stateManager.showLeaderboard();
     }
 
     getGameSpeed() {

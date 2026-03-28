@@ -515,7 +515,11 @@ export class PowerUpManager {
     }
 
     getSolarBoostStatus() {
-        return this.hasSolarBoost;
+        const status = this.hasSolarBoost;
+        if (status) {
+            console.log('☀️ DEBUG: getSolarBoostStatus() returning true');
+        }
+        return status;
     }
 
     getWaterSlideStatus() {

@@ -2,6 +2,11 @@ export class UIManager {
     constructor(gameController = null) {
         this.scoreElement = null;
         this.gameOverElement = null;
+        this.splashElement = null;       
+        this.startMenuElement = null;    
+        this.userInfoElement = null;     
+        this.leaderboardElement = null;  
+
         this.powerUpElements = [];
         this.activePowerUps = [];
         this.gameController = gameController;
@@ -24,6 +29,10 @@ export class UIManager {
     createUI() {
         this.createScoreDisplay();
         this.createGameOverScreen();
+        this.createSplashScreen();
+        this.createStartMenuScreen();
+        this.createUserInfoScreen();
+        this.createLeaderboardScreen();
     }
 
     createScoreDisplay() {
@@ -78,6 +87,225 @@ export class UIManager {
         document.body.appendChild(this.gameOverElement);
     }
 
+    /* ------------------------------------------------------------------ */
+    /*                            NEW SCREENS                             */
+    /* ------------------------------------------------------------------ */
+
+    createSplashScreen() {
+        this.splashElement = document.createElement('div');
+        this.splashElement.className = 'splash-screen';
+        this.splashElement.innerHTML = `
+            <div class="splash-logo">Infrastructure Runner</div>
+            <div class="splash-subtitle">African City Edition</div>
+        `;
+        document.body.appendChild(this.splashElement);
+        this.hideElement(this.splashElement);
+    }
+
+    createStartMenuScreen() {
+        this.startMenuElement = document.createElement('div');
+        this.startMenuElement.className = 'start-menu';
+        
+        const title = document.createElement('h1');
+        title.className = 'game-title';
+        title.innerText = 'Infrastructure Runner';
+        
+        const subtitle = document.createElement('p');
+        subtitle.innerText = 'African City Edition';
+        subtitle.style.fontSize = '18px';
+        subtitle.style.marginBottom = '40px';
+        subtitle.style.opacity = '0.8';
+        
+        const playBtn = document.createElement('button');
+        playBtn.className = 'menu-button';
+        playBtn.innerText = 'Play';
+        
+        this.startMenuElement.appendChild(title);
+        this.startMenuElement.appendChild(subtitle);
+        this.startMenuElement.appendChild(playBtn);
+        document.body.appendChild(this.startMenuElement);
+        this.hideElement(this.startMenuElement);
+
+        // Expose event so game.js can hook into starting game
+        this.onStartButtonClicked = null;
+        playBtn.addEventListener('click', () => {
+            if (typeof this.onStartButtonClicked === 'function') {
+                this.onStartButtonClicked();
+            }
+        });
+    }
+
+    createUserInfoScreen() {
+        this.userInfoElement = document.createElement('div');
+        this.userInfoElement.className = 'user-info';
+        
+        const container = document.createElement('div');
+        container.className = 'user-info-container';
+        
+        const title = document.createElement('h2');
+        title.className = 'user-info-title';
+        title.innerText = 'Great Run! Enter Your Name';
+        
+        const form = document.createElement('div');
+        form.className = 'user-info-form';
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.maxLength = 15;
+        input.className = 'user-info-input';
+        input.placeholder = 'Your Name';
+        
+        const submitBtn = document.createElement('button');
+        submitBtn.innerText = 'Submit Score';
+        
+        form.appendChild(input);
+        form.appendChild(submitBtn);
+        container.appendChild(title);
+        container.appendChild(form);
+        this.userInfoElement.appendChild(container);
+        document.body.appendChild(this.userInfoElement);
+        this.hideElement(this.userInfoElement);
+
+        this.onUserInfoSubmitted = null; // callback(name)
+        
+        const submitScore = () => {
+            const name = input.value.trim() || 'Anonymous';
+            if (typeof this.onUserInfoSubmitted === 'function') {
+                this.onUserInfoSubmitted(name);
+            }
+        };
+        
+        submitBtn.addEventListener('click', submitScore);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitScore();
+        });
+    }
+
+    createLeaderboardScreen() {
+        this.leaderboardElement = document.createElement('div');
+        this.leaderboardElement.className = 'leaderboard';
+
+        const container = document.createElement('div');
+        container.className = 'leaderboard-container';
+        
+        const title = document.createElement('h2');
+        title.className = 'leaderboard-title';
+        title.innerText = 'Top Scores';
+        container.appendChild(title);
+
+        // Create professional table
+        this.leaderboardTable = document.createElement('table');
+        this.leaderboardTable.className = 'leaderboard-table';
+        container.appendChild(this.leaderboardTable);
+
+        // Back button
+        const backBtn = document.createElement('button');
+        backBtn.className = 'leaderboard-back';
+        backBtn.innerText = 'Back to Menu';
+        container.appendChild(backBtn);
+        
+        this.leaderboardElement.appendChild(container);
+        document.body.appendChild(this.leaderboardElement);
+        this.hideElement(this.leaderboardElement);
+
+        this.onLeaderboardBack = null; // callback()
+        backBtn.addEventListener('click', () => {
+            if (typeof this.onLeaderboardBack === 'function') {
+                this.onLeaderboardBack();
+            }
+        });
+    }
+
+    /* --------------------------- Screen Helpers ------------------------ */
+
+    showElement(el) { if (el) el.style.display = 'flex'; }
+    hideElement(el) { if (el) el.style.display = 'none'; }
+
+    showSplash() { this.showElement(this.splashElement); }
+    hideSplash() { this.hideElement(this.splashElement); }
+
+    showStartMenu() { this.showElement(this.startMenuElement); }
+    hideStartMenu() { this.hideElement(this.startMenuElement); }
+
+    showUserInfo() { 
+        // Focus on input when showing user info screen
+        this.showElement(this.userInfoElement);
+        setTimeout(() => {
+            const input = this.userInfoElement.querySelector('.user-info-input');
+            if (input) input.focus();
+        }, 100);
+    }
+    hideUserInfo() { this.hideElement(this.userInfoElement); }
+
+    showLeaderboard() { this.showElement(this.leaderboardElement); }
+    hideLeaderboard() { this.hideElement(this.leaderboardElement); }
+
+    /* --------------------------- Leaderboard --------------------------- */
+
+    /**
+     * Update leaderboard table with an array of entries:
+     * [{ name, score, blueprints, waterDrops, energyCells, date }, ...]
+     */
+    updateLeaderboard(entries = []) {
+        if (!this.leaderboardTable) return;
+
+        console.log('🏆 DEBUG: Updating leaderboard with', entries.length, 'entries:', entries);
+
+        // Clear existing rows
+        this.leaderboardTable.innerHTML = '';
+
+        // Header row
+        const headerRow = document.createElement('tr');
+        ['Rank','Name','Score','Blueprints','Water','Energy','Date'].forEach(h => {
+            const th = document.createElement('th');
+            th.innerText = h;
+            headerRow.appendChild(th);
+        });
+        this.leaderboardTable.appendChild(headerRow);
+
+        if (entries.length === 0) {
+            // Show "no scores yet" message
+            const emptyRow = document.createElement('tr');
+            const emptyCell = document.createElement('td');
+            emptyCell.colSpan = 7;
+            emptyCell.style.textAlign = 'center';
+            emptyCell.style.padding = '40px';
+            emptyCell.style.opacity = '0.7';
+            emptyCell.innerText = 'No scores yet - be the first!';
+            emptyRow.appendChild(emptyCell);
+            this.leaderboardTable.appendChild(emptyRow);
+            return;
+        }
+
+        entries.forEach((entry, idx) => {
+            const row = document.createElement('tr');
+            
+            // Add rank styling for top 3
+            if (idx === 0) row.className = 'rank-1';
+            else if (idx === 1) row.className = 'rank-2';
+            else if (idx === 2) row.className = 'rank-3';
+            
+            const cells = [
+                idx + 1,
+                entry.name || 'Anonymous',
+                (entry.score || 0).toLocaleString(),
+                entry.blueprints || 0,
+                entry.waterDrops || 0,
+                entry.energyCells || 0,
+                entry.date ? new Date(entry.date).toLocaleDateString() : 'Today'
+            ];
+            
+            cells.forEach(val => {
+                const td = document.createElement('td');
+                td.innerText = val;
+                row.appendChild(td);
+            });
+            this.leaderboardTable.appendChild(row);
+        });
+        
+        console.log('✅ Leaderboard updated successfully');
+    }
+
     updateScore(points) {
         this.score += points;
         this.updateScoreDisplay();
@@ -99,7 +327,12 @@ export class UIManager {
     }
 
     updateScoreDisplay() {
-        this.scoreElement.innerHTML = `Score: ${Math.floor(this.score)} | BP: ${this.blueprints} | WD: ${this.waterDrops} | EC: ${this.energyCells}`;
+        if (this.scoreElement) {
+            this.scoreElement.innerHTML = `
+                <div class="score-value">Score: ${Math.floor(this.score)}</div>
+                <div>BP: ${this.blueprints} | WD: ${this.waterDrops} | EC: ${this.energyCells}</div>
+            `;
+        }
     }
 
     getScore() {
@@ -1059,6 +1292,7 @@ export class UIManager {
         this.blueprints = 0;
         this.waterDrops = 0;
         this.energyCells = 0;
+        this.timerUpdateCounter = 0;
         
         // Clear power-up UI elements
         this.powerUpElements.forEach(p => {

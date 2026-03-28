@@ -1,3 +1,4 @@
+// Enhanced Version 9 - Smart Pooling + Progressive Enhancement
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
@@ -166,47 +167,45 @@ export class CollectableManager {
 
     setGameController(gameController) {
         this.gameController = gameController;
+        if (gameController && gameController.obstacleManager) {
+            this.obstacleManager = gameController.obstacleManager;
+        }
     }
 
     createCollectable(playerZ, obstacles) {
-        // Only spawn regular collectibles here - power-ups are handled separately
+        // SMART SPAWNING: Heavily favor priority models for better consistency
         const regularCollectibles = COLLECTABLE_SPAWN_WEIGHTS.REGULAR;
-        const type = regularCollectibles[Math.floor(Math.random() * regularCollectibles.length)];
+        let type;
+        
+        if (this.priorityModelsLoaded && Math.random() < 0.9) {
+            // 90% chance to use priority models (guaranteed GLB quality)
+            type = this.priorityModels[Math.floor(Math.random() * this.priorityModels.length)];
+        } else {
+            // 10% chance for variety
+            type = regularCollectibles[Math.floor(Math.random() * regularCollectibles.length)];
+        }
 
-        // Find clear position - ALWAYS use exact lane positions
+        // Find clear position using exact lane positions
         let spawnPosition;
         let positionClear = false;
         let attempts = 0;
         const maxAttempts = 10;
-        const currentObstacles = obstacles || (this.gameController ? this.gameController.getObstacles() : []);
 
         while (!positionClear && attempts < maxAttempts) {
             const laneIndex = Math.floor(Math.random() * LANES.COUNT);
             const zPos = playerZ - 60 - (Math.random() * 20);
-            // STRICT: Use exact lane positions with NO deviation
-            spawnPosition = new THREE.Vector3(LANES.POSITIONS[laneIndex], 0.7, zPos);
+            const xPos = LANES.POSITIONS[laneIndex];
 
-            positionClear = true;
-            if (currentObstacles && currentObstacles.length > 0) {
-                for (const obstacle of currentObstacles) {
-                    const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
-                    const collectiblePreviewBox = new THREE.Box3(
-                        new THREE.Vector3(spawnPosition.x - 0.5, spawnPosition.y - 0.5, spawnPosition.z - 0.5),
-                        new THREE.Vector3(spawnPosition.x + 0.5, spawnPosition.y + 0.5, spawnPosition.z + 0.5)
-                    );
-                    if (collectiblePreviewBox.intersectsBox(obstacleBox)) {
-                        positionClear = false;
-                        break;
-                    }
-                }
+            if (this.isPositionClear(xPos, zPos)) {
+                spawnPosition = new THREE.Vector3(xPos, 0.7, zPos);
+                positionClear = true;
             }
             attempts++;
         }
 
-        if (!positionClear) {
-            return;
-        }
+        if (!positionClear) return;
 
+        const currentObstacles = obstacles || (this.obstacleManager ? this.obstacleManager.obstacles : []);
         const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
         if (collectableMesh) {
             this.collectables.push({ mesh: collectableMesh, type: type });
@@ -221,41 +220,29 @@ export class CollectableManager {
         const type = this.powerUpDeck.pop();
         // Spawning power-up from deck
 
-        // Find clear position - ALWAYS use exact lane positions
+        // Find clear position
         let spawnPosition;
         let positionClear = false;
         let attempts = 0;
         const maxAttempts = 10;
-        const currentObstacles = obstacles || (this.gameController ? this.gameController.getObstacles() : []);
 
         while (!positionClear && attempts < maxAttempts) {
             const laneIndex = Math.floor(Math.random() * LANES.COUNT);
-            const zPos = playerZ - 40; // Spawn closer for guaranteed visibility
-            // STRICT: Use exact lane positions with NO deviation
-            spawnPosition = new THREE.Vector3(LANES.POSITIONS[laneIndex], 0.7, zPos);
+            const zPos = playerZ - 40;
+            const xPos = LANES.POSITIONS[laneIndex];
 
-            positionClear = true;
-            if (currentObstacles && currentObstacles.length > 0) {
-                for (const obstacle of currentObstacles) {
-                    const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
-                    const collectiblePreviewBox = new THREE.Box3(
-                        new THREE.Vector3(spawnPosition.x - 0.5, spawnPosition.y - 0.5, spawnPosition.z - 0.5),
-                        new THREE.Vector3(spawnPosition.x + 0.5, spawnPosition.y + 0.5, spawnPosition.z + 0.5)
-                    );
-                    if (collectiblePreviewBox.intersectsBox(obstacleBox)) {
-                        positionClear = false;
-                        break;
-                    }
-                }
+            if (this.isPositionClear(xPos, zPos)) {
+                spawnPosition = new THREE.Vector3(xPos, 0.7, zPos);
+                positionClear = true;
             }
             attempts++;
         }
 
         if (!positionClear) {
-            // Force spawn in center lane if no clear position found
-            spawnPosition = new THREE.Vector3(LANES.POSITIONS[LANES.CENTER], 1.2, playerZ - 40);
+            spawnPosition = new THREE.Vector3(LANES.POSITIONS[LANES.CENTER], 0.7, playerZ - 40); // Fixed: ground level, not floating
         }
 
+        const currentObstacles = obstacles || (this.obstacleManager ? this.obstacleManager.obstacles : []);
         const collectableMesh = this.createCollectableMesh(type, spawnPosition, currentObstacles);
         if (collectableMesh) {
             this.collectables.push({ mesh: collectableMesh, type: type });
@@ -577,13 +564,17 @@ export class CollectableManager {
 
         collectableMesh.position.set(
             LANES.POSITIONS[laneIndex],
-            playerPosition.y + 0.5, // Slightly closer to player than aerial stars
+            playerPosition.y + 0.5,
             playerPosition.z - 25 - (Math.random() * 15)
         );
 
         collectableMesh.userData = {
-            rotationSpeed: 0.08 + Math.random() * 0.04, // Faster rotation than aerial stars
-            pulseSpeed: 0.03 + Math.random() * 0.02
+            animationType: 'pulse',
+            originalY: spawnPosition.y,
+            animationTime: 0,
+            rotationSpeed: 0.08 + Math.random() * 0.04,
+            pulseSpeed: 0.03 + Math.random() * 0.02,
+            isFallback: !loadedModel
         };
 
         collectableMesh.castShadow = true;
@@ -810,12 +801,17 @@ export class CollectableManager {
             }
         }
         collectableMesh.position.y += yOffset;
+        if (collectableMesh.userData) {
+            collectableMesh.userData.originalY += yOffset;
+        }
     }
 
     startSpawning() {
-        this.spawnCollectable();
+
+        // Spawning logic is now handled in the update loop, not time-based
     }
 
+    // Legacy method - kept for compatibility but no longer used
     spawnCollectable() {
         if (!this.gameController || !this.gameController.isGameActive()) {
             return;
@@ -977,7 +973,6 @@ export class CollectableManager {
             let collisionDetected = false;
 
             if (gameSpeed > PHYSICS.HIGH_SPEED_THRESHOLD) {
-                // High-speed: Use enhanced collision detection with larger collection radius
                 collisionDetected = CollisionUtils.checkCollectableCollision(
                     playerBox,
                     collectableBox,
@@ -985,7 +980,6 @@ export class CollectableManager {
                     hasMagnetEffect
                 );
             } else {
-                // Low-speed: Use standard collision detection
                 collisionDetected = playerBox.intersectsBox(collectableBox);
             }
 
@@ -1146,6 +1140,7 @@ export class CollectableManager {
     }
 
     applyMagnetEffect(playerPosition, magnetRadius, magnetSpeed) {
+        let affectedCount = 0;
         for (const collectable of this.collectables) {
             const distance = playerPosition.distanceTo(collectable.mesh.position);
             if (distance < magnetRadius) {
@@ -1153,7 +1148,11 @@ export class CollectableManager {
                     .subVectors(playerPosition, collectable.mesh.position)
                     .normalize();
                 collectable.mesh.position.add(direction.multiplyScalar(magnetSpeed));
+                affectedCount++;
             }
+        }
+        if (affectedCount > 0) {
+            console.log(`🧢 DEBUG: Magnet effect applied to ${affectedCount} collectibles (radius: ${magnetRadius}, speed: ${magnetSpeed})`);
         }
     }
 
@@ -1161,7 +1160,6 @@ export class CollectableManager {
         return this.collectables;
     }
 
-    // NEW: Check if a power-up should be spawned (Subway Surfers style)
     shouldSpawnPowerUp() {
         const currentTime = Date.now();
         const timeSinceLastPowerUp = currentTime - this.lastPowerUpTime;
@@ -1199,10 +1197,25 @@ export class CollectableManager {
         // Reset fair spawning system
         this.lastPowerUpTime = Date.now();
         this.regularCollectionsCount = 0;
+        this.lastSpawnZ = 0;
+        
+        // EXPO FIX: Reset smart spawning system
+        this.collectiblePatternIndex = 0;
+        this.collectiblePattern = this.generateCollectiblePattern(60);
+        
+        // CRITICAL FIX: Reset spawn history for power-up distance tracking
+        this.spawnHistory = {
+            lastTypes: [],
+            maxHistory: 5,
+            lastPowerUpDistance: -100,  // ✅ FIXED: Allows immediate power-up spawning
+            minPowerUpSpacing: 80,
+            currentDistance: 0
+        };
+        
+        console.log('✅ CollectableManager reset - power-up distance tracking reset to -100');
     }
 
     removeAerialStars() {
-        // Remove all aerial stars from the scene when helicopter power-up ends
         for (let i = this.collectables.length - 1; i >= 0; i--) {
             const collectable = this.collectables[i];
             if (collectable.type === 'aerialStar') {
@@ -1214,7 +1227,6 @@ export class CollectableManager {
     }
 
     removeSolarOrbs() {
-        // Remove all solar orbs from the scene when solar power-up ends
         for (let i = this.collectables.length - 1; i >= 0; i--) {
             const collectable = this.collectables[i];
             if (collectable.type === 'solarOrb') {

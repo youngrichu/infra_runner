@@ -20,7 +20,8 @@ export class Environment {
 
     setupScene() {
         this.scene.background = new THREE.Color(COLORS.ENVIRONMENT.SKY_WARM);
-        this.scene.fog = new THREE.Fog(COLORS.ENVIRONMENT.SKY_WARM, 50, 150); // Add fog, use warm sky color
+        // Removed fog to eliminate gray cloud effect - cleaner visual presentation
+        // this.scene.fog = new THREE.Fog(COLORS.ENVIRONMENT.SKY_WARM, 50, 150);
     }
 
     setupLighting() {
