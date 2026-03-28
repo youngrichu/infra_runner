@@ -19,6 +19,15 @@ export class CollectableManager {
         this.powerUpDeck = [];
         this.shufflePowerUpDeck();
 
+        // Smart pattern-based spawning constants
+        this.COLLECTIBLE_SPAWN_HORIZON = 45;
+        this.MIN_COLLECTIBLE_SPACING = 6;
+        this.MAX_COLLECTIBLE_SPACING = 12;
+        this.COLLECTIBLE_DENSITY = 0.6;
+        this.POWER_UP_DENSITY = 0.15;
+        this.collectiblePattern = this.generateCollectiblePattern(60);
+        this.collectiblePatternIndex = 0;
+
         // Fair power-up spawning system (like Subway Surfers)
         this.lastPowerUpTime = Date.now(); // Initialize with current time
         this.powerUpInterval = 10000; // Guarantee power-up every 10 seconds
@@ -97,6 +106,32 @@ export class CollectableManager {
             const j = Math.floor(Math.random() * (i + 1));
             [this.powerUpDeck[i], this.powerUpDeck[j]] = [this.powerUpDeck[j], this.powerUpDeck[i]];
         }
+    }
+
+    generateCollectiblePattern(length) {
+        const pattern = [];
+        let currentPosition = 0;
+        const regularTypes = ['blueprint', 'waterDrop', 'energyCell'];
+        const powerUpTypes = ['hardHat', 'helicopter', 'solarPower', 'windPower', 'waterPipeline'];
+
+        for (let i = 0; i < length; i++) {
+            const spacing = this.MIN_COLLECTIBLE_SPACING +
+                Math.random() * (this.MAX_COLLECTIBLE_SPACING - this.MIN_COLLECTIBLE_SPACING);
+            currentPosition += spacing;
+
+            if (Math.random() < this.COLLECTIBLE_DENSITY) {
+                const isPowerUp = Math.random() < this.POWER_UP_DENSITY;
+                const availableTypes = isPowerUp ? powerUpTypes : regularTypes;
+                const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+                pattern.push({
+                    position: currentPosition,
+                    type: type,
+                    isPowerUp: isPowerUp,
+                    lane: Math.floor(Math.random() * 3)
+                });
+            }
+        }
+        return pattern;
     }
 
     async initializeModelLoading() {
