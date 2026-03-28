@@ -202,9 +202,7 @@ export class CollectableManager {
 
     setGameController(gameController) {
         this.gameController = gameController;
-        if (gameController && gameController.obstacleManager) {
-            this.obstacleManager = gameController.obstacleManager;
-        }
+        this.obstacleManager = (gameController && gameController.obstacleManager) ? gameController.obstacleManager : null;
     }
 
     createCollectable(playerZ, obstacles) {
@@ -274,7 +272,12 @@ export class CollectableManager {
         }
 
         if (!positionClear) {
-            spawnPosition = new THREE.Vector3(LANES.POSITIONS[LANES.CENTER], 0.7, playerZ - 40); // Fixed: ground level, not floating
+            // Only fall back to center lane if it's actually clear; otherwise skip spawn
+            if (this.isPositionClear(LANES.POSITIONS[LANES.CENTER], playerZ - 40)) {
+                spawnPosition = new THREE.Vector3(LANES.POSITIONS[LANES.CENTER], 0.7, playerZ - 40);
+            } else {
+                return;
+            }
         }
 
         const currentObstacles = obstacles || (this.obstacleManager ? this.obstacleManager.obstacles : []);
@@ -827,11 +830,14 @@ export class CollectableManager {
     adjustHeightForObstacles(collectableMesh, obstacles) {
         let yOffset = 0;
         for (const obstacle of obstacles) {
-            if (Math.abs(obstacle.mesh.position.x - collectableMesh.position.x) < 1 &&
-                Math.abs(obstacle.mesh.position.z - collectableMesh.position.z) < 1 &&
-                obstacle.mesh.position.y > 0.1) {
-                yOffset = obstacle.mesh.geometry.parameters.height ?
-                    obstacle.mesh.geometry.parameters.height + 0.2 : 0.5;
+            const obstaclePos = obstacle.mesh ? obstacle.mesh.position : obstacle.position;
+            if (!obstaclePos) continue;
+            if (Math.abs(obstaclePos.x - collectableMesh.position.x) < 1 &&
+                Math.abs(obstaclePos.z - collectableMesh.position.z) < 1 &&
+                obstaclePos.y > 0.1) {
+                const height = obstacle.mesh && obstacle.mesh.geometry && obstacle.mesh.geometry.parameters
+                    ? obstacle.mesh.geometry.parameters.height : null;
+                yOffset = height ? height + 0.2 : 0.5;
                 break;
             }
         }
