@@ -547,19 +547,19 @@ export class CollectableManager {
     createSolarOrb(playerPosition) {
         // Create a light bulb/solar energy orb that appears during solar boost
         const geometry = this.cachedGeometries['solarOrbMain'];
-        const material = this.cachedMaterials['solarOrbMain'];
+        const material = this.cachedMaterials['solarOrbMain'].clone();
 
         const collectableMesh = new THREE.Mesh(geometry, material);
 
         // Add a glowing inner core
         const coreGeometry = this.cachedGeometries['solarOrbCore'];
-        const coreMaterial = this.cachedMaterials['solarOrbCore'];
+        const coreMaterial = this.cachedMaterials['solarOrbCore'].clone();
         const core = new THREE.Mesh(coreGeometry, coreMaterial);
         collectableMesh.add(core);
 
         // Add light rays (4 extending lines)
         const rayGeometry = this.cachedGeometries['solarOrbRay'];
-        const rayMaterial = this.cachedMaterials['solarOrbRay'];
+        const rayMaterial = this.cachedMaterials['solarOrbRay'].clone();
         for (let i = 0; i < 4; i++) {
             const ray = new THREE.Mesh(rayGeometry, rayMaterial);
 
@@ -1030,7 +1030,8 @@ export class CollectableManager {
                 opacity: 0.8
             });
         }
-        const particleMaterial = this.cachedEffectMaterials[type];
+        // Clone the material to ensure fading out this burst doesn't fade all other bursts
+        const particleMaterial = this.cachedEffectMaterials[type].clone();
 
         for (let i = 0; i < particleCount; i++) {
             const particle = new THREE.Mesh(particleGeometry, particleMaterial);

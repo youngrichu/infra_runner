@@ -1405,6 +1405,7 @@
                 this.gltfLoader = new window.GLTFLoader();
                 this.dracoLoader = new window.DRACOLoader();
                 this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+                this.dracoLoader.preload();
                 this.gltfLoader.setDRACOLoader(this.dracoLoader);
             },
 
@@ -1625,21 +1626,19 @@
             completeOnboarding();
         };
 
-        function completeOnboarding() {
+        async function completeOnboarding() {
             // Store preference to not show onboarding again
             localStorage.setItem('infrastructureRunner_onboardingCompleted', 'true');
 
-            // Cleanup 3D model viewers first
+            // Start game init/registration process in background FIRST
+            await checkPlayerRegistrationAndStart(true);
+
+            // Cleanup 3D model viewers and hide onboarding overlay ONLY AFTER game/registration is ready
             cleanupModelViewers();
 
             // Hide onboarding overlay
             const overlay = document.getElementById('onboarding-overlay');
-            overlay.classList.remove('active');
-
-            // Add delay to allow cleanup to complete before showing registration
-            setTimeout(() => {
-                checkPlayerRegistrationAndStart();
-            }, 200);
+            if (overlay) overlay.classList.remove('active');
         }
 
         function cleanupModelViewers() {
@@ -1653,6 +1652,11 @@
                 const canvases = document.querySelectorAll('canvas');
                 canvases.forEach(canvas => {
                     try {
+                        // Skip the main game canvas context destruction
+                        if (canvas.parentNode && canvas.parentNode.id === 'game-container') {
+                            return;
+                        }
+
                         // Get both WebGL contexts
                         const gl = canvas.getContext('webgl') || canvas.getContext('webgl2') ||
                             canvas.getContext('experimental-webgl') || canvas.getContext('experimental-webgl2');
@@ -1697,53 +1701,43 @@
         }
 
 
-        function checkPlayerRegistrationAndStart() {
-            // Check if player data exists
-            const storedPlayerData = localStorage.getItem('playerData');
+        async function checkPlayerRegistrationAndStart(fromOnboarding = false) {
+            // Prevent multiple initializations
+            if (window.gameInitialized) return;
 
-            if (storedPlayerData) {
-                // Player already registered, start the game immediately
-                startGameAfterRegistration();
-            } else {
-                // Player not registered, show registration form immediately
-                showRegistrationFallback();
-            }
-        }
-
-        function showRegistrationFallback() {
-            // Prevent multiple game initializations
-            if (window.gameInitialized) {
+            if (!window.initializeGame || typeof window.initializeGame !== 'function') {
+                console.error('Game module not available - this should not happen');
+                alert('Game failed to load properly. Please refresh the page.');
                 return;
             }
 
-            // Mark as initialized
+            // Hide the onboarding overlay if it was shown, but keep its opacity up to hide the background load
             window.gameInitialized = true;
+            const game = window.initializeGame();
 
-            // Initialize the game first, which will handle player registration
-            if (window.initializeGame && typeof window.initializeGame === 'function') {
-                window.initializeGame();
-            } else {
-                console.error('Game module not available - this should not happen');
-                alert('Game failed to load properly. Please refresh the page.');
-            }
-        }
-
-        function startGameAfterRegistration() {
-            // Prevent multiple game initializations
-            if (window.gameInitialized) {
-                return;
+            if (game && game.initPromise) {
+                await game.initPromise; // Wait for ThreeJS setup, managers, etc.
             }
 
-            // Mark as initialized and start immediately
-            window.gameInitialized = true;
+            // Now we can safely hide the loading screen if we aren't coming from onboarding
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.style.display = 'none';
+            }
 
-            // Game module should already be loaded during loading screen
-            if (window.initializeGame && typeof window.initializeGame === 'function') {
-                window.initializeGame();
-            } else {
-                console.error('Game module not available - this should not happen');
-                // Show error message to user
-                alert('Game failed to load properly. Please refresh the page.');
+            if (game) {
+                const storedPlayerData = localStorage.getItem('playerData');
+                if (storedPlayerData) {
+                    try {
+                        const data = JSON.parse(storedPlayerData);
+                        game.registerPlayer(data.playerName, data.email, data.organizationName);
+                        game.showCountdown();
+                    } catch (e) {
+                        game.showPlayerRegistration();
+                    }
+                } else {
+                    game.showPlayerRegistration();
+                }
             }
         }
 
