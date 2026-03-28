@@ -43,7 +43,6 @@ export class Game {
                 // Reset any additional spawning state if needed
                 if (this.collectableManager && this.collectableManager.spawnHistory) {
                     this.collectableManager.spawnHistory.lastPowerUpDistance = -100;
-                    console.log('✅ Improved spawning system reset - dual tracking synchronized');
                 }
             }
         };
@@ -246,11 +245,6 @@ export class Game {
 
         // Apply magnet effect if solar boost is active
         if (this.powerUpManager.getSolarBoostStatus()) {
-            // Performance: Only log occasionally to avoid console spam
-            if (!this.magnetLogCounter) this.magnetLogCounter = 0;
-            if (this.magnetLogCounter++ % 300 === 0) {
-                console.log('✨ DEBUG: Applying magnet effect - Solar boost is active');
-            }
             this.collectableManager.applyMagnetEffect(
                 this.player.getPosition(),
                 PHYSICS.MAGNET_RADIUS,
@@ -293,9 +287,6 @@ export class Game {
             );
             
             if (collision) {
-                // Performance: Reduce collision logging
-                console.log('*** COLLISION DETECTED ***');
-                
                 // Try to trigger stumble animation with game over callback
                 const stumbleTriggered = this.player.triggerStumble(() => this.gameOver());
                 
@@ -439,7 +430,6 @@ export class Game {
         // CRITICAL FIX: Reset improved spawning system that was blocking power-ups
         if (this.improvedSpawningFix) {
             this.improvedSpawningFix.reset();
-            console.log('✅ Reset improved spawning system - power-ups will now spawn after restart');
         }
         
         // Restart spawning
