@@ -176,6 +176,7 @@ export class OptimizedObstacleManager {
                 lane: lane,
                 boundingBox: this.calculateBoundingBox(type, position),
                 collisionEnabled: true,
+                hasCollided: false,
                 isInstanced: true,
                 instanceInfo: instanceInfo,
                 id: `instanced_${type}_${this.spawnCounter}`
@@ -221,6 +222,7 @@ export class OptimizedObstacleManager {
             mesh: mesh,
             boundingBox: this.calculateBoundingBox(type, position),
             collisionEnabled: true,
+            hasCollided: false,
             isInstanced: false,
             id: `pooled_${type}_${this.spawnCounter}`
         };
@@ -391,7 +393,7 @@ export class OptimizedObstacleManager {
     
     checkCollisions(playerBox, waterSlideObjects = [], waterSlideActive = false) {
         for (const obstacle of this.obstacles) {
-            if (!obstacle.collisionEnabled) continue;
+            if (!obstacle.collisionEnabled || obstacle.hasCollided) continue;
             
             // Skip collision if in water slide safe zone
             if (waterSlideActive && this.isInWaterSlideZone(obstacle.position, waterSlideObjects)) {
@@ -421,6 +423,7 @@ export class OptimizedObstacleManager {
                         }
                     }
                 }
+                obstacle.hasCollided = true;
                 return obstacle;
             }
         }

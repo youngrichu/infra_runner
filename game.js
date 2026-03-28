@@ -42,7 +42,7 @@ export class Game {
         this.countdownTimeoutId = null;
         this.animationId = null;
         
-        this.init();
+        this.initPromise = this.init();
     }
 
     async init() { // Make init async
