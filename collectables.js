@@ -34,6 +34,10 @@ export class CollectableManager {
         this.regularCollectionsCount = 0;
         this.powerUpAfterCollections = 3; // Or after collecting 3 regular items
 
+        // Regular collectable spawning
+        this.lastCollectableTime = Date.now();
+        this.collectableInterval = SPAWN_CONFIG.COLLECTABLE_INTERVAL.MIN + Math.random() * (SPAWN_CONFIG.COLLECTABLE_INTERVAL.MAX - SPAWN_CONFIG.COLLECTABLE_INTERVAL.MIN);
+
         // GLB Model loading system with Draco support (maintaining performance optimizations)
         this.loader = new GLTFLoader();
         this.dracoLoader = new DRACOLoader();
@@ -1254,6 +1258,15 @@ export class CollectableManager {
         // Power-up spawned - timers reset
     }
 
+    shouldSpawnCollectable() {
+        return Date.now() - this.lastCollectableTime >= this.collectableInterval;
+    }
+
+    markCollectableSpawned() {
+        this.lastCollectableTime = Date.now();
+        this.collectableInterval = SPAWN_CONFIG.COLLECTABLE_INTERVAL.MIN + Math.random() * (SPAWN_CONFIG.COLLECTABLE_INTERVAL.MAX - SPAWN_CONFIG.COLLECTABLE_INTERVAL.MIN);
+    }
+
     reset() {
         this.collectables.forEach(collectable => this.scene.remove(collectable.mesh));
         this.collectables = [];
@@ -1271,6 +1284,8 @@ export class CollectableManager {
         this.lastPowerUpTime = Date.now();
         this.regularCollectionsCount = 0;
         this.lastSpawnZ = 0;
+        this.lastCollectableTime = Date.now();
+        this.collectableInterval = SPAWN_CONFIG.COLLECTABLE_INTERVAL.MIN + Math.random() * (SPAWN_CONFIG.COLLECTABLE_INTERVAL.MAX - SPAWN_CONFIG.COLLECTABLE_INTERVAL.MIN);
         
         // EXPO FIX: Reset smart spawning system
         this.collectiblePatternIndex = 0;

@@ -247,6 +247,14 @@ export class Game {
         // Check collisions
         this.checkCollisions();
 
+        // Spawn regular collectables
+        if (this.collectableManager.shouldSpawnCollectable()) {
+            const playerZ = this.player.getPosition().z;
+            const obstacles = this.obstacleManager.getObstacles();
+            this.collectableManager.createCollectable(playerZ, obstacles);
+            this.collectableManager.markCollectableSpawned();
+        }
+
         // NEW: Fair power-up spawning system (like Subway Surfers)
         if (this.collectableManager.shouldSpawnPowerUp()) {
             const playerZ = this.player.getPosition().z;
