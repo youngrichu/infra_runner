@@ -42,6 +42,7 @@ export class CollectableManager {
         this.loadedModels = new Map();
         this.loadingPromises = new Map();
         this.priorityModelsLoaded = false;
+        this.priorityModels = ['blueprint', 'waterDrop', 'energyCell'];
 
         // Pre-create and cache geometries and materials for fallback meshes
         this.cacheFallbackResources();
@@ -203,6 +204,37 @@ export class CollectableManager {
     setGameController(gameController) {
         this.gameController = gameController;
         this.obstacleManager = (gameController && gameController.obstacleManager) ? gameController.obstacleManager : null;
+    }
+
+    isPositionClear(x, z) {
+        if (!this.obstacleManager || !this.obstacleManager.obstacles) return true;
+
+        const checkRadius = 2.5;
+        const obstacles = this.obstacleManager.obstacles;
+
+        for (const obstacle of obstacles) {
+            const obstaclePos = obstacle.mesh.position;
+            const dx = x - obstaclePos.x;
+            const dz = z - obstaclePos.z;
+            const distanceSq = dx * dx + dz * dz;
+
+            if (distanceSq < checkRadius * checkRadius) {
+                try {
+                    const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
+                    const collectableBox = new THREE.Box3(
+                        new THREE.Vector3(x - 0.4, 0.2, z - 0.4),
+                        new THREE.Vector3(x + 0.4, 1.2, z + 0.4)
+                    );
+                    if (collectableBox.intersectsBox(obstacleBox)) {
+                        return false;
+                    }
+                } catch (e) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     createCollectable(playerZ, obstacles) {
