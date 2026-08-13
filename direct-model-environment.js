@@ -32,7 +32,7 @@ export class DirectModelEnvironment {
         // Setup DRACO loader for compressed GLB files
         const dracoLoader = new DRACOLoader();
         // Try both local and CDN paths for maximum compatibility
-        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        dracoLoader.setDecoderPath('/draco/gltf/');
         dracoLoader.setDecoderConfig({ type: 'js' });
         this.gltfLoader.setDRACOLoader(dracoLoader);
 

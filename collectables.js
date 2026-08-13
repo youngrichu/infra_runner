@@ -37,7 +37,7 @@ export class CollectableManager {
         // GLB Model loading system with Draco support (maintaining performance optimizations)
         this.loader = new GLTFLoader();
         this.dracoLoader = new DRACOLoader();
-        this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        this.dracoLoader.setDecoderPath('/draco/gltf/');
         this.loader.setDRACOLoader(this.dracoLoader);
         this.loadedModels = new Map();
         this.loadingPromises = new Map();

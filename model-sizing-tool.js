@@ -6,7 +6,7 @@ export class ModelSizingTool {
     constructor() {
         this.loader = new GLTFLoader();
         this.dracoLoader = new DRACOLoader();
-        this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        this.dracoLoader.setDecoderPath('/draco/gltf/');
         this.loader.setDRACOLoader(this.dracoLoader);
         this.loadedModels = new Map();
         
