@@ -132,7 +132,9 @@ export class OnboardingModelViewer {
     initializeLoaders() {
         this.loader = new this.GLTFLoader();
         this.dracoLoader = new this.DRACOLoader();
-        this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        // Self-hosted decoder (was gstatic.com CDN) - avoids hangs/timeouts when the
+        // CDN is unreachable (corporate firewalls, outdated root certs on old OSes, etc.)
+        this.dracoLoader.setDecoderPath('/draco/gltf/');
         this.dracoLoader.preload();
         this.loader.setDRACOLoader(this.dracoLoader);
     }
