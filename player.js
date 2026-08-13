@@ -70,7 +70,7 @@ export class Player {
             
             // Setup DRACO loader for compressed GLB files
             const dracoLoader = new DRACOLoader();
-            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+            dracoLoader.setDecoderPath('/draco/gltf/');
             loader.setDRACOLoader(dracoLoader);
             
             loader.load(
@@ -121,7 +121,7 @@ export class Player {
             
             // Setup DRACO loader for compressed GLB files
             const dracoLoader = new DRACOLoader();
-            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+            dracoLoader.setDecoderPath('/draco/gltf/');
             loader.setDRACOLoader(dracoLoader);
             
             console.log('Loading sliding animation from: /assets/models/Running-Slide.glb');
@@ -210,7 +210,7 @@ export class Player {
             
             // Setup DRACO loader for compressed GLB files
             const dracoLoader = new DRACOLoader();
-            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+            dracoLoader.setDecoderPath('/draco/gltf/');
             loader.setDRACOLoader(dracoLoader);
             
             loader.load(
@@ -261,7 +261,7 @@ export class Player {
             
             // Setup DRACO loader for compressed GLB files
             const dracoLoader = new DRACOLoader();
-            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+            dracoLoader.setDecoderPath('/draco/gltf/');
             loader.setDRACOLoader(dracoLoader);
             
             loader.load(

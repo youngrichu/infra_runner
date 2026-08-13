@@ -132,7 +132,7 @@ export class OnboardingModelViewer {
     initializeLoaders() {
         this.loader = new this.GLTFLoader();
         this.dracoLoader = new this.DRACOLoader();
-        this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        this.dracoLoader.setDecoderPath('/draco/gltf/');
         this.dracoLoader.preload();
         this.loader.setDRACOLoader(this.dracoLoader);
     }
